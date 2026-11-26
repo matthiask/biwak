@@ -195,6 +195,11 @@ def list_unarchive(list_id, as_json):
     help="Only to-dos assigned to this person's ID (people who left too).",
 )
 @click.option(
+    "--group",
+    help="With --list: only the to-dos in this group's ID, or 'none' for"
+    " those outside groups.",
+)
+@click.option(
     "--assigned-by-me",
     is_flag=True,
     help="Only to-dos you assigned (to somebody else, or to you with --mine"
@@ -225,6 +230,7 @@ def todos(
     completed,
     mine,
     assignee,
+    group,
     assigned_by_me,
     project_id,
     due,
@@ -234,7 +240,7 @@ def todos(
 ):
     """To-dos; without a command the open ones of --list, by group, or
     across all projects, by project or by due date (--mine, --assignee,
-    --assigned-by-me, --project, --due, --by-due)"""
+    --group with --list, --assigned-by-me, --project, --due, --by-due)"""
     if ctx.invoked_subcommand is not None:
         return None
     if list_id and (
@@ -244,13 +250,7 @@ def todos(
             "--assigned-by-me, --project, --due, --by-due"
             " and --started/--not-started go without --list."
         )
-    if mine and assignee:
-        terminate("--mine or --assignee, not both.")
-    params = {}
-    if mine:
-        params["assignee"] = "me"
-    if assignee:
-        params["assignee"] = assignee
+    params = filter_params(mine, assignee, group, list_id=list_id)
     if list_id and completed:
         data = paginate(f"lists/{list_id}/todos/completed/", params)
     elif list_id:
@@ -287,6 +287,22 @@ def todos(
         )
     console.print(t)
     return None
+
+
+def filter_params(mine, assignee, group, *, list_id):
+    """The query of --mine, --assignee and --group (with --list)"""
+    if mine and assignee:
+        terminate("--mine or --assignee, not both.")
+    if group and not list_id:
+        terminate("--group goes with --list.")
+    params = {}
+    if mine:
+        params["assignee"] = "me"
+    if assignee:
+        params["assignee"] = assignee
+    if group:
+        params["group"] = group
+    return params
 
 
 def dates(todo):

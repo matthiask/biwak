@@ -28,7 +28,13 @@ from biwak.activity.operations import (
 )
 from biwak.forms import ColorSwatches, Form, PeopleField, next_url
 from biwak.items import due, editing, glance, operations as ops, visibility
-from biwak.items.filters import ANYBODY, ListFilterForm, without_empty
+from biwak.items.filters import (
+    ANYBODY,
+    NO_GROUP,
+    ListFilterForm,
+    in_group,
+    without_empty,
+)
 from biwak.items.models import Comment, Group, Item, Kind, Status, TodoList
 from biwak.modals import form_response
 from biwak.reactions.operations import prefetch
@@ -268,6 +274,7 @@ class ListFilter:
             todos = due.assigned_to(
                 todos, request.user, self.filters.get("assignee") or None
             )
+            todos = in_group(todos, self.filters.get("group"))
         else:
             self.filters = {
                 name: query[name] for name in self.form.fields if name in query
@@ -275,6 +282,8 @@ class ListFilter:
             todos = todos.none()
         self.todos = todos
         self.keep = ({"view": query["view"]} if "view" in query else {}) | self.filters
+        # One group shown (or those outside groups): the others' cards go
+        self.group = self.filters.get("group") if self.valid else None
         self.back = (
             f"{item.get_absolute_url()}?{urlencode(self.keep)}" if self.keep else ""
         )
@@ -316,6 +325,8 @@ def todolist(request, pk):
     completed_count = todos.filter(todo__completed_at__isnull=False).count()
     groups = list(todolist.groups.all())
     by_group = {None: []} | {g.pk: [] for g in groups}
+    if filtered.group:
+        groups = [g for g in groups if str(g.pk) == filtered.group]
     for todo in open_todos:
         by_group[todo.todo.group_id].append(todo)
     form = TodoForm(request.POST or None, item=item, user=request.user)
@@ -358,6 +369,10 @@ def todolist(request, pk):
             "todolist": todolist,
             "ungrouped": by_group[None],
             "groups": [(g, by_group[g.pk]) for g in groups],
+            "one_group": filtered.group,
+            "keep_query": urlencode({
+                k: v for k, v in filtered.keep.items() if k != "group"
+            }),
             "completed": completed,
             "completed_count": completed_count,
             **_completed_more(
@@ -367,13 +382,17 @@ def todolist(request, pk):
             # On the board, the column of to-dos outside groups shows while
             # the list has any, matching the filter or not, so that
             # filtering keeps the columns (and the board's width)
-            "hide_ungrouped": bool(groups)
-            and not by_group[None]
-            and not (
-                filtered.filters
-                and _todos(item)
-                .filter(todo__completed_at__isnull=True, todo__group=None)
-                .exists()
+            "hide_ungrouped": (bool(filtered.group) and filtered.group != NO_GROUP)
+            or (
+                bool(groups)
+                and not filtered.group
+                and not by_group[None]
+                and not (
+                    filtered.filters
+                    and _todos(item)
+                    .filter(todo__completed_at__isnull=True, todo__group=None)
+                    .exists()
+                )
             ),
             "all_done": bool(completed_count) and not any(by_group.values()),
             "nothing_matches": bool(filtered.filters)

@@ -37,9 +37,11 @@ project. Staff create lists with "New list" on the project's page.
 - **Filters:** "Filters" in the list's header (it opens when you point
   at it) shows only the to-dos
   assigned to somebody with to-dos in the list, to you or to nobody, on the list and on the
-  board. A line below the header says what is set; "Reset filters"
-  shows all again. The groups stay, and "Completed" counts only the
-  matching ones. Dragging still works: a to-do lands next to the one you
+  board, and in a list with groups only one group or the to-dos outside
+  groups ("No group"); clicking a group's heading shows it alone, and
+  "Add a to-do" there adds into it. A line below the header says what is
+  set; "Reset filters" shows all again. Filtered by who is assigned, the
+  groups stay; "Completed" counts only the matching ones. Dragging still works: a to-do lands next to the one you
   drop it beside.
 - **Completed:** the latest finished to-dos show below the list, under
   "Completed (N)", newest first; "Show more" adds older ones.

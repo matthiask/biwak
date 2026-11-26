@@ -13,6 +13,8 @@ from biwak.organizations.names import display_name
 
 # The empty assignee's other meaning, spelled out
 ANYBODY = "anybody"
+# The to-dos outside groups (specs/todos.md, "Filters on a list")
+NO_GROUP = "none"
 
 
 def without_empty(query):
@@ -54,9 +56,20 @@ class ListFilterForm(Form):
     list"), anybody's to-dos by default as on a project's to-dos page"""
 
     assignee = forms.ChoiceField(label=_("assigned to"), required=False)
+    group = forms.ChoiceField(label=_("group"), required=False)
 
     def __init__(self, data, *, user, todolist):
         super().__init__(data)
+        # One group, or the to-dos outside groups (decided 2026-11-26 by
+        # the user); only in lists with groups
+        if groups := list(todolist.todolist.groups.all()):
+            self.fields["group"].choices = [
+                ("", _("All groups")),
+                (NO_GROUP, _("No group")),
+                *((str(g.pk), g.title) for g in groups),
+            ]
+        else:
+            del self.fields["group"]
         # Only people with to-dos in the list, open or completed (both are
         # filtered; decided 2026-11-24 by the user), whom the person may know:
         # people removed from the project stay on completed to-dos, and
@@ -80,3 +93,13 @@ class ListFilterForm(Form):
                     )
                 result.append((field.label, labels[value]))
         return result
+
+
+def in_group(todos, group):
+    """The to-dos of ``todos`` in the group with the ID ``group`` (a string
+    or an int), or outside groups (``NO_GROUP``); ``None``: all"""
+    if not group:
+        return todos
+    if group == NO_GROUP:
+        return todos.filter(todo__group=None)
+    return todos.filter(todo__group_id=int(group))

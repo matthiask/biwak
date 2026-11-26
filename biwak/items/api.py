@@ -38,6 +38,7 @@ from biwak.api_conventions import (
     person_out,
 )
 from biwak.items import due, operations as ops
+from biwak.items.filters import NO_GROUP, in_group
 from biwak.items.models import (
     SWITCH_MESSAGE,
     Assignment,
@@ -403,27 +404,48 @@ def _assignee(assignee):
     return None if assignee in {"", "anybody"} else assignee
 
 
-def _todos(request, list_item, assignee=None):
-    """The list's to-dos, those assigned to ``assignee`` (as on the list's
-    page, specs/todos.md, "Filters on a list")"""
+def _group(list_item, group):
+    """``group`` for ``filters.in_group()``: ``none`` (outside groups), the
+    ID of one of the list's groups, or ``None`` (all), else 400"""
+    if group in {None, ""}:
+        return None
+    if group == NO_GROUP:
+        return group
+    if not (
+        group.isdecimal() and list_item.todolist.groups.filter(pk=int(group)).exists()
+    ):
+        bad_request(_("group is none or the ID of one of the list's groups."))
+    return group
+
+
+def _todos(request, list_item, assignee=None, group=None):
+    """The list's to-dos, those assigned to ``assignee`` and in ``group``
+    (as on the list's page, specs/todos.md, "Filters on a list")"""
     return _for_todo_out(
-        due.assigned_to(
-            Item.objects.visible_to(request.user).filter(
-                parent=list_item, kind=Kind.TODO
+        in_group(
+            due.assigned_to(
+                Item.objects.visible_to(request.user).filter(
+                    parent=list_item, kind=Kind.TODO
+                ),
+                request.user,
+                _assignee(assignee),
             ),
-            request.user,
-            _assignee(assignee),
+            _group(list_item, group),
         )
     )
 
 
 @router.get("lists/{list_id}/todos/", response=list[TodoOut])
-def todo_list(request, list_id: int, assignee: str | None = None):
+def todo_list(
+    request, list_id: int, assignee: str | None = None, group: str | None = None
+):
     """The open to-dos in the list's order: ungrouped first, then by group;
     ``assignee`` is ``me``, ``nobody``, ``anybody`` (the default) or a
-    person's ID"""
+    person's ID; ``group`` is ``none`` (outside groups) or a group's ID"""
     item = item_for(request, list_id, Kind.LIST)
-    todos = _todos(request, item, assignee).filter(todo__completed_at__isnull=True)
+    todos = _todos(request, item, assignee, group).filter(
+        todo__completed_at__isnull=True
+    )
     groups = {g.pk: g.position for g in item.todolist.groups.all()}
     return [
         todo_out(todo, request.user)
@@ -444,14 +466,16 @@ def todo_list_completed(
     request,
     list_id: int,
     assignee: str | None = None,
+    group: str | None = None,
     cursor: str | None = None,
     page_size: int | None = None,
 ):
-    """Completed to-dos, the latest first; ``assignee`` as for the open ones"""
+    """Completed to-dos, the latest first; ``assignee`` and ``group`` as for
+    the open ones"""
     item = item_for(request, list_id, Kind.LIST)
     return paginated(
         request,
-        _todos(request, item, assignee)
+        _todos(request, item, assignee, group)
         .filter(todo__completed_at__isnull=False)
         .annotate(completed=F("todo__completed_at")),
         lambda item: todo_out(item, request.user),

@@ -190,6 +190,90 @@ class ListFilterTest(TestCase):
         self.assertEqual(self.shown(self.client.get(url, {"assignee": "x"})), set())
 
 
+class GroupFilterTest(TestCase):
+    """One group shown alone, or the to-dos outside groups (decided
+    2026-11-26 by the user)"""
+
+    setUp = ListFilterTest.setUp
+    todo = ListFilterTest.todo
+    page = ListFilterTest.page
+    shown = ListFilterTest.shown
+
+    def section(self, response, name):
+        return re.search(
+            rf'<section[^>]*id="group-{name}"[^>]*>', response.content.decode()
+        )
+
+    def test_one_group(self):
+        other = ops.create_group(todolist=self.list.todolist, title="Soon")
+        self.todo("Soon's", [], group=other)
+        response = self.page(self.ada, group=self.group.pk)
+        self.assertEqual(self.shown(response), {"Bob's grouped", "Ada's grouped"})
+        # Only its card; adding there adds into it; no "New group"
+        self.assertIn("hidden", self.section(response, "none")[0])
+        self.assertIsNone(self.section(response, other.pk))
+        self.assertIsNotNone(self.section(response, self.group.pk))
+        self.assertContains(response, f'name="group" value="{self.group.pk}"')
+        self.assertNotContains(response, "New group")
+        self.assertContains(response, "Group: Later")
+        self.assertEqual(response.context["filtered"], 1)
+        # Completed ones of other groups or none aren't counted
+        self.assertEqual(response.context["completed_count"], 0)
+        # On the board too
+        response = self.page(self.ada, group=self.group.pk, view="board")
+        self.assertIn("hidden", self.section(response, "none")[0])
+
+    def test_no_group(self):
+        response = self.page(self.ada, group="none")
+        self.assertEqual(
+            self.shown(response),
+            {"Ada's", "Bob's", "Nobody's", "Bob's done", "Ada's done"},
+        )
+        self.assertNotIn("hidden", self.section(response, "none")[0])
+        self.assertIsNone(self.section(response, self.group.pk))
+        self.assertContains(response, "Group: No group")
+
+    def test_with_the_assignee(self):
+        response = self.page(self.ada, group=self.group.pk, assignee=self.bob.pk)
+        self.assertEqual(self.shown(response), {"Bob's grouped"})
+        self.assertEqual(response.context["filtered"], 2)
+
+    def test_headings_show_their_group_alone(self):
+        response = self.page(self.ada, assignee=self.bob.pk, view="board")
+        self.assertContains(
+            response,
+            f'href="?view=board&amp;assignee={self.bob.pk}&amp;group={self.group.pk}"',
+        )
+        # Shown alone, the heading is no link
+        response = self.page(self.ada, group=self.group.pk)
+        self.assertNotContains(response, "wb-group-link")
+
+    def test_other_lists_groups_are_unknown(self):
+        other = ops.create_list(project=self.project, title="Other", creator=self.ada)
+        group = ops.create_group(todolist=other.todolist, title="Elsewhere")
+        response = self.page(self.ada, group=group.pk)
+        self.assertEqual(self.shown(response), set())
+        self.assertContains(response, 'class="text-danger"')
+
+    def test_only_in_lists_with_groups(self):
+        plain = ops.create_list(project=self.project, title="Plain", creator=self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.get(plain.get_absolute_url())
+        self.assertNotIn("group", response.context["filter_form"].fields)
+
+    def test_clients(self):
+        response = self.page(self.cleo, group=self.group.pk)
+        self.assertEqual(self.shown(response), {"Bob's grouped", "Ada's grouped"})
+        internal = ops.create_list(
+            project=self.project, title="Internal", creator=self.ada
+        )
+        self.client.force_login(self.cleo)
+        self.assertEqual(
+            self.client.get(internal.get_absolute_url(), {"group": "none"}).status_code,
+            404,
+        )
+
+
 class ListFilterAPITest(TestCase):
     """``assignee`` on a list's to-dos, open and completed"""
 
@@ -222,6 +306,28 @@ class ListFilterAPITest(TestCase):
         )
         self.assertEqual(len(self.titles(self.api(self.ada, assignee="anybody"))), 5)
         self.assertEqual(self.api(self.ada, assignee="x").status_code, 400)
+
+    def test_group(self):
+        self.assertEqual(
+            self.titles(self.api(self.ada, group=self.group.pk)),
+            {"Bob's grouped", "Ada's grouped"},
+        )
+        self.assertEqual(
+            self.titles(self.api(self.ada, group="none", assignee=self.bob.pk)),
+            {"Bob's"},
+        )
+        self.assertEqual(
+            self.titles(self.api(self.ada, "completed/", group="none")),
+            {"Bob's done", "Ada's done"},
+        )
+        self.assertEqual(
+            self.titles(self.api(self.ada, "completed/", group=self.group.pk)),
+            set(),
+        )
+        other = ops.create_list(project=self.project, title="Other", creator=self.ada)
+        group = ops.create_group(todolist=other.todolist, title="Elsewhere")
+        self.assertEqual(self.api(self.ada, group=group.pk).status_code, 400)
+        self.assertEqual(self.api(self.ada, group="x").status_code, 400)
 
 
 class DraggingNextToTest(TestCase):
