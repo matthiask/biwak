@@ -342,9 +342,13 @@ def done_neighbours(queryset, notifications):
 
 
 def _cancelled(notifications, others):
-    from biwak.activity.timeline import cancelled
+    """The events not to tell of the unread ones: completing and reopening
+    which cancel out, and moves between a list's groups back to where the
+    to-do was (``timeline.moved_back()``, decided 2026-11-26)"""
+    from biwak.activity.timeline import cancelled, moved_back
 
-    return cancelled([n.event for n in [*notifications, *others] if n.read_at is None])
+    events = [n.event for n in [*notifications, *others] if n.read_at is None]
+    return cancelled(events) | moved_back(events)
 
 
 def _deliverable(notifications, user, *, others=()):
@@ -356,7 +360,8 @@ def _deliverable(notifications, user, *, others=()):
     "Subscriptions"), so a level changed since doesn't hold the mail back. Item
     mails and digests both pass here, and the lantern (``lantern.wanted()``).
     Of the unread ones, those of completing and reopening which cancel out
-    aren't (``timeline.cancelled()``, decided 2026-11-21): the net change,
+    aren't (``timeline.cancelled()``, decided 2026-11-21), nor moves back
+    to where the to-do was (``_cancelled()``): the net change,
     if any, is the last one; ``others`` (``done_neighbours()``) are the
     neighbours to count with, outside ``notifications``. The same number of
     queries for any number of items."""

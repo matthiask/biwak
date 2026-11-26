@@ -2,7 +2,8 @@
 
 **Status:** built (2026-11-22); the daily digest's to-dos, "For you"
 and one line per item built 2026-11-23; the weekly to-dos built
-2026-11-23.
+2026-11-23; watching a list (new to-dos, moves between its groups)
+built 2026-11-26.
 
 `biwak/activity/` (`operations.record()`, `mentions.py`,
 `notify.py`, `mails.py`, `./manage.py send_mails`, the settings pages,
@@ -22,7 +23,9 @@ the time, in `data`) and respect visibility like their item
 and notifications. **Moving tells nobody** (decided 2026-11-22,
 `handover.md`): to-dos to another list or group, files into folders,
 anything into another project; the feed and the history say it
-(`notify.SILENT`).
+(`notify.SILENT`). **Except into another group of its list** (a
+board's column, decided 2026-11-26, `notify.column_move()`): "Watching
+a list" below.
 
 **Edits merge:** an `edited` event by the same person on the same item
 within 10 minutes of their last one updates that event's time instead of
@@ -166,8 +169,37 @@ project's** (confirmed 2026-11-21).
   (creating, commenting) subscribe them. New to-dos in a list they
   follow reach them only when they're mentioned or assigned.
 - **Everything:** a new message, doc or file they see tells and
-  subscribes them (`told_by_default()`); subscribed to a list, they hear
-  about every new to-do in it.
+  subscribes them (`told_by_default()`); subscribed to a list, they
+  watch it (below).
+
+### Watching a list
+
+Decided 2026-11-26 with the user, for using a board for Kanban:
+subscribed to a list with "everything" as their level for it
+(`notify.watchers()`), a person watches it:
+
+- **Every new to-do subscribes them** (`create_todo()`, automatic:
+  `explicit=False`), those who see it only; so they hear its comments,
+  completing and moves too. Not while importing (the importer brings the
+  source's subscriptions). Choosing "everything" for a list subscribes
+  to it (`set_level_override()`), one setting instead of two; choosing
+  another level unsubscribes nobody (notifications are additive), and
+  unsubscribing from the list ends the watching. The list's
+  "Notifications…" says so.
+- **Moving a to-do into another group of its list** (dragging between
+  the board's columns, "Move to…" within the list, the same
+  `move_todos()`) tells the to-do's subscribers and the list's watchers,
+  also about to-dos from before they watched it ("Ada moved it to
+  Review."). Moving within its group, into another list or another
+  project stays silent. Moves into any of the groups tell; watching
+  single groups was left for later (the user, 2026-11-26).
+- Moves merge like edits (`record()`); a person's moves back to where
+  the to-do was aren't mailed or shown in the lantern
+  (`timeline.moved_back()` in `mails._cancelled()`, like completing and
+  reopening).
+- The unsubscribe link of a new to-do's mail unsubscribes from the
+  to-do, since they're subscribed to it (`unsubscribe_url()`), like a
+  post in a followed folder; the list stays subscribed.
 
 **Why "only what concerns me" is the default** (decided 2026-11-22, it
 was "everything"): being told about a new post subscribes, so on
@@ -223,7 +255,8 @@ unseen, and counts again on coming back).
 (`transaction.on_commit`):
 
 1. Candidates: the item's subscribers; for `created` also its
-   container's; plus people newly mentioned or assigned by the event. A
+   container's, for a move into another group the list's watchers;
+   plus people newly mentioned or assigned by the event. A
    `shared` event has only the people it names.
 2. Without the actor, inactive people and people who can't see the item
    **now** (`visible_to()`; `who_can_see(item)` for everybody at once).

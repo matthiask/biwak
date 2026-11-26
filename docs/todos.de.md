@@ -38,7 +38,9 @@ auf der Seite des Projekts.
 - **Board:** „Board“ zeigt die Gruppen als Spalten, „Liste“ geht
   zurück, für diesen Besuch. Wie sich eine Liste öffnet, ist ihr
   „Anzeigen als“ unter „Bearbeiten“ (Liste oder Board). Ziehen zwischen
-  Spalten verschiebt das To-do in diese Gruppe. Haben die Spalten
+  Spalten verschiebt das To-do in diese Gruppe und benachrichtigt, wer
+  es abonniert hat oder die Liste beobachtet (siehe
+  [Benachrichtigungen](notifications.md)). Haben die Spalten
   keinen Platz, nimmt das Board die Breite des Fensters und scrollt
   seitwärts.
 - **Filter:** „Filter“ oben in der Liste (öffnet sich, wenn du darauf
@@ -117,7 +119,8 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   kommen mit, und das Projekt, das sie verlassen, zeigt eine Zeile in
   seiner Aktivität („hat 23 To-dos nach Pläne in Website verschoben“).
   Kund:innen verschieben innerhalb des Projekts und nur To-dos eines
-  Projekts. Verschieben benachrichtigt niemanden.
+  Projekts. Verschieben in eine andere Liste oder ein anderes Projekt
+  benachrichtigt niemanden.
 - **Fälligkeit…** gibt allen dieselbe Fälligkeit („Ein Datum setzen“;
   Startdaten bleiben, also kann sie nicht vor einem davon liegen),
   verschiebt ihre Daten um eine Anzahl Tage („Verschieben um“, Startdaten

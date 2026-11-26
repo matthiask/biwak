@@ -15,6 +15,7 @@ from biwak.activity.models import Action, Event, Notification, Subscription
 from biwak.activity.operations import subscribe
 from biwak.files import attachments
 from biwak.items import operations as ops
+from biwak.items.models import Item
 from biwak.outbox import sending as outbox
 from biwak.outbox.models import OutgoingMail
 from biwak.reactions.operations import add_reaction
@@ -366,23 +367,28 @@ class MailsTest(MailsBase):
         self.assertIn(f"The [plan]({url})", bob.body)
         self.assertIn(f'href="{url}"', bob.alternatives[0].content)
 
-    def test_moving_tells_nobody(self):
-        """Moving notifies nobody (decided 2026-11-22, specs/handover.md):
-        the feed and the history say it"""
+    def test_moving_tells_only_of_columns(self):
+        """Moving into another list notifies nobody (decided 2026-11-22,
+        specs/handover.md): the feed and the history say it; into another
+        group of its list it does (decided 2026-11-26)"""
         subscribe(self.cleo, self.todo)
         plans = ops.create_list(
             project=self.project, title="Plans", creator=self.ada, visible=True
         )
         group = ops.create_group(todolist=plans.todolist, title="Done")
         self.act(lambda: ops.move_todo(self.todo, todolist=plans, actor=self.ada))
+        self.assertFalse(Notification.objects.exists())
         self.act(
             lambda: ops.move_todo(
                 self.todo, todolist=plans, group=group, actor=self.ada
             )
         )
-        self.assertFalse(Notification.objects.exists())
         self.send(timezone.now() + dt.timedelta(minutes=11))
-        self.assertEqual(mail.outbox, [])
+        self.assertEqual(
+            sorted(m.to[0] for m in mail.outbox),
+            sorted([self.bob.email, self.cleo.email]),
+        )
+        self.assertIn("Ada Example moved it to Done.", mail.outbox[0].body)
 
     def test_describing_a_move(self):
         """Notifications of moves from before: clients don't learn where it
@@ -509,7 +515,9 @@ class MailsTest(MailsBase):
         self.assertNotContains(self.client.get(url), "Secret plan")
 
     def test_unsubscribe_link_of_new_items(self):
-        """Subscribed to the list: the link unsubscribes from the list"""
+        """Watching the list (subscribed on "everything"): subscribed to the
+        new to-do too, the link unsubscribes from the to-do, like from a
+        post in a folder one follows; the list stays"""
         subscribe(self.bob, self.shared)
         self.act(
             lambda: ops.create_todo(todolist=self.shared, title="New", creator=self.ada)
@@ -519,7 +527,9 @@ class MailsTest(MailsBase):
         self.assertIn("Ada Example added it.", message.body)
         url = message.extra_headers["List-Unsubscribe"].strip("<>")
         self.client.post(url.removeprefix("https://biwak.example.org"))
-        self.assertFalse(
+        new = Item.objects.get(title="New")
+        self.assertFalse(Subscription.objects.filter(user=self.bob, item=new).exists())
+        self.assertTrue(
             Subscription.objects.filter(user=self.bob, item=self.shared).exists()
         )
 

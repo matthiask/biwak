@@ -254,7 +254,9 @@ across projects, told once about dates, moving telling nobody.
 
 1. **Moving tells nobody**, within a project too (a single to-do's
    "Move to…" and dragging are the same code, `move_todos()`); the feed
-   and the history show it as before. One rule for every move
+   and the history show it as before. Except into another group of
+   the same list since 2026-11-26 (`notifications.md`, "Watching a
+   list"). One rule for every move
    (`Action.MOVED` in `notify.SILENT`): files moved into folders and
    items moved to other projects tell nobody either.
 2. **Told once:** the events of one action share a `batch`; one

@@ -30,8 +30,9 @@ project. Staff create lists with "New list" on the project's page.
   to..." in the to-do's "More" menu.
 - **Board:** "Board" shows the groups as columns, "List" goes back, for
   this visit. How a list opens is its "Shown as" in "Edit" (list or
-  board). Dragging between columns moves the to-do to that group. When
-  the columns don't fit, the board takes the window's width and scrolls
+  board). Dragging between columns moves the to-do to that group and
+  tells who is subscribed to it or watches the list (see
+  [Notifications](notifications.md)). When the columns don't fit, the board takes the window's width and scrolls
   sideways.
 - **Filters:** "Filters" in the list's header (it opens when you point
   at it) shows only the to-dos
@@ -97,7 +98,8 @@ somebody leaves and their to-dos go to someone else:
   unsubscribed); their comments and history come along, and the
   project they left shows one line in its activity ("moved 23 to-dos to
   Plans in Website"). Clients move within the project, and only to-dos
-  of one project. Moving tells nobody.
+  of one project. Moving to another list or project tells
+  nobody.
 - **Due date…** gives them all one due date ("Set a date"; start dates
   stay, so it can't be before one of them), moves their dates by a
   number of days ("Move by", start dates and "repeats until" too; to-dos

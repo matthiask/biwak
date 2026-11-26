@@ -55,7 +55,16 @@ still has everything). The activity feed always shows everything.
 
 A project can have its own level ("More", then "Notifications" on the
 project's page), and so can a list ("Notifications..." in its "More"
-menu): the closest one wins. Other items have no level: subscribe or
+menu): the closest one wins.
+
+**Watching a list:** choose "Everything" in a list's "Notifications..."
+and you're subscribed to the list and to every new to-do in it, so you
+hear about their comments and completion too, and you're told when a
+to-do moves to another group (a column of the board): a board works for
+Kanban. Moving a to-do into another group also tells everybody
+subscribed to it; moving it within its group, to another list or to
+another project tells nobody. Unsubscribing from the list stops the
+watching. Other items have no level: subscribe or
 unsubscribe. On a project's people page staff see who is notified "Only
 when tagged" and who about "Everything new", and change it right in
 the person's row (it's saved at once; if it can't be saved, it shakes

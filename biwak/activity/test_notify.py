@@ -362,6 +362,154 @@ class NotifyTest(TestCase):
         )
 
 
+class WatchingListsTest(TestCase):
+    """Subscribed to a list on "everything" (watching it): subscribed to
+    every new to-do in it, told when to-dos move between its groups (a
+    board for Kanban; decided 2026-11-26)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob", notification_level=NotificationLevel.CONCERNS_ME)
+        self.cleo = person("Cleo", client=True)
+        self.dan = person("Dan", notification_level=NotificationLevel.CONCERNS_ME)
+        self.project = project(members=[self.ada, self.bob, self.cleo, self.dan])
+        self.board = ops.create_list(
+            project=self.project, title="Board", creator=self.ada, visible=True
+        )
+        self.other = ops.create_list(
+            project=self.project, title="Other", creator=self.ada
+        )
+        self.doing = ops.create_group(todolist=self.board.todolist, title="Doing")
+        self.done = ops.create_group(todolist=self.board.todolist, title="Done")
+        self.todo = ops.create_todo(
+            todolist=self.board, title="Fix the login", creator=self.ada
+        )
+
+    def told(self, run):
+        before = set(Notification.objects.values_list("pk", flat=True))
+        with self.captureOnCommitCallbacks(execute=True):
+            run()
+        return {
+            n.user
+            for n in Notification.objects.exclude(pk__in=before).select_related("user")
+        }
+
+    def watch(self, user):
+        set_level_override(user, NotificationLevel.EVERYTHING, item=self.board)
+
+    def move(self, group, *, actor=None, index=None):
+        return lambda: ops.move_todo(
+            self.todo,
+            todolist=self.board,
+            group=group,
+            index=index,
+            actor=actor or self.ada,
+        )
+
+    def test_everything_for_a_list_subscribes_to_it(self):
+        self.watch(self.bob)
+        self.assertTrue(
+            Subscription.objects.filter(user=self.bob, item=self.board).exists()
+        )
+        # Back to "only what concerns me" doesn't unsubscribe (additive)
+        set_level_override(self.bob, NotificationLevel.CONCERNS_ME, item=self.board)
+        self.assertTrue(
+            Subscription.objects.filter(user=self.bob, item=self.board).exists()
+        )
+
+    def test_watchers_are_subscribed_to_new_to_dos(self):
+        self.watch(self.bob)
+        # Subscribed to the list on "only what concerns me": not watching
+        subscribe(self.dan, self.board)
+        with self.captureOnCommitCallbacks(execute=True):
+            new = ops.create_todo(todolist=self.board, title="New", creator=self.ada)
+        self.assertEqual(
+            set(Subscription.objects.filter(item=new).values_list("user", flat=True)),
+            {self.ada.pk, self.bob.pk},
+        )
+        # So they hear what happens on it later
+        self.assertEqual(
+            self.told(lambda: ops.add_comment(new, author=self.ada, content="Hi")),
+            {self.bob},
+        )
+        # Not if they unsubscribed from the list
+        unsubscribe(self.bob, self.board)
+        new = ops.create_todo(todolist=self.board, title="New", creator=self.ada)
+        self.assertFalse(Subscription.objects.filter(user=self.bob, item=new).exists())
+
+    def test_watchers_who_cant_see_the_to_do_arent_subscribed(self):
+        subscribe(self.cleo, self.other)
+        set_level_override(self.cleo, NotificationLevel.EVERYTHING, item=self.other)
+        new = ops.create_todo(todolist=self.other, title="Secret", creator=self.ada)
+        self.assertFalse(Subscription.objects.filter(user=self.cleo, item=new).exists())
+
+    def test_moving_between_groups_tells_subscribers_and_watchers(self):
+        subscribe(self.dan, self.todo)
+        # Watching the list, not subscribed to the to-do (older than that)
+        self.watch(self.bob)
+        # Cleo is on "everything" (test_utils)
+        subscribe(self.cleo, self.board)
+        self.assertFalse(
+            Subscription.objects.filter(user=self.bob, item=self.todo).exists()
+        )
+        self.assertEqual(
+            self.told(self.move(self.doing)), {self.bob, self.cleo, self.dan}
+        )
+        # Never the actor; Ada created it
+        self.assertEqual(
+            self.told(self.move(self.done, actor=self.bob)),
+            {self.ada, self.cleo, self.dan},
+        )
+        # Not a list subscriber on "only what concerns me"
+        set_level_override(self.cleo, NotificationLevel.CONCERNS_ME, item=self.board)
+        self.assertEqual(
+            self.told(self.move(None, actor=self.dan)), {self.ada, self.bob}
+        )
+
+    def test_reordering_within_a_group_tells_nobody(self):
+        subscribe(self.dan, self.todo)
+        self.watch(self.bob)
+        ops.create_todo(todolist=self.board, title="Second", creator=self.ada)
+        self.assertEqual(self.told(self.move(None, index=1)), set())
+
+    def test_moving_to_another_list_still_tells_nobody(self):
+        subscribe(self.dan, self.todo)
+        self.watch(self.bob)
+        set_level_override(self.dan, NotificationLevel.EVERYTHING, item=self.other)
+        told = self.told(
+            lambda: ops.move_todo(self.todo, todolist=self.other, actor=self.ada)
+        )
+        self.assertEqual(told, set())
+
+    def test_moving_back_is_not_mailed(self):
+        """Into "Doing" and back out: nothing to tell, whether the moves
+        merged into one event or not"""
+        subscribe(self.dan, self.todo)
+
+        def notifications():
+            return list(
+                Notification.objects.filter(user=self.dan).select_related("event__item")
+            )
+
+        for group in [self.doing, None]:
+            self.told(self.move(group))
+        self.assertEqual(len(notifications()), 1)
+        self.assertEqual(_deliverable(notifications(), self.dan), [])
+        # Separate events (more than 10 minutes apart, not merged)
+        Notification.objects.all().delete()
+        Event.objects.filter(action=Action.MOVED).delete()
+        for group in [self.doing, None]:
+            self.told(self.move(group))
+            Event.objects.filter(action=Action.MOVED).update(
+                created_at=timezone.now() - dt.timedelta(hours=1)
+            )
+        self.assertEqual(len(notifications()), 2)
+        self.assertEqual(_deliverable(notifications(), self.dan), [])
+        # Moved on: told
+        self.told(self.move(self.done))
+        self.assertEqual(len(_deliverable(notifications(), self.dan)), 1)
+
+
 class ToldByDefaultTest(TestCase):
     """Whom something new tells without the poster choosing (decided
     2026-11-21: additive): the container's subscribers and those on
