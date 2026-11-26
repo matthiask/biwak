@@ -25,8 +25,12 @@ report their socket.
 
 ## The banner and what changes
 
-A bar under the navigation in the warning tone, `role="status"`, pushing
-content down (`[data-connection]` in `base.html`):
+A box floating at the bottom of the window in the warning tone,
+`role="status"` (`[data-connection]` in `base.html`), at the top of
+the window while a selection bar takes the bottom (it has two rows on
+phones); the page never moves (decided
+2026-11-26 with the user: the bar under the navigation pushed the page
+down, twice with "Back online."):
 
 - in the live editor: "You're offline. What you type is kept and merged
   when you're back.";

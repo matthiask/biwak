@@ -2857,15 +2857,30 @@ body:has(.wb-modal[open]) {
   }
 }
 
-/* The connection banner under the navigation (frontend/connection.js): it
-   pushes the page down, without a state it takes no room */
+/* The connection banner (frontend/connection.js, specs/connection.md):
+   floating at the bottom, so the page never moves (decided 2026-11-26).
+   Without a state it's gone. */
 .wb-connection {
+  position: fixed;
+  z-index: 1040;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
   padding: 0.5rem 1rem;
-  margin: -1rem 0 1rem;
   text-align: center;
   color: var(--bs-warning-text-emphasis);
   background: var(--bs-warning-bg-subtle);
-  border-bottom: 1px solid var(--bs-warning-border-subtle);
+  border: 1px solid var(--bs-warning-border-subtle);
+  border-radius: var(--bs-border-radius);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+  translate: -50% 0;
+}
+
+/* The selection bar takes the bottom (two rows on phones): at the top then */
+body:has(.wb-selection-bar:not([hidden])) .wb-connection {
+  top: calc(0.5rem + env(safe-area-inset-top, 0px));
+  bottom: auto;
 }
 
 .wb-connection:not([data-connection-state]) {
@@ -2875,7 +2890,7 @@ body:has(.wb-modal[open]) {
 .wb-connection[data-connection-state="back"] {
   color: var(--bs-success-text-emphasis);
   background: var(--bs-success-bg-subtle);
-  border-bottom-color: var(--bs-success-border-subtle);
+  border-color: var(--bs-success-border-subtle);
 }
 
 /* The people picker (people-picker.js, specs/todos.md, "Assignees"): pills and a field
