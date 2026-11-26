@@ -151,6 +151,15 @@ durchgestrichen und die Zeile blendet aus; das letzte offene To-do einer
 Liste bekommt einen kleinen Funkenregen und „Alles erledigt.“ (nicht,
 wenn dein System reduzierte Bewegung eingestellt hat).
 
+Ein To-do, das nicht mehr erledigt wird, ist **hinfällig**: „Als
+hinfällig markieren“ in seinem Menü „Mehr“ (oder in der Befehlspalette)
+schliesst es ab, ohne dass es als erledigt zählt. Wer ein To-do
+erledigen kann, kann es auch als hinfällig markieren; „Wieder öffnen“
+macht es rückgängig. Es steht bei den erledigten, durchgestrichen und
+mit „Hinfällig“, und seine Seite sagt, wer es wann markiert hat. Ein
+wiederholtes To-do, das als hinfällig markiert wird, erzeugt kein
+nächstes: die Serie endet.
+
 Die Seite des To-dos zeigt seine Angaben (zugewiesen an, fällig am,
 beginnt am, Wiederholung, wann und von wem es erstellt wurde) und
 Notizen. Klicke darauf, auf den Titel oder auf „Bearbeiten“

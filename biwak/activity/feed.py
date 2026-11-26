@@ -408,7 +408,12 @@ def _together(older, newer):
 
 
 # Toggles and moves of an item a later one may cancel (``merge()``)
-NET_CHANGES = {Action.COMPLETED, Action.REOPENED, Action.MOVED}
+NET_CHANGES = {
+    Action.COMPLETED,
+    Action.MARKED_OBSOLETE,
+    Action.REOPENED,
+    Action.MOVED,
+}
 
 
 def _edge(events, size):

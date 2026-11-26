@@ -277,7 +277,8 @@ def todos(
     for todo in data:
         t.add_row(
             str(todo["id"]),
-            link(todo["title"], todo.get("url")),
+            link(todo["title"], todo.get("url"))
+            + (" (obsolete)" if todo.get("obsolete") else ""),
             f"{todo['project_name']} / {todo['list_title']}"
             if "project_name" in todo
             else (todo["group"] or {}).get("title", ""),
@@ -368,7 +369,13 @@ def show_reactions(reactions):
 
 def show_todo(data):
     marker = " [clients]" if data["visible_to_clients"] else ""
-    done = " (completed)" if data["completed_at"] else ""
+    done = (
+        " (obsolete)"
+        if data.get("obsolete")
+        else " (completed)"
+        if data["completed_at"]
+        else ""
+    )
     echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), done, marker)
     for label, value in [
         ("Group", (data["group"] or {}).get("title")),
@@ -673,6 +680,19 @@ def todo_done(todo_id, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Completed #{data['id']} {data['title']}.")
+    return None
+
+
+@todos.command("obsolete")
+@click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
+@json_option
+def todo_obsolete(todo_ids, as_json):
+    """Mark TODOs as obsolete: completed, but not done; reopen undoes it"""
+    done = [request("POST", f"todos/{todo_id}/obsolete/") for todo_id in todo_ids]
+    if as_json:
+        return echo_json(done)
+    for data in done:
+        click.echo(f"Marked #{data['id']} {data['title']} as obsolete.")
     return None
 
 

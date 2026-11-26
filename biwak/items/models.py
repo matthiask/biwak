@@ -317,6 +317,12 @@ class TodoList(Detail):
         verbose_name_plural = _("to-do lists")
 
 
+# To-dos untouched this many days are stale (specs/stale-todos.md, decided
+# 2026-11-26); a group may keep its to-dos for a year instead
+STALE_AFTER = 90
+STALE_AFTER_LONG = 365
+
+
 class Group(models.Model):
     """A heading within a list; not an item (specs/core.md). To-dos point at
     it and are ordered within it; ungrouped to-dos come first."""
@@ -337,6 +343,12 @@ class Group(models.Model):
         blank=True,
         choices=Color,
         help_text=_("Marks the group's card and heading."),
+    )
+    # Days without activity before its to-dos are stale and get marked
+    # obsolete after a warning: STALE_AFTER or, for a backlog,
+    # STALE_AFTER_LONG (specs/stale-todos.md)
+    stale_after = models.PositiveSmallIntegerField(
+        _("stale after days"), default=STALE_AFTER
     )
 
     class Meta:
@@ -401,6 +413,9 @@ class Todo(Checklist, Detail):
         related_name="+",
         verbose_name=_("completed by"),
     )
+    # Completed as obsolete, not done (specs/stale-todos.md): by hand, or
+    # by Biwak after a warning (``completed_by`` empty)
+    obsolete = models.BooleanField(_("obsolete"), default=False)
     assignees = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="Assignment",
@@ -433,6 +448,11 @@ class Todo(Checklist, Detail):
     @property
     def is_completed(self):
         return self.completed_at is not None
+
+    @property
+    def stale_after(self):
+        """The days without activity after which it's stale: its group's"""
+        return self.group.stale_after if self.group_id else STALE_AFTER
 
     @property
     def recurrence_description(self):

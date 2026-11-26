@@ -126,6 +126,13 @@ check pops, the title is struck through and the row fades away; the last
 open to-do of a list gets a small burst and "All done." (not with reduced
 motion set in your system).
 
+A to-do that won't be done any more is **obsolete**: "Mark as obsolete"
+in its "More" menu (or the command palette) completes it without it
+counting as done. Whoever can complete a to-do can mark it obsolete;
+"Reopen" undoes it. It shows among the completed ones, struck through
+with "Obsolete", and its page says who marked it and when. A repeating
+to-do marked obsolete creates no next one: the series ends.
+
 The to-do's page shows its facts (assigned to, due on, starts on, repeats,
 when and by whom it was created) and notes. Click them, the title or "Edit" (<kbd>e</kbd>) to change them in
 place; "Save" or "Cancel" goes back. To choose people, type in the

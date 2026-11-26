@@ -207,8 +207,11 @@ def describe(event, user):
 
 
 def _other(event, actor):
-    """``describe()`` of the rest: to-dos added from text
+    """``describe()`` of the rest: to-dos marked obsolete
+    (specs/stale-todos.md), to-dos added from text
     (specs/todos-from-text.md), else the action's name"""
+    if event.action == Action.MARKED_OBSOLETE:
+        return _("%(actor)s marked it as obsolete.") % {"actor": actor}
     if event.action == Action.ADDED_TODOS:
         count = event.data.get("todos", 0)
         return ngettext(
@@ -317,7 +320,7 @@ def _item(item, user):
     return context
 
 
-DONE = (Action.COMPLETED, Action.REOPENED)
+DONE = (Action.COMPLETED, Action.MARKED_OBSOLETE, Action.REOPENED)
 
 
 def done_neighbours(queryset, notifications):

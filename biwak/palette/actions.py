@@ -225,6 +225,15 @@ def on_item(request, item, context):
                 "Shift+x",
             )
         )
+        if not completed:
+            # Whoever completes it (specs/stale-todos.md)
+            actions.append(
+                post(
+                    _("Mark as obsolete"),
+                    reverse("todo_obsolete", args=[item.pk]),
+                    {"next": url},
+                )
+            )
     if item.kind == Kind.LIST:
         actions += _on_list(user, item, context, url)
     if item.kind == Kind.FOLDER and ops.can_change(user, item):

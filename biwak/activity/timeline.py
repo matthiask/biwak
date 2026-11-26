@@ -33,6 +33,7 @@ MERGE_WINDOW = dt.timedelta(minutes=10)
 # text (or replaced the file); the switch, which to-dos don't have
 ACTIONS = [
     Action.COMPLETED,
+    Action.MARKED_OBSOLETE,
     Action.REOPENED,
     Action.MOVED,
     Action.ASSIGNED,
@@ -92,6 +93,7 @@ def _due(value):
 # Pairs which undo each other: group -> value of each action
 TOGGLES = {
     Action.COMPLETED: ("done", True),
+    Action.MARKED_OBSOLETE: ("done", True),
     Action.REOPENED: ("done", False),
     Action.TRASHED: ("trash", True),
     Action.RESTORED: ("trash", False),
@@ -128,7 +130,7 @@ def cancelled(events, *, together=_always, others=()):
     ``events`` (a person's feed: the others' events) which still break
     runs up. For the feed, the lantern and the mails; the timeline's
     lines do the same through ``combine()``."""
-    done = {Action.COMPLETED, Action.REOPENED}
+    done = {Action.COMPLETED, Action.MARKED_OBSOLETE, Action.REOPENED}
     runs = {}  # item ID -> the runs of its completing and reopening
     for event, other in _in_order(events, others, done):
         item_runs = runs.setdefault(event.item_id, [])
@@ -149,7 +151,11 @@ def cancelled(events, *, together=_always, others=()):
     result = set()
     for item_runs in runs.values():
         for run in filter(None, item_runs):
-            if run[0].action != run[-1].action:
+            # Back where it started (completed or marked obsolete and
+            # reopened): nothing; else the last one
+            if (run[0].action == Action.REOPENED) != (
+                run[-1].action == Action.REOPENED
+            ):
                 result.update(e.pk for e in run)
             else:
                 result.update(e.pk for e in run[:-1])
@@ -318,6 +324,7 @@ def effects(event):
         group, value = TOGGLES[action]
         word = {
             Action.COMPLETED: _("completed %(it)s"),
+            Action.MARKED_OBSOLETE: _("marked %(it)s as obsolete"),
             Action.REOPENED: _("reopened %(it)s"),
             Action.TRASHED: _("trashed %(it)s"),
             Action.RESTORED: _("restored %(it)s"),
@@ -516,9 +523,16 @@ class Line:
         """The completing people react to (specs/reactions.md): the line's
         last ``completed`` event if the line says it completed the to-do;
         None when it doesn't (nothing completed, or reopened again)"""
-        if not any(e.key == "done" and e.value for e in combine(self.events)):
+        kept = combine(self.events)
+        if not any(e.key == "done" and e.value for e in kept):
             return None
-        return next(e for e in reversed(self.events) if e.action == Action.COMPLETED)
+        last = next(
+            e
+            for e in reversed(self.events)
+            if e.action in {Action.COMPLETED, Action.MARKED_OBSOLETE}
+        )
+        # Marked obsolete isn't getting it done: nothing to react to
+        return last if last.action == Action.COMPLETED else None
 
 
 def relevant(events, user, comments=()):

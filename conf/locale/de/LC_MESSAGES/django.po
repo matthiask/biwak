@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 21:18+0100\n"
+"POT-Creation-Date: 2026-11-26 21:24+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1178,9 +1178,14 @@ msgid "Due on"
 msgstr "Fällig am"
 
 #: biwak/activity/history.py biwak/items/by_due.py
-#: biwak/templates/items/todo.html
+#: biwak/templates/items/_completed_label.html
 msgid "Completed"
 msgstr "Erledigt"
+
+#: biwak/activity/history.py biwak/templates/items/_todo_title.html
+#: biwak/templates/items/todo.html
+msgid "Obsolete"
+msgstr "Hinfällig"
 
 #: biwak/activity/history.py
 msgid "Description"
@@ -1354,6 +1359,11 @@ msgstr "%(actor)s hat es erledigt."
 
 #: biwak/activity/mails.py
 #, python-format
+msgid "%(actor)s marked it as obsolete."
+msgstr "%(actor)s hat es als hinfällig markiert."
+
+#: biwak/activity/mails.py
+#, python-format
 msgid "%(actor)s reopened it."
 msgstr "%(actor)s hat es wieder geöffnet."
 
@@ -1488,6 +1498,11 @@ msgstr "bearbeitet"
 msgctxt "action"
 msgid "completed"
 msgstr "erledigt"
+
+#: biwak/activity/models.py
+msgctxt "action"
+msgid "marked obsolete"
+msgstr "als hinfällig markiert"
 
 #: biwak/activity/models.py
 msgctxt "action"
@@ -1823,6 +1838,11 @@ msgstr "hat %(it)s aus der Gruppe genommen"
 #, python-format
 msgid "completed %(it)s"
 msgstr "hat %(it)s erledigt"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "marked %(it)s as obsolete"
+msgstr "hat %(it)s als hinfällig markiert"
 
 #: biwak/activity/timeline.py
 #, python-format
@@ -3542,6 +3562,10 @@ msgid "Marks the group's card and heading."
 msgstr "Markiert die Karte und die Überschrift der Gruppe."
 
 #: biwak/items/models.py
+msgid "stale after days"
+msgstr "veraltet nach Tagen"
+
+#: biwak/items/models.py
 msgid "groups"
 msgstr "Gruppen"
 
@@ -3569,6 +3593,10 @@ msgstr "erledigt am"
 #: biwak/items/models.py
 msgid "completed by"
 msgstr "erledigt von"
+
+#: biwak/items/models.py
+msgid "obsolete"
+msgstr "hinfällig"
 
 #: biwak/items/models.py biwak/items/views.py
 #: biwak/templates/items/_add_todo.html
@@ -4620,6 +4648,10 @@ msgstr "Wieder öffnen"
 #: biwak/templates/items/todo.html
 msgid "Complete"
 msgstr "Erledigen"
+
+#: biwak/palette/actions.py biwak/templates/items/_more_entries.html
+msgid "Mark as obsolete"
+msgstr "Als hinfällig markieren"
 
 #: biwak/palette/actions.py biwak/templates/bookmarks/_links.html
 #: biwak/templates/checkins/question.html biwak/templates/files/doc.html
@@ -6339,6 +6371,11 @@ msgstr "hat %(subject)s erledigt"
 
 #: biwak/templates/activity/_event.html
 #, python-format
+msgid "marked %(subject)s as obsolete"
+msgstr "hat %(subject)s als hinfällig markiert"
+
+#: biwak/templates/activity/_event.html
+#, python-format
 msgid "reopened %(subject)s"
 msgstr "hat %(subject)s wieder geöffnet"
 
@@ -7363,6 +7400,23 @@ msgstr "%(done)s von %(total)s erledigt"
 msgid "Comments"
 msgstr "Kommentare"
 
+#: biwak/templates/items/_completed_label.html
+#, python-format
+msgid "Marked as obsolete by %(mark)s %(who)s %(when)s"
+msgstr "Als hinfällig markiert von %(mark)s %(who)s %(when)s"
+
+#: biwak/templates/items/_completed_label.html
+#, python-format
+msgid "Marked as obsolete after %(days)s day without activity"
+msgid_plural "Marked as obsolete after %(days)s days without activity"
+msgstr[0] "Als hinfällig markiert nach %(days)s Tag ohne Aktivität"
+msgstr[1] "Als hinfällig markiert nach %(days)s Tagen ohne Aktivität"
+
+#: biwak/templates/items/_completed_label.html
+#, python-format
+msgid "Completed by %(mark)s %(who)s"
+msgstr "Erledigt von %(mark)s %(who)s"
+
 #: biwak/templates/items/_due_row.html
 #, python-format
 msgid "completed %(when)s"
@@ -7474,11 +7528,6 @@ msgid "Reopen:"
 msgstr "Wieder öffnen:"
 
 #: biwak/templates/items/todo.html
-#, python-format
-msgid "Completed by %(mark)s %(who)s"
-msgstr "Erledigt von %(mark)s %(who)s"
-
-#: biwak/templates/items/todo.html
 msgid "Previous:"
 msgstr "Vorheriges:"
 
@@ -7556,6 +7605,10 @@ msgstr "Neuere"
 #: biwak/templates/items/todos_by_due.html
 msgid "Nothing to do."
 msgstr "Nichts zu tun."
+
+#: biwak/templates/mails/_item.html biwak/templates/mails/_item.txt
+msgid "Obsolete."
+msgstr "Hinfällig."
 
 #: biwak/templates/mails/_item.html biwak/templates/mails/_item.txt
 msgid "Completed."

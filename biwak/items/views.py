@@ -674,6 +674,15 @@ def todo_toggle(request, pk):
     return redirect(next_url(request) or item.parent)
 
 
+@require_POST
+def todo_obsolete(request, pk):
+    """Marks an open to-do as obsolete (specs/stale-todos.md): whoever may
+    complete it; no question, reopening undoes it"""
+    item = item_for(request, pk, Kind.TODO)
+    ops.mark_obsolete(item, actor=request.user)
+    return redirect(next_url(request) or item)
+
+
 class TodoDetailForm(TodoFieldsForm):
     field_order = ["title", "notes", "starts_on", "due_on", "assignees"]
 

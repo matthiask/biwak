@@ -312,6 +312,10 @@ class TodoOut(ItemOut):
     due_on: dt.date | None
     completed_at: dt.datetime | None
     completed_by: PersonOut | None
+    obsolete: bool = Field(
+        description="Completed as obsolete, not done (specs/stale-todos.md):"
+        " by hand, or by Biwak after a warning (completed_by null)"
+    )
     assignees: list[AssigneeOut]
     recurrence: str
     recurrence_description: str
@@ -347,6 +351,7 @@ def todo_out(item, user):
         "due_on": todo.due_on,
         "completed_at": todo.completed_at,
         "completed_by": person_out(todo.completed_by),
+        "obsolete": todo.obsolete,
         "assignees": _assignees_out(item, todo, user),
         "recurrence": todo.recurrence,
         "recurrence_description": todo.recurrence_description,
@@ -944,6 +949,15 @@ def todo_update(request, todo_id: int, data: TodoPatch):
 def todo_complete(request, todo_id: int):
     item = item_for(request, todo_id, Kind.TODO)
     ops.complete(item, actor=request.user)
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
+
+
+@router.post("todos/{todo_id}/obsolete/", response=TodoOut)
+def todo_obsolete(request, todo_id: int):
+    """Completes it as obsolete, not done (specs/stale-todos.md); reopening
+    undoes it. Already completed, nothing happens."""
+    item = item_for(request, todo_id, Kind.TODO)
+    ops.mark_obsolete(item, actor=request.user)
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 

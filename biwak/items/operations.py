@@ -957,6 +957,30 @@ def complete(item, *, actor):
     read_by_acting(actor, item)
 
 
+@transaction.atomic
+def mark_obsolete(item, *, actor):
+    """Completes the to-do as obsolete, not done (specs/stale-todos.md):
+    whoever may complete it; ``actor`` None is Biwak marking a stale one,
+    an internal event clients aren't told about. A recurring one's series
+    ends: no next one. Already completed, nothing happens."""
+    todo = Todo.objects.select_for_update().get(item=item)
+    if todo.is_completed:
+        return
+    todo.completed_at = timezone.now()
+    todo.completed_by = actor
+    todo.obsolete = True
+    todo.save(update_fields=["completed_at", "completed_by", "obsolete"])
+    record(
+        actor=actor,
+        action=Action.MARKED_OBSOLETE,
+        project=item.project,
+        item=item,
+        internal=actor is None,
+    )
+    if actor is not None:
+        read_by_acting(actor, item)
+
+
 def _create_next(item, todo, *, actor):
     """The next to-do of a recurring one: same list and group, at the end,
     same title, notes, assignees and subscribers, the rule moved over to
@@ -1040,7 +1064,8 @@ def reopen(item, *, actor):
     item.save(update_fields=["position"])
     todo.completed_at = None
     todo.completed_by = None
-    todo.save(update_fields=["completed_at", "completed_by"])
+    todo.obsolete = False
+    todo.save(update_fields=["completed_at", "completed_by", "obsolete"])
     record(actor=actor, action=Action.REOPENED, project=item.project, item=item)
     read_by_acting(actor, item)
 

@@ -9,4 +9,6 @@
       class="wb-lantern-unread"
       role="img"
       aria-label="{% translate 'Unread' %}"
-    ></span>{% endif %}{{ todo|item_title }}</a>
+    ></span>{% endif %}{{ todo|item_title }}</a>{% if todo.todo.obsolete %}
+  {# Completed as obsolete, not done (specs/stale-todos.md) #}
+  <span class="badge wb-tone-neutral">{% translate "Obsolete" %}</span>{% endif %}

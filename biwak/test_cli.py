@@ -19,7 +19,7 @@ from biwak.accounts.models import APIToken
 from biwak.activity.models import LevelOverride
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Comment, Item
+from biwak.items.models import Comment, Item, Todo
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
@@ -251,6 +251,20 @@ class CLICommandsTest(CLITest):
             "Order the tent",
             self.biwak("todos", "--list", self.list.pk, "--completed").output,
         )
+
+    def test_obsolete(self):
+        """Completed, but not done (specs/stale-todos.md)"""
+        first = ops.create_todo(todolist=self.list, title="Tent", creator=self.ada)
+        second = ops.create_todo(todolist=self.list, title="Stove", creator=self.ada)
+        output = self.biwak("todos", "obsolete", first.pk, second.pk).output
+        self.assertIn(f"Marked #{first.pk} Tent as obsolete.", output)
+        self.assertIn(f"Marked #{second.pk} Stove as obsolete.", output)
+        self.assertTrue(Todo.objects.get(item=first).obsolete)
+        output = self.biwak("todos", "--list", self.list.pk, "--completed").output
+        self.assertIn("Tent (obsolete)", output)
+        self.assertIn("(obsolete)", self.biwak("todos", "show", first.pk).output)
+        self.biwak("todos", "reopen", first.pk)
+        self.assertFalse(Todo.objects.get(item=first).obsolete)
 
     def test_a_list_by_assignee(self):
         """``--mine`` and ``--assignee`` with ``--list``, as the list's

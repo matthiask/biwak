@@ -60,6 +60,7 @@ def _fields(item):
             "starts_on": (gettext("Starts on"), DATE),
             "due_on": (gettext("Due on"), DATE),
             "completed_at": (gettext("Completed"), COMPLETED),
+            "obsolete": (gettext("Obsolete"), BOOL),
         },
         "items_todolist": {
             "description": (gettext("Description"), TEXT),

@@ -7,7 +7,8 @@
       {% if assignees %}{% translate "Assigned to" %}: {{ assignees }}{% endif %}
       {% if todo.due_on %}· {% translate "Due on" %}: {{ todo.due_on|dateformat:"DATE_FORMAT" }}{% endif %}
       {% if todo.starts_on %}· {% translate "Starts on" %}: {{ todo.starts_on|dateformat:"DATE_FORMAT" }}{% endif %}
-      {% if todo.completed_at %}· {% translate "Completed." %}{% endif %}
+      {% if todo.obsolete %}· {% translate "Obsolete." %}{% elif todo.completed_at %}·
+        {% translate "Completed." %}{% endif %}
     </p>
   {% endif %}
   {% if text %}<div>{{ text|mail_markdown:item_obj }}</div>{% endif %}

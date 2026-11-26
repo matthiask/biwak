@@ -23,6 +23,8 @@ class Action(models.TextChoices):
     CREATED = "created", pgettext_lazy("action", "created")
     EDITED = "edited", pgettext_lazy("action", "edited")
     COMPLETED = "completed", pgettext_lazy("action", "completed")
+    # Completed as obsolete, not done (specs/stale-todos.md)
+    MARKED_OBSOLETE = "marked_obsolete", pgettext_lazy("action", "marked obsolete")
     REOPENED = "reopened", pgettext_lazy("action", "reopened")
     ASSIGNED = "assigned", pgettext_lazy("action", "assigned")
     UNASSIGNED = "unassigned", pgettext_lazy("action", "unassigned")
