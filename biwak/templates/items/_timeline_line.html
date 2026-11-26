@@ -3,6 +3,8 @@
   <span class="wb-timeline-icon">
     {% with kind=line.kind %}
       {% if kind == "completed" %}{% icon "check-circle" %}
+      {% elif kind == "marked_obsolete" %}{% icon "slash-circle" %}
+      {% elif kind == "kept" %}{% icon "clock-history" %}
       {% elif kind == "reopened" or kind == "restored" %}{% icon "arrow-counterclockwise" %}
       {% elif kind == "moved" %}{% icon "arrow-right" %}
       {% elif kind == "assigned" %}{% icon "person-plus" %}

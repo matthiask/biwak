@@ -188,6 +188,23 @@ than a "👍" for the to-do. Only the person who completed it is told
 ("Reactions to you completing it"). If the to-do is reopened later, the
 reactions stay on that line.
 
+## Old to-dos
+
+To-dos nobody touches don't stay forever. An open to-do is **stale**
+when nothing happened on it for 90 days: no change, no comment, no
+assigning, no move (reactions don't count). An overdue to-do counts from
+its due date, one starting later isn't stale before its start.
+
+The staff following a stale to-do get a mail ("12 to-dos will be marked
+as obsolete"), at most one a day; clients don't. Two weeks later it's
+marked obsolete by Biwak, unless somebody kept it: "Keep open" in the
+mail or in the banner on the to-do's page, or any comment or change.
+Who follows it hears about it being marked; "Reopen" brings it back.
+
+A group can keep its to-dos for a year instead, for a backlog or a list
+of ideas: "Keep untouched to-dos for a year" in the group's form (staff
+only).
+
 ## Repeating
 
 Choose how often it repeats: daily, weekly, monthly or yearly, with an

@@ -147,6 +147,11 @@ Projekt („Ada hat es geändert. 3 Kommentare von Ada und Bob.“), mit
 einem Link zum Eintrag. Ohne
 Benachrichtigungen gibt es keine Zusammenfassung.
 
+**Alte To-dos:** das Team bekommt eine Mail über die To-dos, denen es
+folgt und die in zwei Wochen als hinfällig markiert werden, was auch
+immer du oben gewählt hast, ausser „Keine Mails“, nicht während du
+abwesend bist; siehe [To-dos](todos.de.md).
+
 ## Push-Benachrichtigungen
 
 Biwak kann dich auf deinem Telefon oder Computer benachrichtigen, auch

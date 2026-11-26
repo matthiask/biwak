@@ -403,6 +403,9 @@ A Monday mail of one's open to-dos (decided 2026-11-23) was removed
 2026-11-26: it repeated the to-dos page. Old to-dos are marked obsolete
 after a warning instead (`stale-todos.md`).
 
+Events may have no actor: Biwak itself (marking stale to-dos obsolete);
+everything reading events says "Biwak" (`stale-todos.md`).
+
 ## API and CLI
 
 `GET/PUT /api/v1/me/notifications/` (level, delivery; `weekly_todos`

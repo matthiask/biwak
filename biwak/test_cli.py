@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
+from django.utils import timezone
 from rich.color import ColorSystem
 
 from biwak import api_conventions, cli_version
@@ -265,6 +266,11 @@ class CLICommandsTest(CLITest):
         self.assertIn("(obsolete)", self.biwak("todos", "show", first.pk).output)
         self.biwak("todos", "reopen", first.pk)
         self.assertFalse(Todo.objects.get(item=first).obsolete)
+        # Keeping a warned one open (specs/stale-todos.md)
+        Todo.objects.filter(item=first).update(stale_warned_at=timezone.now())
+        output = self.biwak("todos", "keep", first.pk).output
+        self.assertIn(f"Kept #{first.pk} Tent open.", output)
+        self.assertIsNone(Todo.objects.get(item=first).stale_warned_at)
 
     def test_a_list_by_assignee(self):
         """``--mine`` and ``--assignee`` with ``--list``, as the list's

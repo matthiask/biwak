@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 21:28+0100\n"
+"POT-Creation-Date: 2026-11-26 21:36+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -596,8 +596,8 @@ msgid "mark"
 msgstr "Zeichnung"
 
 #: biwak/accounts/models.py biwak/activity/models.py biwak/bookmarks/models.py
-#: biwak/checkins/models.py biwak/inbound/models.py biwak/projects/models.py
-#: biwak/reactions/models.py
+#: biwak/checkins/models.py biwak/inbound/models.py biwak/items/models.py
+#: biwak/projects/models.py biwak/reactions/models.py
 msgid "person"
 msgstr "Person"
 
@@ -1424,6 +1424,11 @@ msgstr "%(actor)s hat es als hinfällig markiert."
 
 #: biwak/activity/mails.py
 #, python-format
+msgid "%(actor)s kept it open."
+msgstr "%(actor)s hat es offen gelassen."
+
+#: biwak/activity/mails.py
+#, python-format
 msgid "%(actor)s added %(count)d to-do."
 msgid_plural "%(actor)s added %(count)d to-dos."
 msgstr[0] "%(actor)s hat %(count)d To-do hinzugefügt."
@@ -1503,6 +1508,11 @@ msgstr "erledigt"
 msgctxt "action"
 msgid "marked obsolete"
 msgstr "als hinfällig markiert"
+
+#: biwak/activity/models.py
+msgctxt "action"
+msgid "kept open"
+msgstr "offen gelassen"
 
 #: biwak/activity/models.py
 msgctxt "action"
@@ -1687,7 +1697,7 @@ msgstr "abweichende Benachrichtigungsstufe"
 msgid "notification level overrides"
 msgstr "abweichende Benachrichtigungsstufen"
 
-#: biwak/activity/models.py biwak/outbox/models.py
+#: biwak/activity/models.py biwak/items/models.py biwak/outbox/models.py
 msgid "sent at"
 msgstr "gesendet am"
 
@@ -1858,6 +1868,11 @@ msgstr "hat %(it)s in den Papierkorb gelegt"
 #, python-format
 msgid "restored %(it)s"
 msgstr "hat %(it)s wiederhergestellt"
+
+#: biwak/activity/timeline.py
+#, python-format
+msgid "kept %(it)s open"
+msgstr "hat %(it)s offen gelassen"
 
 #: biwak/activity/timeline.py
 msgid "someone"
@@ -3607,6 +3622,10 @@ msgstr "erledigt von"
 msgid "obsolete"
 msgstr "hinfällig"
 
+#: biwak/items/models.py
+msgid "stale warning at"
+msgstr "gewarnt am"
+
 #: biwak/items/models.py biwak/items/views.py
 #: biwak/templates/items/_add_todo.html
 msgid "assignees"
@@ -3631,6 +3650,14 @@ msgstr "vorheriges"
 #: biwak/items/models.py
 msgid "to-dos"
 msgstr "To-dos"
+
+#: biwak/items/models.py
+msgid "stale warning"
+msgstr "Warnung vor dem Veralten"
+
+#: biwak/items/models.py
+msgid "stale warnings"
+msgstr "Warnungen vor dem Veralten"
 
 #: biwak/items/models.py
 msgid "emoji"
@@ -3755,6 +3782,40 @@ msgstr "In ein archiviertes Projekt und aus einem heraus wird nichts verschoben.
 #: biwak/items/operations.py
 msgid "Nothing moves into or out of a template."
 msgstr "In eine Vorlage und aus einer heraus wird nichts verschoben."
+
+#: biwak/items/stale.py
+#, python-format
+msgid "It was due on %(day)s."
+msgstr "Es war am %(day)s fällig."
+
+#: biwak/items/stale.py
+#, python-format
+msgid "Nothing happened since %(day)s."
+msgstr "Seit dem %(day)s ist nichts passiert."
+
+#: biwak/items/stale.py
+#, python-format
+msgid "Due %(day)s"
+msgstr "Fällig am %(day)s"
+
+#: biwak/items/stale.py
+#, python-format
+msgid "Nothing since %(day)s"
+msgstr "Nichts seit dem %(day)s"
+
+#: biwak/items/stale.py
+#, python-format
+msgid "%(count)d to-do will be marked as obsolete on %(day)s"
+msgid_plural "%(count)d to-dos will be marked as obsolete on %(day)s"
+msgstr[0] "%(count)d To-do wird am %(day)s als hinfällig markiert"
+msgstr[1] "%(count)d To-dos werden am %(day)s als hinfällig markiert"
+
+#: biwak/items/stale.py
+#, python-format
+msgid "[Biwak] %(count)d to-do will be marked as obsolete"
+msgid_plural "[Biwak] %(count)d to-dos will be marked as obsolete"
+msgstr[0] "[Biwak] %(count)d To-do wird als hinfällig markiert"
+msgstr[1] "[Biwak] %(count)d To-dos werden als hinfällig markiert"
 
 #: biwak/items/views.py biwak/templates/forms/rule_widget.html
 msgid "Repeat"
@@ -4487,6 +4548,10 @@ msgid "digest"
 msgstr "Zusammenfassung"
 
 #: biwak/outbox/models.py
+msgid "stale to-dos"
+msgstr "veraltete To-dos"
+
+#: biwak/outbox/models.py
 msgid "check-in"
 msgstr "Check-in"
 
@@ -4665,6 +4730,12 @@ msgstr "Wieder öffnen"
 #: biwak/templates/items/todo.html
 msgid "Complete"
 msgstr "Erledigen"
+
+#: biwak/palette/actions.py biwak/templates/items/keep.html
+#: biwak/templates/items/todo.html biwak/templates/mails/stale.html
+#: biwak/templates/mails/stale.txt
+msgid "Keep open"
+msgstr "Offen lassen"
 
 #: biwak/palette/actions.py biwak/templates/items/_more_entries.html
 msgid "Mark as obsolete"
@@ -6393,6 +6464,11 @@ msgstr "hat %(subject)s als hinfällig markiert"
 
 #: biwak/templates/activity/_event.html
 #, python-format
+msgid "kept %(subject)s open"
+msgstr "hat %(subject)s offen gelassen"
+
+#: biwak/templates/activity/_event.html
+#, python-format
 msgid "reopened %(subject)s"
 msgstr "hat %(subject)s wieder geöffnet"
 
@@ -6686,7 +6762,7 @@ msgstr "Dir zugewiesen"
 msgid "You're assigned to this to-do, so you hear about it. Unassign yourself to stop getting mails about it."
 msgstr "Dieses To-do ist dir zugewiesen, deshalb wirst du benachrichtigt. Entferne dich als zugewiesene Person, um keine Mails mehr dazu zu erhalten."
 
-#: biwak/templates/activity/unsubscribe.html
+#: biwak/templates/activity/unsubscribe.html biwak/templates/items/keep.html
 msgid "Open the to-do"
 msgstr "To-do öffnen"
 
@@ -6863,7 +6939,8 @@ msgstr "Nicht mehr abonnieren"
 #: biwak/templates/checkins/mails/summary.txt biwak/templates/mails/batch.html
 #: biwak/templates/mails/batch.txt biwak/templates/mails/digest.html
 #: biwak/templates/mails/digest.txt biwak/templates/mails/notification.html
-#: biwak/templates/mails/notification.txt
+#: biwak/templates/mails/notification.txt biwak/templates/mails/stale.html
+#: biwak/templates/mails/stale.txt
 msgid "Your notification settings"
 msgstr "Deine Benachrichtigungseinstellungen"
 
@@ -7540,9 +7617,41 @@ msgstr "Notizen hinzufügen…"
 msgid "Preview"
 msgstr "Vorschau"
 
+#: biwak/templates/items/keep.html
+msgid "Already completed"
+msgstr "Schon abgeschlossen"
+
+#: biwak/templates/items/keep.html
+#, python-format
+msgid "“%(title)s” is completed already. Reopen it on its page if it's still needed."
+msgstr "„%(title)s“ ist schon abgeschlossen. Öffne es auf seiner Seite wieder, wenn es noch gebraucht wird."
+
+#: biwak/templates/items/keep.html
+msgid "Kept open"
+msgstr "Offen gelassen"
+
+#: biwak/templates/items/keep.html
+#, python-format
+msgid "“%(title)s” stays open."
+msgstr "„%(title)s“ bleibt offen."
+
+#: biwak/templates/items/keep.html
+msgid "Keep open?"
+msgstr "Offen lassen?"
+
+#: biwak/templates/items/keep.html
+#, python-format
+msgid "Keep “%(title)s” open instead of marking it as obsolete?"
+msgstr "„%(title)s“ offen lassen, statt es als hinfällig zu markieren?"
+
 #: biwak/templates/items/todo.html
 msgid "Reopen:"
 msgstr "Wieder öffnen:"
+
+#: biwak/templates/items/todo.html
+#, python-format
+msgid "It will be marked as obsolete on %(day)s."
+msgstr "Es wird am %(day)s als hinfällig markiert."
 
 #: biwak/templates/items/todo.html
 msgid "Previous:"
@@ -7648,6 +7757,10 @@ msgstr "Für dich"
 #: biwak/templates/mails/notification.txt
 msgid "Reply to this mail to comment."
 msgstr "Antworte auf diese Mail, um zu kommentieren."
+
+#: biwak/templates/mails/stale.html biwak/templates/mails/stale.txt
+msgid "Comment on one or change it to keep it too."
+msgstr "Kommentiere eines oder ändere es, um es ebenfalls offen zu lassen."
 
 #: biwak/templates/mfa/authenticate.html
 msgid "Code from your authenticator app"
@@ -8456,12 +8569,6 @@ msgstr "Farbe: %(color)s"
 #~ msgstr[1] "Und %(count)d To-dos ohne Datum"
 
 #, python-format
-#~ msgid "%(count)d to-do without a date"
-#~ msgid_plural "%(count)d to-dos without a date"
-#~ msgstr[0] "%(count)d To-do ohne Datum"
-#~ msgstr[1] "%(count)d To-dos ohne Datum"
-
-#, python-format
 #~ msgid "Your open to-dos, week of %(day)s"
 #~ msgstr "Deine offenen To-dos, Woche vom %(day)s"
 
@@ -8494,10 +8601,6 @@ msgstr "Farbe: %(color)s"
 
 #~ msgid "Include templates"
 #~ msgstr "Mit Vorlagen"
-
-#, python-format
-#~ msgid "Since %(date)s"
-#~ msgstr "Seit %(date)s"
 
 #, python-format
 #~ msgid "completed %(day)s"

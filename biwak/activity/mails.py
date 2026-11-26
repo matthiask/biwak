@@ -28,6 +28,7 @@ from biwak.activity.operations import is_subscribed
 from biwak.api_conventions import absolute
 from biwak.files.models import REFERENCE, Attachment
 from biwak.inbound.tokens import reply_to
+from biwak.items import stale
 from biwak.items.models import Comment, Item, Kind
 from biwak.outbox import sending as outbox
 from biwak.outbox.models import Kind as MailKind
@@ -212,6 +213,8 @@ def _other(event, actor):
     (specs/todos-from-text.md), else the action's name"""
     if event.action == Action.MARKED_OBSOLETE:
         return _("%(actor)s marked it as obsolete.") % {"actor": actor}
+    if event.action == Action.KEPT:
+        return _("%(actor)s kept it open.") % {"actor": actor}
     if event.action == Action.ADDED_TODOS:
         count = event.data.get("todos", 0)
         return ngettext(
@@ -829,4 +832,7 @@ def send_mails(*, now=None):
             ),
             MailKind.DIGEST,
         )
+    # Stale to-dos about to be marked obsolete (specs/stale-todos.md),
+    # whatever the delivery except none
+    count += stale.send_warnings(now)
     return count

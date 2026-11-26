@@ -227,6 +227,25 @@ es erledigt hat, wird benachrichtigt („Reaktionen darauf, dass du es
 erledigt hast“). Wird das To-do später wieder geöffnet, bleiben die
 Reaktionen auf dieser Zeile.
 
+## Alte To-dos
+
+To-dos, die niemand anrührt, bleiben nicht für immer. Ein offenes To-do
+ist **veraltet**, wenn 90 Tage lang nichts damit passiert ist: keine
+Änderung, kein Kommentar, kein Zuweisen, kein Verschieben (Reaktionen
+zählen nicht). Ein überfälliges To-do zählt ab seinem Fälligkeitsdatum,
+eines, das später beginnt, ist vor seinem Beginn nicht veraltet.
+
+Das Team, das einem veralteten To-do folgt, bekommt eine Mail („12 To-dos
+werden als hinfällig markiert“), höchstens eine pro Tag; Kund:innen
+nicht. Zwei Wochen später markiert Biwak es als hinfällig, ausser jemand
+hat es offen gelassen: „Offen lassen“ in der Mail oder im Hinweis auf
+der Seite des To-dos, oder irgendein Kommentar oder eine Änderung. Wer
+ihm folgt, hört davon; „Wieder öffnen“ holt es zurück.
+
+Eine Gruppe kann ihre To-dos stattdessen ein Jahr behalten, für einen
+Backlog oder eine Liste von Ideen: „Unberührte To-dos ein Jahr behalten“
+im Formular der Gruppe (nur das Team).
+
 ## Wiederholen
 
 Wähle, wie oft es sich wiederholt: täglich, wöchentlich, monatlich oder

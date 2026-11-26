@@ -718,6 +718,20 @@ def todo_obsolete(todo_ids, as_json):
     return None
 
 
+@todos.command("keep")
+@click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
+@json_option
+def todo_keep(todo_ids, as_json):
+    """Keep TODOs open: a stale to-do isn't marked obsolete (any activity
+    does the same)"""
+    kept = [request("POST", f"todos/{todo_id}/keep/") for todo_id in todo_ids]
+    if as_json:
+        return echo_json(kept)
+    for data in kept:
+        click.echo(f"Kept #{data['id']} {data['title']} open.")
+    return None
+
+
 @todos.command("reopen")
 @click.argument("todo_id", metavar="TODO", type=int)
 @json_option

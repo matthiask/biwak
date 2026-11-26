@@ -23,6 +23,8 @@
   {% blocktranslate %}completed {{ subject }}{% endblocktranslate %}
 {% elif event.action == "marked_obsolete" %}
   {% blocktranslate %}marked {{ subject }} as obsolete{% endblocktranslate %}
+{% elif event.action == "kept" %}
+  {% blocktranslate %}kept {{ subject }} open{% endblocktranslate %}
 {% elif event.action == "reopened" %}
   {% blocktranslate %}reopened {{ subject }}{% endblocktranslate %}
 {% elif event.action == "assigned" %}

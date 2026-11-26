@@ -59,7 +59,7 @@ confirm: `decisions-to-confirm.md`.
 | `web-push.md` | built | push notifications on phones and desktops: mentions and assignments |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
 | `agent-skills.md` | built (0.63.0) | Claude Code skills in the CLI: triage, a mail into a to-do or message, weekly summary, handover |
-| `stale-todos.md` | open | to-dos marked obsolete, by hand or after 90 days untouched with a warning to staff; the weekly to-dos removed |
+| `stale-todos.md` | built | to-dos marked obsolete, by hand or after 90 days untouched with a warning to staff; the weekly to-dos removed |
 
 ## Writing a spec for a new part
 

@@ -126,6 +126,10 @@ Then what happened: what mentions you or assigns you a to-do first,
 changed it. 3 comments by Ada and Bob."), linked to the item. Without
 notifications there's no digest.
 
+**Old to-dos:** staff get a mail about the to-dos they follow which will
+be marked as obsolete in two weeks, whatever you chose above except "No
+mails", not while you're away; see [To-dos](todos.md).
+
 ## Push notifications
 
 Biwak can notify you on your phone or computer while it isn't open, when

@@ -37,7 +37,7 @@ from biwak.api_conventions import (
     paginated,
     person_out,
 )
-from biwak.items import due, operations as ops
+from biwak.items import due, operations as ops, stale
 from biwak.items.filters import NO_GROUP, in_group
 from biwak.items.models import (
     STALE_AFTER,
@@ -345,6 +345,11 @@ class TodoOut(ItemOut):
     due_on: dt.date | None
     completed_at: dt.datetime | None
     completed_by: PersonOut | None
+    stale_warned_at: dt.datetime | None = Field(
+        None,
+        description="Warned it'll be marked obsolete 14 days later unless"
+        " something happens or it's kept (POST keep/, specs/stale-todos.md)",
+    )
     obsolete: bool = Field(
         description="Completed as obsolete, not done (specs/stale-todos.md):"
         " by hand, or by Biwak after a warning (completed_by null)"
@@ -385,6 +390,7 @@ def todo_out(item, user):
         "completed_at": todo.completed_at,
         "completed_by": person_out(todo.completed_by),
         "obsolete": todo.obsolete,
+        "stale_warned_at": todo.stale_warned_at,
         "assignees": _assignees_out(item, todo, user),
         "recurrence": todo.recurrence,
         "recurrence_description": todo.recurrence_description,
@@ -991,6 +997,15 @@ def todo_obsolete(request, todo_id: int):
     undoes it. Already completed, nothing happens."""
     item = item_for(request, todo_id, Kind.TODO)
     ops.mark_obsolete(item, actor=request.user)
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
+
+
+@router.post("todos/{todo_id}/keep/", response=TodoOut)
+def todo_keep(request, todo_id: int):
+    """ "Keep open": starts the clock of a stale to-do again and ends its
+    warning (specs/stale-todos.md); an internal event telling nobody"""
+    item = item_for(request, todo_id, Kind.TODO)
+    stale.keep(item, actor=request.user)
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 

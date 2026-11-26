@@ -416,6 +416,11 @@ class Todo(Checklist, Detail):
     # Completed as obsolete, not done (specs/stale-todos.md): by hand, or
     # by Biwak after a warning (``completed_by`` empty)
     obsolete = models.BooleanField(_("obsolete"), default=False)
+    # Warned it'll be marked obsolete (specs/stale-todos.md); activity
+    # after it clears it
+    stale_warned_at = models.DateTimeField(
+        _("stale warning at"), null=True, blank=True, editable=False
+    )
     assignees = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="Assignment",
@@ -457,6 +462,42 @@ class Todo(Checklist, Detail):
     @property
     def recurrence_description(self):
         return schedules.describe(self.recurrence)
+
+
+class StaleWarning(models.Model):
+    """A person to warn that a to-do will be marked obsolete
+    (specs/stale-todos.md): written by the daily run, mailed by
+    ``send_mails`` (one mail per person and day), or dropped"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("person"),
+    )
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("to-do"),
+    )
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+    # Mailed, or dropped (no mails, away, kept meanwhile)
+    sent_at = models.DateTimeField(_("sent at"), null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["user"],
+                condition=models.Q(sent_at__isnull=True),
+                name="unsent_stale_warnings",
+            )
+        ]
+        verbose_name = _("stale warning")
+        verbose_name_plural = _("stale warnings")
+
+    def __str__(self):
+        return f"{self.user}: {self.item}"
 
 
 class MessageCategory(models.Model):

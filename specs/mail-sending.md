@@ -47,7 +47,8 @@ coming in are `notifications.md`.
   attempts and delivery state stay. Mails given up keep their content.
   `fairy_tasks` deletes rows 90 days after they were queued (decided
   2026-11-24, 30 before; like incoming mails, `specs/auditing.md`).
-- **Kinds** (Resend's tag `kind`): `notification`, `digest`, `checkin`,
+- **Kinds** (Resend's tag `kind`): `notification`, `digest`, `stale` (stale to-dos,
+  `stale-todos.md`), `checkin`,
   `login-code`, `invitation`, `reply-refused`, `account`, and `admin`
   for `mail_admins`.
 - **From:** `DEFAULT_FROM_EMAIL`, with the acting person's name where

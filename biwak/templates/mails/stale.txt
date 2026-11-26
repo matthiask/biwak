@@ -1,0 +1,13 @@
+{% load i18n %}{% autoescape off %}# {{ heading }}
+
+{% for section in sections %}## {{ section.project }} / {{ section.list }}
+{% for todo in section.todos %}
+- {{ todo.title }} ({{ todo.reason }})
+  {{ todo.url }}
+  {% translate "Keep open" %}: {{ todo.keep_url }}
+{% endfor %}
+{% endfor %}{% translate "Comment on one or change it to keep it too." %}
+
+--
+{% translate "Your notification settings" %}: {{ settings_url }}
+{% endautoescape %}

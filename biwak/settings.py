@@ -323,6 +323,10 @@ WEBPUSH_SUBJECT = env(
     "WEBPUSH_SUBJECT", default=f"mailto:{parseaddr(DEFAULT_FROM_EMAIL)[1]}"
 )
 
+# Stale to-dos warned, then marked obsolete by fairy_tasks
+# (specs/stale-todos.md); off until `./manage.py stale_todos` looked right
+STALE_TODOS = env("STALE_TODOS", default=False)
+
 # Sending (specs/mail-sending.md): the app's mails go through the outbox
 # (biwak.outbox), which sends them with the default mailer; mail_admins
 # uses it directly. ``EMAIL_URL=resend:`` sends through Resend's API with

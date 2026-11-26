@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Keep open" %} – Biwak{% endblock %}
+
+{% block content %}
+  {% comment %}"Keep open" from the stale to-dos' mail (specs/stale-todos.md): a GET asks, a POST keeps it.{% endcomment %}
+  <div class="card">
+    <div class="card-body">
+      {% if completed %}
+        <h1 class="h4">{% translate "Already completed" %}</h1>
+        <p>
+          {% blocktranslate %}“{{ title }}” is completed already. Reopen it on its page if it's still needed.{% endblocktranslate %}
+        </p>
+      {% elif done %}
+        <h1 class="h4">{% translate "Kept open" %}</h1>
+        <p>{% blocktranslate %}“{{ title }}” stays open.{% endblocktranslate %}</p>
+      {% else %}
+        <h1 class="h4">{% translate "Keep open?" %}</h1>
+        <p>{% blocktranslate %}Keep “{{ title }}” open instead of marking it as obsolete?{% endblocktranslate %}</p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">{% translate "Keep open" %}</button>
+        </form>
+      {% endif %}
+      <p class="mt-3 mb-0"><a href="{{ item.get_absolute_url }}">{% translate "Open the to-do" %}</a></p>
+    </div>
+  </div>
+{% endblock content %}

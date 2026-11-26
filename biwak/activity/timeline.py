@@ -34,6 +34,7 @@ MERGE_WINDOW = dt.timedelta(minutes=10)
 ACTIONS = [
     Action.COMPLETED,
     Action.MARKED_OBSOLETE,
+    Action.KEPT,
     Action.REOPENED,
     Action.MOVED,
     Action.ASSIGNED,
@@ -331,6 +332,15 @@ def effects(event):
         }[action]
         return [Effect(str(action), group, value, lambda it: word % {"it": it})]
     match action:
+        case Action.KEPT:
+            return [
+                Effect(
+                    "kept",
+                    "kept",
+                    value=True,
+                    make=lambda it: _("kept %(it)s open") % {"it": it},
+                )
+            ]
         case Action.MOVED:
             return _moved(event)
         case Action.ASSIGNED | Action.UNASSIGNED:

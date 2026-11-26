@@ -20,6 +20,8 @@ PUBLIC = {
     # The secret in the URL is the key
     "calendar/<str:token>.ics",
     "unsubscribe/<str:token>/",
+    # "Keep open" from the stale to-dos' mail (specs/stale-todos.md)
+    "keep/<str:token>/",
     # Public links (specs/public-links.md)
     "p/<str:token>/",
     "p/<str:token>/download/",

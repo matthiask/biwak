@@ -15,7 +15,8 @@
         title="{% translate 'Click to edit' %}"
       {% endif %}
     >
-      {% if todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
+      {% if todo.obsolete %}<span class="text-body-secondary">{% icon "slash-circle" %}</span>
+      {% elif todo.is_completed %}<span class="text-body-secondary">{% icon "check-circle" %}</span>{% endif %}
       <span
         class="wb-todo-title{% if todo.obsolete %} text-decoration-line-through text-body-secondary{% endif %}"
         data-celebrate-title
@@ -66,6 +67,17 @@
     </div>
   </div>
   {% include "items/_client_tab.html" %}
+  {% if stale and not todo.is_completed %}
+    {# Staff while it's warned (specs/stale-todos.md) #}
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="status">
+      <span>{{ stale.reason }}
+        {% blocktranslate with day=stale.day|date:"DATE_FORMAT" %}It will be marked as obsolete on {{ day }}.{% endblocktranslate %}</span>
+      <form method="post" action="{% url 'todo_keep' item.pk %}" class="ms-auto">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-primary">{% translate "Keep open" %}</button>
+      </form>
+    </div>
+  {% endif %}
   {% if previous %}
     <p class="small text-body-secondary">
       {% translate "Previous:" %}

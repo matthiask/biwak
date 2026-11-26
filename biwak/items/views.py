@@ -2,6 +2,7 @@ from urllib.parse import urlencode
 
 from django import forms
 from django.contrib import messages
+from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import BadRequest, PermissionDenied
 from django.db.models import Q
 from django.http import (
@@ -14,11 +15,16 @@ from django.http import (
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _, ngettext
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak import cursors, schedules
 from biwak.accounts.models import Color, User
 from biwak.activity import timeline as timelines
+from biwak.activity.mentions import (
+    reading_as as mention_reading_as,
+    title as mention_title,
+)
 from biwak.activity.operations import (
     StillAssigned,
     is_assigned,
@@ -27,7 +33,7 @@ from biwak.activity.operations import (
     unsubscribe,
 )
 from biwak.forms import ColorSwatches, Form, PeopleField, next_url
-from biwak.items import due, editing, glance, operations as ops, visibility
+from biwak.items import due, editing, glance, operations as ops, stale, visibility
 from biwak.items.filters import (
     ANYBODY,
     NO_GROUP,
@@ -823,6 +829,62 @@ def todo(request, pk, *, edit=False):
             "move_targets": _move_targets(request, item),
             "can_change": ops.can_change(request.user, item),
             "previous": _previous(request, todo),
+            "stale": _stale_banner(request, item),
+        },
+    )
+
+
+def _stale_banner(request, item):
+    """For staff while the to-do is warned (specs/stale-todos.md): why,
+    and the day it'll be marked obsolete"""
+    if request.user.is_client or not stale.is_warned(item):
+        return None
+    return {
+        "reason": stale.banner_reason(item),
+        "day": stale.obsolete_on(item.todo),
+    }
+
+
+@require_POST
+def todo_keep(request, pk):
+    """ "Keep open" on a stale to-do (specs/stale-todos.md): whoever sees
+    it, like a comment would"""
+    item = item_for(request, pk, Kind.TODO)
+    stale.keep(item, actor=request.user)
+    return redirect(next_url(request) or item)
+
+
+@login_not_required
+@never_cache
+def todo_keep_link(request, token):
+    """ "Keep open" from the warning mail, without logging in: the signed
+    link is the key. A GET only asks (link checkers follow links), a POST
+    keeps it as the mail's recipient; 404 for a bad token or a to-do they
+    don't see (any more)."""
+    if not (ids := stale.read_keep_token(token)):
+        raise Http404
+    user = User.objects.active().filter(pk=ids[0]).first()
+    item = (
+        Item.objects.visible_to(user).filter(pk=ids[1], kind=Kind.TODO).first()
+        if user is not None
+        else None
+    )
+    if item is None:
+        raise Http404
+    done = False
+    if request.method == "POST" and not item.todo.is_completed:
+        stale.keep(item, actor=user)
+        done = True
+    with mention_reading_as(user):
+        title = mention_title(item.title, item)
+    return render(
+        request,
+        "items/keep.html",
+        {
+            "item": item,
+            "title": title,
+            "done": done,
+            "completed": item.todo.is_completed,
         },
     )
 
