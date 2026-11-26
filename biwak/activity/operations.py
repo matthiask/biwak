@@ -306,11 +306,10 @@ def set_notification_settings(
     working_days=None,
     working_from=None,
     working_until=None,
-    weekly_todos=None,
 ):
     """The person's level, mail delivery, whether the tab's icon shows
-    unread notifications, the quiet hours (specs/quiet-hours.md) and the
-    weekly mail of their to-dos (specs/notifications.md), what's given; raises ``ValidationError`` for working hours which end before
+    unread notifications and the quiet hours (specs/quiet-hours.md), what's
+    given; raises ``ValidationError`` for working hours which end before
     they start or quiet hours without working days"""
     fields = []
     if favicon is not None:
@@ -322,9 +321,6 @@ def set_notification_settings(
     if delivery is not None:
         user.mail_delivery = MailDelivery(delivery)
         fields.append("mail_delivery")
-    if weekly_todos is not None:
-        user.weekly_todos = bool(weekly_todos)
-        fields.append("weekly_todos")
     if quiet_hours is not None:
         user.quiet_hours = bool(quiet_hours)
         fields.append("quiet_hours")

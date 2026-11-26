@@ -1,0 +1,31 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <title>Biwak</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #222">
+    {% comment %}Stale to-dos about to be marked obsolete (items.stale, specs/stale-todos.md): by project and list, each with why and "Keep open".{% endcomment %}
+    <h1 style="font-size: 20px">{{ heading }}</h1>
+    {% for section in sections %}
+      <h2 style="font-size: 17px; margin-top: 24px">{{ section.project }} / {{ section.list }}</h2>
+      <ul style="padding-left: 20px">
+        {% for todo in section.todos %}
+          <li style="margin: 8px 0">
+            <a href="{{ todo.url }}">{{ todo.title }}</a>
+            <span style="color: #666; font-size: 13px">· {{ todo.reason }}</span>
+            · <a
+              href="{{ todo.keep_url }}"
+              style="border: 1px solid #5b37b0; border-radius: 4px; padding: 1px 8px; color: #5b37b0; font-size: 13px; text-decoration: none"
+            >{% translate "Keep open" %}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
+    <p style="margin-top: 16px">{% translate "Comment on one or change it to keep it too." %}</p>
+    <p style="color: #666; font-size: 13px; margin-top: 24px">
+      <a href="{{ settings_url }}">{% translate "Your notification settings" %}</a>
+    </p>
+  </body>
+</html>

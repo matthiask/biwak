@@ -48,6 +48,13 @@
     >{% translate "Show to clients…" %}</a>
   {% endif %}
 {% endif %}
+{% if item.kind == "todo" and not item.todo.is_completed %}
+  {# Whoever completes it; reopening undoes it, so no question (specs/stale-todos.md) #}
+  <form method="post" action="{% url 'todo_obsolete' item.pk %}{{ next_query }}">
+    {% csrf_token %}
+    <button type="submit" class="dropdown-item">{% translate "Mark as obsolete" %}</button>
+  </form>
+{% endif %}
 {% if not tile and not request.user.is_client %}
   <a class="dropdown-item" href="{% url 'item_history' item.pk %}">{% translate "History" %}</a>
 {% endif %}

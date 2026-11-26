@@ -37,9 +37,11 @@ from biwak.api_conventions import (
     paginated,
     person_out,
 )
-from biwak.items import due, operations as ops
+from biwak.items import due, operations as ops, stale
 from biwak.items.filters import NO_GROUP, in_group
 from biwak.items.models import (
+    STALE_AFTER,
+    STALE_AFTER_LONG,
     SWITCH_MESSAGE,
     Assignment,
     Group,
@@ -77,6 +79,12 @@ class GroupOut(Schema):
     # colors")
     color: Color | Literal[""] = ""
     color_name: str = ""
+    stale_after: int = Field(
+        STALE_AFTER,
+        description="Days without activity before its to-dos are marked"
+        " obsolete after a warning: 90, or 365 for a backlog"
+        " (specs/stale-todos.md)",
+    )
 
 
 def group_out(group):
@@ -86,7 +94,22 @@ def group_out(group):
         "position": group.position,
         "color": group.color,
         "color_name": group.get_color_display() if group.color else "",
+        "stale_after": group.stale_after,
     }
+
+
+def _stale_after(request, days):
+    """``stale_after`` as sent: staff only, 90 or 365"""
+    if days is None:
+        return {}
+    if request.user.is_client:
+        raise HttpError(403, _("Only staff decide how long to-dos are kept."))
+    if days not in (STALE_AFTER, STALE_AFTER_LONG):
+        bad_request(
+            _("stale_after is %(short)s or %(long)s.")
+            % {"short": STALE_AFTER, "long": STALE_AFTER_LONG}
+        )
+    return {"stale_after": days}
 
 
 class ListOut(ItemOut):
@@ -244,12 +267,19 @@ class GroupIn(Schema):
     title: GroupTitle
     # A palette name or "" for none (the default)
     color: Color | Literal[""] = ""
+    # 90 (the default) or 365, staff only
+    stale_after: int | None = None
 
 
 @router.post("lists/{list_id}/groups/", response={201: GroupOut})
 def group_create(request, list_id: int, data: GroupIn):
     item = changeable_list(request, list_id)
-    group = ops.create_group(todolist=item.todolist, title=data.title, color=data.color)
+    group = ops.create_group(
+        todolist=item.todolist,
+        title=data.title,
+        color=data.color,
+        **_stale_after(request, data.stale_after),
+    )
     return Status(201, group_out(group))
 
 
@@ -257,6 +287,8 @@ class GroupPatch(Schema):
     title: GroupTitle | None = None
     # A palette name or "" for none
     color: Color | Literal[""] | None = None
+    # 90 or 365, staff only
+    stale_after: int | None = None
     index: int | None = None
 
 
@@ -275,6 +307,7 @@ def group_update(request, group_id: int, data: GroupPatch):
             for field in ["title", "color"]
             if field in data.model_fields_set
         },
+        **_stale_after(request, data.stale_after),
     )
     if data.index is not None:
         ops.move_group(group, index=max(0, data.index))
@@ -312,6 +345,15 @@ class TodoOut(ItemOut):
     due_on: dt.date | None
     completed_at: dt.datetime | None
     completed_by: PersonOut | None
+    stale_warned_at: dt.datetime | None = Field(
+        None,
+        description="Warned it'll be marked obsolete 14 days later unless"
+        " something happens or it's kept (POST keep/, specs/stale-todos.md)",
+    )
+    obsolete: bool = Field(
+        description="Completed as obsolete, not done (specs/stale-todos.md):"
+        " by hand, or by Biwak after a warning (completed_by null)"
+    )
     assignees: list[AssigneeOut]
     recurrence: str
     recurrence_description: str
@@ -347,6 +389,8 @@ def todo_out(item, user):
         "due_on": todo.due_on,
         "completed_at": todo.completed_at,
         "completed_by": person_out(todo.completed_by),
+        "obsolete": todo.obsolete,
+        "stale_warned_at": todo.stale_warned_at,
         "assignees": _assignees_out(item, todo, user),
         "recurrence": todo.recurrence,
         "recurrence_description": todo.recurrence_description,
@@ -944,6 +988,24 @@ def todo_update(request, todo_id: int, data: TodoPatch):
 def todo_complete(request, todo_id: int):
     item = item_for(request, todo_id, Kind.TODO)
     ops.complete(item, actor=request.user)
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
+
+
+@router.post("todos/{todo_id}/obsolete/", response=TodoOut)
+def todo_obsolete(request, todo_id: int):
+    """Completes it as obsolete, not done (specs/stale-todos.md); reopening
+    undoes it. Already completed, nothing happens."""
+    item = item_for(request, todo_id, Kind.TODO)
+    ops.mark_obsolete(item, actor=request.user)
+    return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
+
+
+@router.post("todos/{todo_id}/keep/", response=TodoOut)
+def todo_keep(request, todo_id: int):
+    """ "Keep open": starts the clock of a stale to-do again and ends its
+    warning (specs/stale-todos.md); an internal event telling nobody"""
+    item = item_for(request, todo_id, Kind.TODO)
+    stale.keep(item, actor=request.user)
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 
 

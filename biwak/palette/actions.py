@@ -27,7 +27,7 @@ from django.utils.translation import gettext as _
 from biwak.activity.operations import is_assigned, is_subscribed
 from biwak.bookmarks.operations import can_manage_links, is_bookmarked
 from biwak.forwarding import operations as forwarding
-from biwak.items import operations as ops
+from biwak.items import operations as ops, stale
 from biwak.items.models import Item, Kind, Status
 from biwak.organizations import operations as org_ops
 from biwak.organizations.models import Organization
@@ -225,6 +225,24 @@ def on_item(request, item, context):
                 "Shift+x",
             )
         )
+        if not user.is_client and stale.is_warned(item):
+            # While warned (specs/stale-todos.md)
+            actions.append(
+                post(
+                    _("Keep open"),
+                    reverse("todo_keep", args=[item.pk]),
+                    {"next": url},
+                )
+            )
+        if not completed:
+            # Whoever completes it (specs/stale-todos.md)
+            actions.append(
+                post(
+                    _("Mark as obsolete"),
+                    reverse("todo_obsolete", args=[item.pk]),
+                    {"next": url},
+                )
+            )
     if item.kind == Kind.LIST:
         actions += _on_list(user, item, context, url)
     if item.kind == Kind.FOLDER and ops.can_change(user, item):

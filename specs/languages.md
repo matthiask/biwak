@@ -27,6 +27,7 @@ a third language is a catalog, nothing else.
 |---|---|
 | project | Projekt |
 | to-do, to-dos | To-do, To-dos |
+| obsolete, mark as obsolete | hinfällig, als hinfällig markieren (decided 2026-11-26, `stale-todos.md`) |
 | list, group | Liste, Gruppe |
 | board (view) | Board |
 | message board, message | Mitteilungen, Mitteilung (decided 2026-11-22 by the user: "Nachricht" sounds strange; "Beitrag" is taken by "posts to everyone"); a forwarded mail is "eingehende Mail" |

@@ -359,7 +359,6 @@ def settings_notifications(request):
         level=data["notification_level"],
         delivery=data["mail_delivery"],
         favicon=data["lantern_in_favicon"],
-        weekly_todos=data["weekly_todos"],
         quiet_hours=data["quiet_hours"],
         working_days=data["working_days"],
         working_from=data["working_from"],

@@ -32,6 +32,8 @@ from biwak.live import announce as live
 # moving a to-do into another group of its list (``column_move()``)
 SILENT = {
     Action.MOVED,
+    # "Keep open" on a stale to-do (specs/stale-todos.md)
+    Action.KEPT,
     Action.PINNED,
     Action.UNPINNED,
     Action.UNASSIGNED,

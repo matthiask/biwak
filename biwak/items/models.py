@@ -317,6 +317,12 @@ class TodoList(Detail):
         verbose_name_plural = _("to-do lists")
 
 
+# To-dos untouched this many days are stale (specs/stale-todos.md, decided
+# 2026-11-26); a group may keep its to-dos for a year instead
+STALE_AFTER = 90
+STALE_AFTER_LONG = 365
+
+
 class Group(models.Model):
     """A heading within a list; not an item (specs/core.md). To-dos point at
     it and are ordered within it; ungrouped to-dos come first."""
@@ -337,6 +343,12 @@ class Group(models.Model):
         blank=True,
         choices=Color,
         help_text=_("Marks the group's card and heading."),
+    )
+    # Days without activity before its to-dos are stale and get marked
+    # obsolete after a warning: STALE_AFTER or, for a backlog,
+    # STALE_AFTER_LONG (specs/stale-todos.md)
+    stale_after = models.PositiveSmallIntegerField(
+        _("stale after days"), default=STALE_AFTER
     )
 
     class Meta:
@@ -401,6 +413,14 @@ class Todo(Checklist, Detail):
         related_name="+",
         verbose_name=_("completed by"),
     )
+    # Completed as obsolete, not done (specs/stale-todos.md): by hand, or
+    # by Biwak after a warning (``completed_by`` empty)
+    obsolete = models.BooleanField(_("obsolete"), default=False)
+    # Warned it'll be marked obsolete (specs/stale-todos.md); activity
+    # after it clears it
+    stale_warned_at = models.DateTimeField(
+        _("stale warning at"), null=True, blank=True, editable=False
+    )
     assignees = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="Assignment",
@@ -435,8 +455,49 @@ class Todo(Checklist, Detail):
         return self.completed_at is not None
 
     @property
+    def stale_after(self):
+        """The days without activity after which it's stale: its group's"""
+        return self.group.stale_after if self.group_id else STALE_AFTER
+
+    @property
     def recurrence_description(self):
         return schedules.describe(self.recurrence)
+
+
+class StaleWarning(models.Model):
+    """A person to warn that a to-do will be marked obsolete
+    (specs/stale-todos.md): written by the daily run, mailed by
+    ``send_mails`` (one mail per person and day), or dropped"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("person"),
+    )
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="+",
+        verbose_name=_("to-do"),
+    )
+    created_at = models.DateTimeField(_("created at"), default=timezone.now)
+    # Mailed, or dropped (no mails, away, kept meanwhile)
+    sent_at = models.DateTimeField(_("sent at"), null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["user"],
+                condition=models.Q(sent_at__isnull=True),
+                name="unsent_stale_warnings",
+            )
+        ]
+        verbose_name = _("stale warning")
+        verbose_name_plural = _("stale warnings")
+
+    def __str__(self):
+        return f"{self.user}: {self.item}"
 
 
 class MessageCategory(models.Model):

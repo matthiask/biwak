@@ -1,6 +1,10 @@
 # Stale to-dos: warned, then marked obsolete
 
-**Status:** open (specified 2026-11-26 with the user).
+**Status:** built (2026-11-26): `Todo.obsolete` and `mark_obsolete()`,
+`Event.actor` nullable ("Biwak"), `Group.stale_after`,
+`biwak/items/stale.py` (the query, the daily run, the mail, keeping),
+`./manage.py stale_todos`; the weekly to-dos removed. Off until
+`STALE_TODOS=True`.
 
 **Depends on:** `notifications.md` (events, who gets told, mails, the
 weekly to-dos this replaces), `todos.md` (completing, recurrence),
@@ -87,8 +91,9 @@ set only to 90 or 365 (decided 2026-11-26: the model stores days, the
 interface offers a switch, not arbitrary values). The group's form has
 a checkbox "Keep untouched to-dos for a year" (`update_group()`,
 `create_group()`), staff only; the API and CLI take the same two
-values (`stale_after`, 400 for others; `biwak groups edit ID
---keep-for-a-year/--no-keep-for-a-year` by `specs/api-cli.md`'s rules).
+values (`stale_after`, 400 for others, 403 for clients; `biwak groups
+create|update … --keep-for-a-year/--no-keep-for-a-year`, the existing
+commands, decided by the building agent 2026-11-26).
 Ungrouped to-dos: 90 days. Not on lists (a list of ideas gets a group),
 no "never". The board's column header and the list's group heading show
 nothing.
@@ -162,6 +167,30 @@ accepted and ignored on `PUT`, not returned; `biwak notifications
 --weekly` removed (CLI version bump, `MINIMUM` unchanged: an older CLI
 sending it still works). `notifications.md` loses its section and
 gets a pointer here.
+
+## Decided while building (2026-11-26, by the building agent)
+
+- **Who keeps:** the banner and the palette offer "Keep open" to staff
+  only (only they're warned); the API's `keep/`, `biwak todos keep` and
+  the mail's link work for whoever sees the to-do, since a comment would
+  keep it all the same. The link acts as the mail's recipient, without
+  logging in (`/keep/<token>/`, signed like the unsubscribe link); 404
+  for a bad token or a to-do they don't see.
+- **Who gets the mail** is decided at the warning: `StaleWarning` rows
+  (`biwak/items/stale.py`) for the subscribers then. When sending, rows
+  of people without mail (none, inactive, bounced, away) and of to-dos
+  not warned any more are dropped, not kept for later.
+- **Clearing:** the daily run clears the warning of every warned to-do
+  which isn't stale any more (touched, its dates moved, its group kept
+  for a year now) or isn't open; keeping clears it at once.
+- **Net changes:** completing (or marking obsolete) and reopening by the
+  same person cancel out as before; completed, reopened and marked
+  obsolete leaves "marked as obsolete" (`timeline.cancelled()`).
+  Reactions only go to completing, not to marking obsolete.
+- **Shown:** a `slash-circle` icon instead of the check on the page and
+  in the timeline; the timeline's "kept this open" with a
+  `clock-history` icon. "Obsolete." instead of "Completed." in mails.
+- The help's chapter is "Old to-dos" in `docs/todos*.md`.
 
 ## Not in this part
 

@@ -126,6 +126,13 @@ check pops, the title is struck through and the row fades away; the last
 open to-do of a list gets a small burst and "All done." (not with reduced
 motion set in your system).
 
+A to-do that won't be done any more is **obsolete**: "Mark as obsolete"
+in its "More" menu (or the command palette) completes it without it
+counting as done. Whoever can complete a to-do can mark it obsolete;
+"Reopen" undoes it. It shows among the completed ones, struck through
+with "Obsolete", and its page says who marked it and when. A repeating
+to-do marked obsolete creates no next one: the series ends.
+
 The to-do's page shows its facts (assigned to, due on, starts on, repeats,
 when and by whom it was created) and notes. Click them, the title or "Edit" (<kbd>e</kbd>) to change them in
 place; "Save" or "Cancel" goes back. To choose people, type in the
@@ -180,6 +187,23 @@ apart from the to-do's: a "🎉" for getting it done says something other
 than a "👍" for the to-do. Only the person who completed it is told
 ("Reactions to you completing it"). If the to-do is reopened later, the
 reactions stay on that line.
+
+## Old to-dos
+
+To-dos nobody touches don't stay forever. An open to-do is **stale**
+when nothing happened on it for 90 days: no change, no comment, no
+assigning, no move (reactions don't count). An overdue to-do counts from
+its due date, one starting later isn't stale before its start.
+
+The staff following a stale to-do get a mail ("12 to-dos will be marked
+as obsolete"), at most one a day; clients don't. Two weeks later it's
+marked obsolete by Biwak, unless somebody kept it: "Keep open" in the
+mail or in the banner on the to-do's page, or any comment or change.
+Who follows it hears about it being marked; "Reopen" brings it back.
+
+A group can keep its to-dos for a year instead, for a backlog or a list
+of ideas: "Keep untouched to-dos for a year" in the group's form (staff
+only).
 
 ## Repeating
 

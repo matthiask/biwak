@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
+from django.utils import timezone
 from rich.color import ColorSystem
 
 from biwak import api_conventions, cli_version
@@ -19,7 +20,7 @@ from biwak.accounts.models import APIToken
 from biwak.activity.models import LevelOverride
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Comment, Item
+from biwak.items.models import Comment, Item, Todo
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
@@ -252,6 +253,25 @@ class CLICommandsTest(CLITest):
             self.biwak("todos", "--list", self.list.pk, "--completed").output,
         )
 
+    def test_obsolete(self):
+        """Completed, but not done (specs/stale-todos.md)"""
+        first = ops.create_todo(todolist=self.list, title="Tent", creator=self.ada)
+        second = ops.create_todo(todolist=self.list, title="Stove", creator=self.ada)
+        output = self.biwak("todos", "obsolete", first.pk, second.pk).output
+        self.assertIn(f"Marked #{first.pk} Tent as obsolete.", output)
+        self.assertIn(f"Marked #{second.pk} Stove as obsolete.", output)
+        self.assertTrue(Todo.objects.get(item=first).obsolete)
+        output = self.biwak("todos", "--list", self.list.pk, "--completed").output
+        self.assertIn("Tent (obsolete)", output)
+        self.assertIn("(obsolete)", self.biwak("todos", "show", first.pk).output)
+        self.biwak("todos", "reopen", first.pk)
+        self.assertFalse(Todo.objects.get(item=first).obsolete)
+        # Keeping a warned one open (specs/stale-todos.md)
+        Todo.objects.filter(item=first).update(stale_warned_at=timezone.now())
+        output = self.biwak("todos", "keep", first.pk).output
+        self.assertIn(f"Kept #{first.pk} Tent open.", output)
+        self.assertIsNone(Todo.objects.get(item=first).stale_warned_at)
+
     def test_a_list_by_assignee(self):
         """``--mine`` and ``--assignee`` with ``--list``, as the list's
         filter (specs/todos.md, "Filters on a list")"""
@@ -418,6 +438,18 @@ class CLICommandsTest(CLITest):
         )
         result = self.biwak("groups", "update", group.pk, "--color", "amber")
         self.assertEqual(result.exit_code, 2)
+        # A backlog keeps its untouched to-dos for a year (specs/stale-todos.md)
+        output = self.biwak("groups", "update", group.pk, "--keep-for-a-year").output
+        self.assertIn("untouched to-dos kept for a year", output)
+        group.refresh_from_db()
+        self.assertEqual(group.stale_after, 365)
+        self.biwak("groups", "update", group.pk, "--no-keep-for-a-year")
+        group.refresh_from_db()
+        self.assertEqual(group.stale_after, 90)
+        self.biwak("groups", "create", self.list.pk, "Ideas", "--keep-for-a-year")
+        ideas = self.list.todolist.groups.get(title="Ideas")
+        self.assertEqual(ideas.stale_after, 365)
+        ideas.delete()
         self.assertEqual(self.biwak("groups", "update", group.pk).exit_code, 2)
         self.assertEqual(self.biwak("groups").exit_code, 2)
         self.biwak("groups", "delete", group.pk)
@@ -674,7 +706,6 @@ class CLICommandsTest(CLITest):
                 "level": "concerns_me",
                 "delivery": "digest",
                 "lantern_in_favicon": True,
-                "weekly_todos": False,
                 "quiet_hours": False,
                 "working_days": [0, 1, 2, 3, 4],
                 "working_from": "08:00:00",
@@ -686,15 +717,6 @@ class CLICommandsTest(CLITest):
         self.ada.refresh_from_db()
         self.assertEqual(self.ada.mail_delivery, "none")
         self.biwak("notifications", "--delivery", "digest")
-        # The weekly mail of one's open to-dos, off by default
-        self.assertIn("Weekly to-dos: off", self.biwak("notifications").output)
-        output = self.biwak("notifications", "--weekly", "on").output
-        self.assertIn("Weekly to-dos: on, Monday morning", output)
-        self.ada.refresh_from_db()
-        self.assertTrue(self.ada.weekly_todos)
-        self.biwak("notifications", "--weekly", "off")
-        self.ada.refresh_from_db()
-        self.assertFalse(self.ada.weekly_todos)
 
         # A project's and an item's own level
         project_id = self.project.pk
@@ -720,7 +742,7 @@ class CLICommandsTest(CLITest):
         for args in [
             ["--project", project_id, "--item", self.list.pk],
             ["--project", project_id, "--delivery", "each"],
-            ["--project", project_id, "--weekly", "on"],
+            ["--project", project_id, "--quiet-hours", "on"],
             ["--level", "default"],
         ]:
             self.assertEqual(self.biwak("notifications", *args).exit_code, 1)

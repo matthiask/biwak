@@ -21,8 +21,7 @@ def todo_row(item, user, today, *, others=False):
     """A to-do as one line: its title and link, its project and list, what's
     urgent about it ("Overdue", "Today", "Starts today", else nothing) and
     its dates; with ``others`` who has it, by the names the person may
-    know, those away with "(away until 3 Dec)". The weekly mail's rows too
-    (``biwak.activity.weekly``)."""
+    know, those away with "(away until 3 Dec)"."""
     todo = item.todo
     state = due.badge_state(todo, today)
     if state == due.OVERDUE:
@@ -95,7 +94,7 @@ def for_you(notification):
 
 def _people(events):
     return get_text_list(
-        list(dict.fromkeys(str(event.actor) for event in events)), _("and")
+        list(dict.fromkeys(event.actor_name for event in events)), _("and")
     )
 
 

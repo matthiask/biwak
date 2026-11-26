@@ -13,7 +13,7 @@ confirm: `decisions-to-confirm.md`.
 | `ui.md` | built | the rules every page follows: modals, quiet pages, filters, phones, motion |
 | `access.md` | built | client visibility (one function decides what clients see) and sign-in: the ways in, the sign-in page, sessions |
 | `api-cli.md` | built | the API's conventions, the CLI |
-| `notifications.md` | built | events, subscribing is the switch, mentions by short name, levels on projects and lists, watching lists, mails, digests and the weekly to-dos, replying by mail |
+| `notifications.md` | built | events, subscribing is the switch, mentions by short name, levels on projects and lists, watching lists, mails, digests, replying by mail |
 | `files.md` | built | attachments, the message board, folders as tiles with ordering, drag and drop and uploading several, docs (title from the first line, versions, drafts), files |
 | `todos.md` | built | assignees, the board, the to-do's page, recurrence, the to-dos page, the calendar feed |
 | `rule-widget.md` | built | one control for repeat rules |
@@ -59,7 +59,7 @@ confirm: `decisions-to-confirm.md`.
 | `web-push.md` | built | push notifications on phones and desktops: mentions and assignments |
 | `forwarding.md` | built | one address to forward mails to, filed as messages or to-dos |
 | `agent-skills.md` | built (0.63.0) | Claude Code skills in the CLI: triage, a mail into a to-do or message, weekly summary, handover |
-| `stale-todos.md` | open | to-dos marked obsolete, by hand or after 90 days untouched with a warning to staff; the weekly to-dos removed |
+| `stale-todos.md` | built | to-dos marked obsolete, by hand or after 90 days untouched with a warning to staff; the weekly to-dos removed |
 
 ## Writing a spec for a new part
 

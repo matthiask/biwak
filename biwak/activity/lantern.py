@@ -200,7 +200,7 @@ def prepare(notifications, user):
         # The mails' wording, a reaction with what it says
         notification.line = (
             _("%(actor)s reacted %(content)s")
-            % {"actor": event.actor, "content": event.data.get("content", "")}
+            % {"actor": event.actor_name, "content": event.data.get("content", "")}
             if event.action == Action.REACTED
             else describe(event, user)
         )
@@ -265,7 +265,7 @@ class Batch:
             )
             self.title = _("To-dos")
             self.url = reverse("todos")
-            self.line = assigned_line(event.actor, len(self.files), you=you)
+            self.line = assigned_line(event.actor_name, len(self.files), you=you)
             self.subject = self.line.removesuffix(".")
             return
         if event.action == Action.EDITED:
@@ -273,7 +273,7 @@ class Batch:
             self.item_icon = KIND_ICONS[self.files[0].kind]
             self.title = _("To-dos")
             self.url = reverse("todos")
-            self.line = dated_line(event.actor, len(self.files))
+            self.line = dated_line(event.actor_name, len(self.files))
             self.subject = self.line.removesuffix(".")
             return
         self.kind_icon = "upload"
@@ -286,7 +286,7 @@ class Batch:
             if folder
             else reverse("project_files", args=[self.project.pk])
         )
-        self.line = batch_line(event.actor, len(self.files), self.title)
+        self.line = batch_line(event.actor_name, len(self.files), self.title)
 
 
 def batch_line(actor, count, where):

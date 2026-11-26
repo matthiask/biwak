@@ -1,7 +1,6 @@
 """Notification mails (specs/notifications.md): one mail per person and
 item once its newest notification is 10 minutes old, or a daily digest at
-07:00, and the weekly to-dos (``weekly.py``). ``./manage.py send_mails``
-runs ``send_mails()`` every minute."""
+07:00. ``./manage.py send_mails`` runs ``send_mails()`` every minute."""
 
 import datetime as dt
 import logging
@@ -23,12 +22,13 @@ from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.languages import language_for
 from biwak.accounts.models import MailDelivery, User
-from biwak.activity import digest, feed, mentions, weekly
+from biwak.activity import digest, feed, mentions
 from biwak.activity.models import Action, Notification
 from biwak.activity.operations import is_subscribed
 from biwak.api_conventions import absolute
 from biwak.files.models import REFERENCE, Attachment
 from biwak.inbound.tokens import reply_to
+from biwak.items import stale
 from biwak.items.models import Comment, Item, Kind
 from biwak.outbox import sending as outbox
 from biwak.outbox.models import Kind as MailKind
@@ -150,7 +150,7 @@ def _moved(event, user):
 def describe(event, user):
     """The line saying what happened"""
     data = event.data
-    actor = str(event.actor)
+    actor = event.actor_name
     to = data.get("to", "")
     match event.action:
         case Action.CREATED if event.item.kind == Kind.ANSWER:
@@ -208,8 +208,13 @@ def describe(event, user):
 
 
 def _other(event, actor):
-    """``describe()`` of the rest: to-dos added from text
+    """``describe()`` of the rest: to-dos marked obsolete
+    (specs/stale-todos.md), to-dos added from text
     (specs/todos-from-text.md), else the action's name"""
+    if event.action == Action.MARKED_OBSOLETE:
+        return _("%(actor)s marked it as obsolete.") % {"actor": actor}
+    if event.action == Action.KEPT:
+        return _("%(actor)s kept it open.") % {"actor": actor}
     if event.action == Action.ADDED_TODOS:
         count = event.data.get("todos", 0)
         return ngettext(
@@ -318,7 +323,7 @@ def _item(item, user):
     return context
 
 
-DONE = (Action.COMPLETED, Action.REOPENED)
+DONE = (Action.COMPLETED, Action.MARKED_OBSOLETE, Action.REOPENED)
 
 
 def done_neighbours(queryset, notifications):
@@ -402,6 +407,14 @@ def _claim(pks, now):
     return claimed
 
 
+def sender_name(event):
+    """The mail's sender: "Ada Example (Biwak)", or "Biwak" for an event
+    without an actor"""
+    if event.actor_id is None:
+        return "Biwak"
+    return _("%(name)s (Biwak)") % {"name": event.actor}
+
+
 def build_mail(user, *, subject, template, context, from_name="Biwak", headers=None):
     """A mail to the person, plain text and HTML (``template`` plus ``.txt``
     and ``.html``), from ``"from_name" <DEFAULT_FROM_EMAIL>``, with a
@@ -451,7 +464,7 @@ def item_mail(user, item, notifications):
         subject=_("[%(project)s] %(title)s") % context,
         template="mails/notification",
         context=context,
-        from_name=_("%(name)s (Biwak)") % {"name": entries[-1]["event"].actor},
+        from_name=sender_name(entries[-1]["event"]),
         headers={"In-Reply-To": thread, "References": thread}
         | unsubscribe_headers(context["unsubscribe_url"])
         | (reply_to(user, item) if item.is_commentable else {}),
@@ -502,7 +515,7 @@ def batch_mail(user, notifications):
         subject=_("[%(project)s] %(subject)s") % context,
         template="mails/batch",
         context=context,
-        from_name=_("%(name)s (Biwak)") % {"name": notifications[0].event.actor},
+        from_name=sender_name(notifications[0].event),
         # No item to unsubscribe from: the settings
         headers=unsubscribe_headers(context["settings_url"], one_click=False),
     )
@@ -819,8 +832,7 @@ def send_mails(*, now=None):
             ),
             MailKind.DIGEST,
         )
-
-    # The weekly to-dos of those who want them (Monday morning), whatever
-    # the delivery: on Mondays digest people get both
-    count += weekly.send_weekly(now)
+    # Stale to-dos about to be marked obsolete (specs/stale-todos.md),
+    # whatever the delivery except none
+    count += stale.send_warnings(now)
     return count

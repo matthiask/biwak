@@ -198,15 +198,6 @@ class User(AbstractBaseUser):
         choices=MailDelivery,
         default=MailDelivery.EACH,
     )
-    # The weekly mail of one's open to-dos on Monday morning
-    # (specs/notifications.md, "The weekly to-dos", decided 2026-11-23):
-    # off by default, whatever the delivery above (except no mails)
-    weekly_todos = models.BooleanField(_("weekly mail of my to-dos"), default=False)
-    # The day this week's mail went (or was skipped: nothing to say, away);
-    # once per week. Not in the audit log, like ``last_login``
-    weekly_todos_on = models.DateField(
-        _("weekly to-dos mailed on"), null=True, blank=True, editable=False
-    )
     # A dot on the tab's icon while there are unread notifications
     # (specs/lantern.md),
     # on by default (decided 2026-11-21)

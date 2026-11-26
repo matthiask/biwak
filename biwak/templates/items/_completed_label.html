@@ -1,0 +1,11 @@
+{% load biwak i18n %}
+{# The to-do page's completed button: who completed it, or marked it as obsolete, by hand or Biwak after a warning (specs/stale-todos.md) #}
+{% if todo.obsolete and todo.completed_by %}
+  {% short_name todo.completed_by as who %}{% avatar todo.completed_by as mark %}{% blocktranslate with when=todo.completed_at|moment:"on" %}Marked as obsolete by {{ mark }} {{ who }} {{ when }}{% endblocktranslate %}
+{% elif todo.obsolete %}
+  {% blocktranslate count days=todo.stale_after %}Marked as obsolete after {{ days }} day without activity{% plural %}Marked as obsolete after {{ days }} days without activity{% endblocktranslate %}
+{% elif todo.completed_by %}
+  {% short_name todo.completed_by as who %}{% avatar todo.completed_by as mark %}{% blocktranslate %}Completed by {{ mark }} {{ who }}{% endblocktranslate %}
+{% else %}
+  {% translate "Completed" %}
+{% endif %}

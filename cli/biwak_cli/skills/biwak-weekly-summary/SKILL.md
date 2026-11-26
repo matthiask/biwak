@@ -52,7 +52,8 @@ Short, in the user's language, each line with its link (the item's
 `url`):
 
 - **Done:** to-dos completed this week (`completed` events of to-dos
-  still completed), by list.
+  still completed and not `obsolete`), by list. To-dos marked obsolete
+  (`marked_obsolete`) weren't done: leave them out.
 - **New:** to-dos created and still open, new messages and docs, files
   uploaded.
 - **Decisions:** what messages and comments decided or agreed on, in a

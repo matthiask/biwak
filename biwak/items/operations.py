@@ -40,6 +40,8 @@ from biwak.files.models import (
 from biwak.files.titles import doc_title, with_heading
 from biwak.items import editing, visibility
 from biwak.items.models import (
+    STALE_AFTER,
+    STALE_AFTER_LONG,
     Assignment,
     Comment,
     Doc,
@@ -130,12 +132,21 @@ def _checked_color(color):
     return color
 
 
-def create_group(*, todolist, title, color=""):
+def _checked_stale_after(days):
+    """90 or 365 days, nothing else (specs/stale-todos.md, decided
+    2026-11-26: a switch, not arbitrary values)"""
+    if days not in (STALE_AFTER, STALE_AFTER_LONG):
+        raise ValueError(f"stale_after is {STALE_AFTER} or {STALE_AFTER_LONG}")
+    return days
+
+
+def create_group(*, todolist, title, color="", stale_after=STALE_AFTER):
     live.changed(todolist.item, action="grouped")
     return Group.objects.create(
         todolist=todolist,
         title=title,
         color=_checked_color(color),
+        stale_after=_checked_stale_after(stale_after),
         position=_next_position(todolist.groups.all()),
     )
 
@@ -957,6 +968,30 @@ def complete(item, *, actor):
     read_by_acting(actor, item)
 
 
+@transaction.atomic
+def mark_obsolete(item, *, actor):
+    """Completes the to-do as obsolete, not done (specs/stale-todos.md):
+    whoever may complete it; ``actor`` None is Biwak marking a stale one,
+    an internal event clients aren't told about. A recurring one's series
+    ends: no next one. Already completed, nothing happens."""
+    todo = Todo.objects.select_for_update().get(item=item)
+    if todo.is_completed:
+        return
+    todo.completed_at = timezone.now()
+    todo.completed_by = actor
+    todo.obsolete = True
+    todo.save(update_fields=["completed_at", "completed_by", "obsolete"])
+    record(
+        actor=actor,
+        action=Action.MARKED_OBSOLETE,
+        project=item.project,
+        item=item,
+        internal=actor is None,
+    )
+    if actor is not None:
+        read_by_acting(actor, item)
+
+
 def _create_next(item, todo, *, actor):
     """The next to-do of a recurring one: same list and group, at the end,
     same title, notes, assignees and subscribers, the rule moved over to
@@ -1040,7 +1075,8 @@ def reopen(item, *, actor):
     item.save(update_fields=["position"])
     todo.completed_at = None
     todo.completed_by = None
-    todo.save(update_fields=["completed_at", "completed_by"])
+    todo.obsolete = False
+    todo.save(update_fields=["completed_at", "completed_by", "obsolete"])
     record(actor=actor, action=Action.REOPENED, project=item.project, item=item)
     read_by_acting(actor, item)
 
@@ -1387,10 +1423,14 @@ def unarchive(item, *, actor):
 
 
 @transaction.atomic
-def update_group(group, *, title=_UNCHANGED, color=_UNCHANGED):
-    """Renames a group or sets its color; neither is an event (groups have
-    none of their own, specs/core.md)"""
+def update_group(group, *, title=_UNCHANGED, color=_UNCHANGED, stale_after=_UNCHANGED):
+    """Renames a group, sets its color or how long its untouched to-dos
+    are kept (specs/stale-todos.md); none is an event (groups have none of
+    their own, specs/core.md)"""
     fields = []
+    if stale_after is not _UNCHANGED and stale_after != group.stale_after:
+        group.stale_after = _checked_stale_after(stale_after)
+        fields.append("stale_after")
     if title is not _UNCHANGED and title != group.title:
         group.title = title
         fields.append("title")

@@ -37,7 +37,9 @@ class EventItemOut(Schema):
 class EventOut(Schema):
     id: int
     action: str
-    actor: PersonOut
+    actor: PersonOut | None = Field(
+        description="None: Biwak itself, e.g. marking a stale to-do obsolete"
+    )
     project_id: int
     item: EventItemOut | None
     # What the event stored: the title at the time, assignees, where it moved
@@ -297,10 +299,6 @@ class SettingsOut(Schema):
     level: NotificationLevel
     delivery: MailDelivery
     lantern_in_favicon: bool
-    weekly_todos: bool = Field(
-        description="A mail with your open to-dos on Monday morning, whatever"
-        " the delivery (except none)."
-    )
     quiet_hours: bool = Field(
         description="Mails and digests wait outside the working days and hours"
         " (specs/quiet-hours.md)."
@@ -318,7 +316,11 @@ class SettingsIn(Schema):
     level: NotificationLevel | None = None
     delivery: MailDelivery | None = None
     lantern_in_favicon: bool | None = None
-    weekly_todos: bool | None = None
+    weekly_todos: bool | None = Field(
+        None,
+        description="Accepted and ignored: the weekly mail of one's to-dos is"
+        " gone (specs/stale-todos.md).",
+    )
     quiet_hours: bool | None = None
     working_days: list[int] | None = None
     working_from: dt.time | None = None
@@ -330,7 +332,6 @@ def settings_out(user):
         "level": user.notification_level,
         "delivery": user.mail_delivery,
         "lantern_in_favicon": user.lantern_in_favicon,
-        "weekly_todos": user.weekly_todos,
         "quiet_hours": user.quiet_hours,
         "working_days": user.working_days,
         "working_from": user.working_from,
@@ -343,7 +344,7 @@ def settings_out(user):
 def settings_detail(request):
     """Your level (everything or only what concerns you), how mails
     come (each change, a daily digest, or none: the lantern only),
-    the weekly mail of your open to-dos, whether the tab's icon shows
+    whether the tab's icon shows
     unread notifications and the quiet hours"""
     return settings_out(request.user)
 
@@ -356,7 +357,6 @@ def settings_update(request, data: SettingsIn):
         level=data.level,
         delivery=data.delivery,
         favicon=data.lantern_in_favicon,
-        weekly_todos=data.weekly_todos,
         quiet_hours=data.quiet_hours,
         working_days=data.working_days,
         working_from=data.working_from,

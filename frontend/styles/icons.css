@@ -283,6 +283,9 @@
 .bi-square::before {
   content: "\f584";
 }
+.bi-slash-circle::before {
+  content: "\f567";
+}
 .bi-check-square::before {
   content: "\f26d";
 }

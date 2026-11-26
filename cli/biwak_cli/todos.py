@@ -58,7 +58,20 @@ COLOR_OPTION = click.option(
 
 def show_group(group):
     color = group["color_name"] or "no color"
-    click.echo(f"#{group['id']} {group['title']} ({color})")
+    kept = (
+        ", untouched to-dos kept for a year" if group.get("stale_after") == 365 else ""
+    )
+    click.echo(f"#{group['id']} {group['title']} ({color}{kept})")
+
+
+# How long a group keeps its untouched to-dos (specs/stale-todos.md)
+KEEP_OPTION = click.option(
+    "--keep-for-a-year/--no-keep-for-a-year",
+    "keep",
+    default=None,
+    help="Untouched to-dos are marked obsolete after a year instead of 90"
+    " days, after a warning (staff only).",
+)
 
 
 @cli.group(invoke_without_command=True)
@@ -85,12 +98,15 @@ def groups(ctx, list_id, as_json):
 @click.argument("list_id", metavar="LIST", type=int)
 @click.argument("title")
 @COLOR_OPTION
+@KEEP_OPTION
 @json_option
-def group_create(list_id, title, color, as_json):
+def group_create(list_id, title, color, keep, as_json):
     """Add a group titled TITLE at the end of LIST"""
     body = {"title": title}
     if color not in (None, "none"):
         body["color"] = color
+    if keep is not None:
+        body["stale_after"] = 365 if keep else 90
     data = request("POST", f"lists/{list_id}/groups/", json=body)
     if as_json:
         return echo_json(data)
@@ -103,9 +119,11 @@ def group_create(list_id, title, color, as_json):
 @click.option("--title", help="The new name.")
 @COLOR_OPTION
 @click.option("--index", type=int, help="Move it there (0: first), with its to-dos.")
+@KEEP_OPTION
 @json_option
-def group_update(group_id, title, color, index, as_json):
-    """Rename GROUP, give it a color or move it"""
+def group_update(group_id, title, color, index, keep, as_json):
+    """Rename GROUP, give it a color, move it or keep its untouched to-dos
+    for a year"""
     body = {}
     if title is not None:
         body["title"] = title
@@ -113,8 +131,12 @@ def group_update(group_id, title, color, index, as_json):
         body["color"] = "" if color == "none" else color
     if index is not None:
         body["index"] = index
+    if keep is not None:
+        body["stale_after"] = 365 if keep else 90
     if not body:
-        raise click.UsageError("Give --title, --color or --index.")
+        raise click.UsageError(
+            "Give --title, --color, --index or --keep-for-a-year/--no-keep-for-a-year."
+        )
     data = request("PATCH", f"groups/{group_id}/", json=body)
     if as_json:
         return echo_json(data)
@@ -277,7 +299,8 @@ def todos(
     for todo in data:
         t.add_row(
             str(todo["id"]),
-            link(todo["title"], todo.get("url")),
+            link(todo["title"], todo.get("url"))
+            + (" (obsolete)" if todo.get("obsolete") else ""),
             f"{todo['project_name']} / {todo['list_title']}"
             if "project_name" in todo
             else (todo["group"] or {}).get("title", ""),
@@ -368,7 +391,13 @@ def show_reactions(reactions):
 
 def show_todo(data):
     marker = " [clients]" if data["visible_to_clients"] else ""
-    done = " (completed)" if data["completed_at"] else ""
+    done = (
+        " (obsolete)"
+        if data.get("obsolete")
+        else " (completed)"
+        if data["completed_at"]
+        else ""
+    )
     echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), done, marker)
     for label, value in [
         ("Group", (data["group"] or {}).get("title")),
@@ -673,6 +702,33 @@ def todo_done(todo_id, as_json):
     if as_json:
         return echo_json(data)
     click.echo(f"Completed #{data['id']} {data['title']}.")
+    return None
+
+
+@todos.command("obsolete")
+@click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
+@json_option
+def todo_obsolete(todo_ids, as_json):
+    """Mark TODOs as obsolete: completed, but not done; reopen undoes it"""
+    done = [request("POST", f"todos/{todo_id}/obsolete/") for todo_id in todo_ids]
+    if as_json:
+        return echo_json(done)
+    for data in done:
+        click.echo(f"Marked #{data['id']} {data['title']} as obsolete.")
+    return None
+
+
+@todos.command("keep")
+@click.argument("todo_ids", metavar="TODO...", type=int, nargs=-1, required=True)
+@json_option
+def todo_keep(todo_ids, as_json):
+    """Keep TODOs open: a stale to-do isn't marked obsolete (any activity
+    does the same)"""
+    kept = [request("POST", f"todos/{todo_id}/keep/") for todo_id in todo_ids]
+    if as_json:
+        return echo_json(kept)
+    for data in kept:
+        click.echo(f"Kept #{data['id']} {data['title']} open.")
     return None
 
 
