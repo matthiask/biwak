@@ -239,6 +239,52 @@ class DailyRunTest(StaleBase):
         self.assertIn("1 stale, 0 warned, 1 to warn", out.getvalue())
         self.assertIsNone(self.todo(self.item).stale_warned_at)
 
+    def test_report_lists_the_todos(self):
+        """Each stale to-do with why and what happens to it (warned, warned
+        at the next run, or later: over the day's limit)"""
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        backlog = ops.create_group(todolist=self.list.todolist, title="Backlog")
+        overdue = self.make(
+            "Book the bus", age=200, due_on=days_ago(120).date(), group=backlog
+        )
+        self.run_at(NOW)
+        for n in range(21):
+            self.make(f"Later {n:02}", age=100)
+        self.make("Recent", age=10)
+
+        def report(*args):
+            out = StringIO()
+            with time_machine.travel(NOW + dt.timedelta(days=1), tick=False):
+                call_command("stale_todos", *args, stdout=out)
+            return out.getvalue()
+
+        output = report()
+        self.assertIn("23 stale, 2 warned, 20 to warn", output)
+        self.assertIn(
+            f"#{overdue.pk} Book the bus (Shared / Backlog): Due 9 August 2026;"
+            " warned, marked obsolete on 21 December 2026",
+            output,
+        )
+        self.assertIn(
+            f"#{self.item.pk} Old (Shared): Nothing since 29 August 2026; warned,",
+            output,
+        )
+        self.assertIn("Later 00 (Shared): Nothing since", output)
+        self.assertIn("; to warn", output)
+        self.assertEqual(output.count("; later (over 20 a day)"), 1)
+        self.assertNotIn("Recent", output)
+        # Only the counts
+        output = report("--summary")
+        self.assertIn("23 stale, 2 warned, 20 to warn", output)
+        self.assertNotIn("Book the bus", output)
+        # One project
+        other = project("Other", members=[self.ada])
+        self.assertNotIn("Website", report("--project", other.pk))
+        self.assertIn("Book the bus", report("--project", self.project.pk))
+
 
 class WarningMailTest(StaleBase):
     def setUp(self):
