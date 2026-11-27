@@ -604,6 +604,17 @@ class SecondRunTest(ImportCase):
         self.assertEqual(report.counts["to-dos"]["unchanged"], 6)
         self.assertEqual(visibility.check(), [])
 
+    def test_unchanged_recordings_keep_their_times(self):
+        """A rerun doesn't write Basecamp's times onto what it skips: an
+        item changed in Biwak since keeps its own"""
+        self.run_import()
+        later = timezone.now()
+        Item.objects.update(updated_at=later)
+        self.run_import()
+        self.assertEqual(
+            set(Item.objects.values_list("updated_at", flat=True)), {later}
+        )
+
     def test_people_assigned_since_the_last_run_at_the_last_change(self):
         self.run_import()
         food = self.item("Buy giraffe food")

@@ -78,7 +78,9 @@ goes into internal containers, archived recordings skipped.
   count; when both are the same, the recording isn't updated and its
   comments and subscribers aren't fetched (the two requests per
   recording that made a second run as slow as the first). The report
-  counts them as unchanged (a dry run too). Changed subscriptions don't
+  counts them as unchanged (a dry run too). Their times aren't written
+  back either (found 2026-11-27: every rerun set Basecamp's `updated_at`
+  again, also on items changed in Biwak since). Changed subscriptions don't
   change `updated_at`, so they come along only with `--full`, which reads
   everything. `ImportedObject`'s `basecamp_updated_at` and `basecamp_comments_count` (cards say
   `comment_count`), stored once the recording's comments and subscribers

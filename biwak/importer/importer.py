@@ -1290,6 +1290,13 @@ class Importer(Resolver):
             )
         return item, found
 
+    def _restamp(self, bc_type, item, rec):
+        """``_stamp()`` after ``_upsert()``, not for what it skipped as
+        unchanged: those weren't touched, and may have been changed in
+        Biwak since (found 2026-11-27: every rerun reset their times)"""
+        if (bc_type, rec["id"]) not in self._skipped:
+            self._stamp(item, rec)
+
     def _stamp(self, item, rec):
         """The original times; the operations wrote now"""
         Item.objects.filter(pk=item.pk).update(
@@ -1432,7 +1439,7 @@ class Importer(Resolver):
         if item is not None:
             self._top_visibility(item, visible, rec)
             self._status(item, rec)
-            self._stamp(item, rec)
+            self._restamp("Todolist", item, rec)
         self._list_content(rec, item, visible, project)
         self._follow("Todolist", rec, item, comments=False)
 
@@ -1553,7 +1560,7 @@ class Importer(Resolver):
             with importing(at=parse_time(assigned_at)):
                 self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
             self._completion(todo, rec, new=bool(created))
-            self._stamp(todo, rec)
+            self._restamp(bc_type, todo, rec)
         self._follow(bc_type, rec, todo)
 
     def _repeat(self, rec, title):
@@ -1675,7 +1682,7 @@ class Importer(Resolver):
         )
         if item is not None:
             self._top_visibility(item, visible, rec)
-            self._stamp(item, rec)
+            self._restamp("Kanban::Board", item, rec)
         self._container, self._container_is_board = rec, True
         self._container_project = project
         self._preload(COLUMN, rec.get("lists", []))
@@ -1763,7 +1770,7 @@ class Importer(Resolver):
         item = self._upsert("Message", rec, create=create, update=update, follow=True)
         if item is not None:
             self._top_visibility(item, visible, rec)
-            self._stamp(item, rec)
+            self._restamp("Message", item, rec)
         self._follow("Message", rec, item)
         if item is not None:
             # From the original times, for the board's order
@@ -1839,7 +1846,7 @@ class Importer(Resolver):
         if item is not None:
             # Internal also when a client forwarded it
             self._top_visibility(item, visible=False, rec=rec)
-            self._stamp(item, rec)
+            self._restamp("Inbox::Forward", item, rec)
         self._follow(
             "Inbox::Forward",
             rec,
@@ -1889,7 +1896,7 @@ class Importer(Resolver):
         item = self._upsert("Vault", rec, create=create, follow=True)
         if item is not None:
             self._top_visibility(item, visible, rec)
-            self._stamp(item, rec)
+            self._restamp("Vault", item, rec)
         self._follow("Vault", rec, item, comments=False)
         self._vault(
             rec["id"],
@@ -1938,7 +1945,7 @@ class Importer(Resolver):
         item = self._upsert("Document", rec, create=create, update=update, follow=True)
         if item is not None:
             self._top_visibility(item, visible, rec)
-            self._stamp(item, rec)
+            self._restamp("Document", item, rec)
         self._follow("Document", rec, item)
 
     def _upload(self, rec, project, parent, parent_visible, nested, internal):
@@ -1996,7 +2003,7 @@ class Importer(Resolver):
             return
         if item is not None:
             self._top_visibility(item, visible, rec)
-            self._stamp(item, rec)
+            self._restamp("Upload", item, rec)
         self._follow("Upload", rec, item)
 
     # Check-ins ------------------------------------------------------------------------------------
@@ -2037,7 +2044,7 @@ class Importer(Resolver):
         answers = list(self.client.paginate(f"/questions/{rec['id']}/answers.json"))
         self._preload("Question::Answer", answers)
         if item is not None:
-            self._stamp(item, rec)
+            self._restamp("Question", item, rec)
         asked = []
         for answer in answers:
             if self._skip(answer):
@@ -2109,7 +2116,7 @@ class Importer(Resolver):
         except _Skip:
             return user
         if item is not None:
-            self._stamp(item, rec)
+            self._restamp("Question::Answer", item, rec)
         self._follow("Question::Answer", rec, item, subscriptions=False)
         return user
 
