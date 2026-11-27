@@ -1752,6 +1752,7 @@ class CommandTest(ImportCase):
             "secret",
             cache_dir=client_api.default_cache_dir(),
             answers_max_age=3600,
+            renew_token=None,
         )
         self.assertIn("Imported.", text)
         self.assertIn("to-dos: 6 new", text)
@@ -1840,11 +1841,15 @@ class CommandTest(ImportCase):
         args = ["--account", "1000", "--project", str(support.PROJECT)]
         _text, make = self.call(*args, "--cache-dir", "/srv/somewhere")
         make.assert_called_once_with(
-            "1000", "secret", cache_dir="/srv/somewhere", answers_max_age=3600
+            "1000",
+            "secret",
+            cache_dir="/srv/somewhere",
+            answers_max_age=3600,
+            renew_token=None,
         )
         _text, make = self.call(*args, "--no-cache")
         make.assert_called_once_with(
-            "1000", "secret", cache_dir=None, answers_max_age=3600
+            "1000", "secret", cache_dir=None, answers_max_age=3600, renew_token=None
         )
         _text, make = self.call(*args, "--answers-max-age", "0.5")
         self.assertEqual(make.call_args.kwargs["answers_max_age"], 1800)
@@ -1870,6 +1875,49 @@ class CommandTest(ImportCase):
 
             os.environ.pop("BASECAMP_TOKEN", None)
             call_command("import_basecamp", "--account", "1", "--project", "2")
+
+    def test_a_token_command(self):
+        """For the token, and again when Basecamp refuses it: run without
+        BASECAMP_TOKEN, which the Basecamp CLI would echo"""
+        command = "sh -c 'echo ${BASECAMP_TOKEN:-fresh}'"
+        _text, make = self.call(
+            "--account",
+            "1000",
+            "--project",
+            str(support.PROJECT),
+            "--token-command",
+            command,
+            token=None,
+        )
+        self.assertEqual(make.call_args.args, ("1000", "fresh"))
+        renew = make.call_args.kwargs["renew_token"]
+        with mock.patch.dict("os.environ", {"BASECAMP_TOKEN": "stale"}):
+            self.assertEqual(renew(), "fresh")
+        with self.assertRaisesMessage(CommandError, "--token-command"):
+            self.call(
+                "--account",
+                "1000",
+                "--project",
+                "1",
+                "--token-command",
+                "false",
+                token=None,
+            )
+
+    def test_a_refused_token_stops_the_run(self):
+        """What was imported stays; the message says how to go on"""
+
+        def refuse(path):
+            if path == "/vaults/400/vaults.json":
+                raise client_api.Unauthorized(path)
+
+        self.client_.on_request = refuse
+        args = ("--account", "1000", "--project", str(support.PROJECT))
+        with self.assertRaisesMessage(CommandError, "--token-command"):
+            self.call(*args)
+        self.assertEqual(Project.objects.count(), 1)
+        with self.assertRaisesMessage(CommandError, "also the one 'echo x' gave"):
+            self.call(*args, "--token-command", "echo x")
 
     def test_needs_a_staff_member_to_run_as(self):
         with self.assertRaisesMessage(CommandError, "No active staff member"):

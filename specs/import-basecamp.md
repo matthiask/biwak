@@ -3,7 +3,7 @@
 For moving an existing team over: reads the Basecamp API and creates
 projects, people and items.
 
-**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23, the answer cache 2026-11-23, organizations by domain 2026-11-23. Not built: other people's bookmarks (the API
+**Status:** built (2026-11-21), the download cache 2026-11-22, fewer queries 2026-11-23, email forwards 2026-11-23, the answer cache 2026-11-23, organizations by domain 2026-11-23, renewing the token 2026-11-27. Not built: other people's bookmarks (the API
 only gives the token owner's). Dropped (decided 2026-11-23):
 `--lazy-files` (fetching old attachments when first opened: nothing to
 fetch once the Basecamp account is cancelled) and the import as a job in
@@ -19,13 +19,23 @@ the tests.
 `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
 [--project ID ...] [--templates] [--dry-run] [--since YYYY-MM-DD] [--full]
 [--include-disabled] [--user EMAIL] [--archive] [--cache-dir DIR | --no-cache]
-[--answers-max-age HOURS]`.
+[--answers-max-age HOURS] [--token-command CMD]`.
 Always dry-run first: counts per kind, people to create, problems, what
 goes into internal containers, archived recordings skipped.
 
 - The token must be an administrator's: only they get the people's
   addresses (others get them redacted; the importer reports it and
   creates placeholder people `basecamp-ID@import.invalid`).
+- **The token expires** (found 2026-11-27: a big project's import
+  stopped with a 401 after 50 minutes): the Basecamp CLI's OAuth tokens
+  last an hour. `--token-command "basecamp auth token"` runs the command
+  for the token (without `BASECAMP_TOKEN`, which the CLI would echo
+  back) and again whenever Basecamp answers 401, retrying the request
+  once with the new token ("token renewed" in the progress). A 401
+  without the option, or with a token the command can't renew, stops
+  the run (`client.Unauthorized`, not an `ApiError`, which would turn
+  every remaining request into a problem in the report) and says how to
+  go on: a rerun continues, since what was imported is skipped.
 - The import runs as the token's owner (`/my/profile.json`, or
   `--user`), who must be Biwak staff: they create the projects and own
   the bookmarks.
@@ -135,9 +145,12 @@ goes into internal containers, archived recordings skipped.
   decided 2026-11-23 by the user, it was 6: a completion in Basecamp
   went unnoticed by a later run; the cache is for one work session,
   a dry run and the run after it;
-  `--no-cache` neither). Keyed by the SHA-256 of the token and the URL:
+  `--no-cache` neither). Keyed by the SHA-256 of who asks and the URL:
   what an answer contains depends on who asks (addresses only for
-  administrators); the token itself isn't stored. Errors aren't cached,
+  administrators). Who asks is the token's person
+  (`/my/profile.json`, asked at the start of every run, never from the
+  cache; decided 2026-11-27, it was the token: a renewed token found
+  nothing); the token itself isn't stored. Errors aren't cached,
   an older answer is fetched and overwritten, none is deleted. What
   changes in Basecamp within the hour is missed by that run, not lost:
   the run stores the `updated_at` it saw, so the next run after the

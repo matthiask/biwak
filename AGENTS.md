@@ -50,7 +50,10 @@ them when a decision changes (dated: "decided 2026-11-20").
 - `BASECAMP_TOKEN=... ./manage.py import_basecamp --account ID --project ID
   [--dry-run] [--archive]` imports a Basecamp 4 project
   (`specs/import-basecamp.md`); a second run updates, `--archive`
-  archives it in Basecamp afterwards. Always dry-run first. Downloaded
+  archives it in Basecamp afterwards. Always dry-run first. The Basecamp
+  CLI's tokens last an hour: for long runs `--token-command "basecamp
+  auth token"` instead of `BASECAMP_TOKEN` renews it on a 401; an
+  interrupted run is simply started again. Downloaded
   files are cached in `~/.cache/biwak/basecamp/` (`XDG_CACHE_HOME`),
   `--cache-dir DIR` elsewhere, `--no-cache` off; never cleaned up. The
   API's answers are reused from there for an hour (`--answers-max-age`),

@@ -3,6 +3,8 @@ routes, pagination by ``Link`` headers, rate limits.
 
 Basecamp answers 429 with ``Retry-After``: wait as told. Otherwise at most
 50 requests per 10 seconds. Server errors are retried with a growing wait.
+A 401 (an expired token) asks ``renew_token`` for a new one and tries
+again, or stops the run (``Unauthorized``).
 The importer uses ``get()``, ``paginate()`` and ``download()``, and
 ``archive_project()`` with ``--archive``; the tests give it a fake client
 with the same methods.
@@ -11,7 +13,7 @@ Downloads go through a cache on disk (``FileCache``), keyed by where the
 API redirects to: an upload's download URL stays the same when a new
 version replaces its file, the storage location doesn't (verified
 2026-11-22). The API's JSON answers go through ``AnswerCache``, reused
-for a few hours, so a dry run and the run after it read Basecamp once.
+for an hour, so a dry run and the run after it read Basecamp once.
 """
 
 import hashlib
@@ -42,6 +44,12 @@ class NotFound(Exception):
 
 class ApiError(Exception):
     pass
+
+
+class Unauthorized(Exception):
+    """401: the token expired or was revoked. Not an ``ApiError``, which
+    the importer reports and goes on with: without a token nothing more
+    can be read, so the run stops."""
 
 
 @dataclass
@@ -101,11 +109,12 @@ class FileCache:
 
 
 class AnswerCache:
-    """The API's JSON answers on disk, by token and URL, reused while
+    """The API's JSON answers on disk, by who asks and URL, reused while
     younger than ``max_age`` seconds: a dry run and the run after it
-    read Basecamp once. The token is part of the key because what an
-    answer contains depends on who asks (addresses only for
-    administrators); only its hash is stored. An older answer is fetched
+    read Basecamp once. Who asks is part of the key because what an
+    answer contains depends on it (addresses only for administrators):
+    the person once known (``BasecampClient.identify()``), else the
+    token; only the key's hash is stored. An older answer is fetched
     again and overwritten; none is ever deleted."""
 
     def __init__(self, directory, max_age, *, clock=time.time):
@@ -113,23 +122,23 @@ class AnswerCache:
         self.max_age = max_age
         self.clock = clock
 
-    def _path(self, token, url):
-        digest = hashlib.sha256(f"{token}\n{url}".encode()).hexdigest()
+    def _path(self, identity, url):
+        digest = hashlib.sha256(f"{identity}\n{url}".encode()).hexdigest()
         return self.directory / digest[:2] / digest
 
-    def get(self, token, url):
+    def get(self, identity, url):
         """``(body, link)``, None without a fresh answer"""
         try:
-            stored = json.loads(self._path(token, url).read_bytes())
+            stored = json.loads(self._path(identity, url).read_bytes())
         except FileNotFoundError, ValueError:
             return None
         if self.clock() - stored["fetched"] > self.max_age:
             return None
         return stored["body"].encode(), stored["link"]
 
-    def put(self, token, url, body, link):
+    def put(self, identity, url, body, link):
         stored = {"fetched": self.clock(), "link": link, "body": body.decode()}
-        _write(self._path(token, url), json.dumps(stored).encode())
+        _write(self._path(identity, url), json.dumps(stored).encode())
 
 
 def _write(path, data):
@@ -160,14 +169,20 @@ class BasecampClient:
         *,
         cache=None,
         answers=None,
+        renew_token=None,
         transport=urllib_transport,
         sleep=time.sleep,
         clock=time.monotonic,
     ):
         """``cache``: a ``FileCache`` for downloads, ``answers`` an
-        ``AnswerCache`` for the JSON answers, either None for none"""
+        ``AnswerCache`` for the JSON answers, either None for none.
+        ``renew_token``: called for a new token when Basecamp answers 401
+        (OAuth tokens of the Basecamp CLI last an hour), None to stop"""
         self.account = account
         self.token = token
+        self.renew_token = renew_token
+        # The person, once ``identify()`` knows them
+        self.person_id = None
         self.cache = cache
         self.answers = answers
         self.transport = transport
@@ -184,6 +199,7 @@ class BasecampClient:
         # (``on_wait(seconds, why)``)
         self.request_count = 0
         self.on_wait = None
+        self.on_renew = None
 
     def _sleep(self, seconds, why):
         if self.on_wait is not None and seconds >= 1:
@@ -203,11 +219,17 @@ class BasecampClient:
         headers = {"User-Agent": USER_AGENT}
         if accept:
             headers["Accept"] = accept
-        if auth:
-            headers["Authorization"] = f"Bearer {self.token}"
+        renewed = False
         for attempt in range(RETRIES):
+            if auth:
+                headers["Authorization"] = f"Bearer {self.token}"
             self._wait_for_slot()
             response = self.transport(url, headers, method=method)
+            if response.status == 401 and auth:
+                if renewed or not self._renew():
+                    raise Unauthorized(url)
+                renewed = True
+                continue
             if response.status == 429:
                 wait = int(_header(response, "Retry-After") or WINDOW)
                 self._sleep(wait, "Basecamp asked to wait (429)")
@@ -217,6 +239,32 @@ class BasecampClient:
                 continue
             return response
         raise ApiError(f"Giving up on {url}: status {response.status}")
+
+    def _renew(self):
+        """Whether ``renew_token`` gave a token other than the one refused"""
+        if self.renew_token is None:
+            return False
+        token = self.renew_token()
+        if not token or token == self.token:
+            return False
+        self.token = token
+        if self.on_renew is not None:
+            self.on_renew()
+        return True
+
+    def identify(self):
+        """The token owner's profile (asked, never from the cache); from
+        now on the cached answers are theirs, whatever the token"""
+        response = self._json(self._url("/my/profile.json", None))
+        profile = json.loads(response.body)
+        self.person_id = profile["id"]
+        return profile
+
+    @property
+    def identity(self):
+        """Whose answers the ``AnswerCache`` holds: the person once known,
+        so a renewed token still finds them, else the token"""
+        return f"person {self.person_id}" if self.person_id else self.token
 
     def _url(self, path, params):
         url = path if path.startswith("http") else f"{API}/{self.account}{path}"
@@ -237,14 +285,14 @@ class BasecampClient:
         while fresh"""
         if (
             self.answers is not None
-            and (cached := self.answers.get(self.token, url)) is not None
+            and (cached := self.answers.get(self.identity, url)) is not None
         ):
             self.answer_counts["cached"] += 1
             return cached
         response = self._json(url)
         link = _header(response, "Link") or ""
         if self.answers is not None:
-            self.answers.put(self.token, url, response.body, link)
+            self.answers.put(self.identity, url, response.body, link)
         return response.body, link
 
     def get(self, path, **params):
