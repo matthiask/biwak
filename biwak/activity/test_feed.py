@@ -169,6 +169,57 @@ class MergeTest(FeedBase):
         self.assertEqual(entry.where, "Website")
 
 
+class CreatedAndAssignedTest(FeedBase):
+    """Creating a to-do and assigning it in one go is one line (decided
+    2026-11-27)"""
+
+    def entries(self):
+        events = list(feed.feed_events(self.ada))
+        feed.attach(events, self.ada)
+        return feed.merge(events)
+
+    def test_one_entry(self):
+        ops.create_todo(
+            todolist=self.shared, title="Pack", creator=self.ada, assignees=[self.bob]
+        )
+        (entry,) = self.entries()
+        self.assertEqual(entry.latest.action, Action.CREATED)
+        self.assertEqual(entry.latest.assigned_with.action, Action.ASSIGNED)
+
+    def test_several_merge_as_created(self):
+        for n in range(3):
+            ops.create_todo(
+                todolist=self.shared,
+                title=f"Pack {n}",
+                creator=self.ada,
+                assignees=[self.ada],
+            )
+        (entry,) = self.entries()
+        self.assertEqual(entry.what, "3 to-dos")
+
+    def test_assigning_later_stays_apart(self):
+        todo = ops.create_todo(todolist=self.shared, title="Pack", creator=self.ada)
+        Event.objects.filter(item=todo).update(created_at=NOW - dt.timedelta(hours=2))
+        ops.assign(todo, [self.bob], actor=self.ada)
+        self.assertEqual(
+            [e.action for entry in self.entries() for e in entry.events],
+            [Action.ASSIGNED, Action.CREATED],
+        )
+
+    def test_the_page(self):
+        ops.create_todo(
+            todolist=self.shared, title="Pack", creator=self.ada, assignees=[self.ada]
+        )
+        ops.create_todo(
+            todolist=self.shared, title="Ship", creator=self.ada, assignees=[self.bob]
+        )
+        self.client.force_login(self.ada)
+        text = page_text(self.client.get("/feed/"))
+        self.assertIn("Ada created Pack and took it on", text)
+        self.assertIn("Ada created Ship and assigned it to Bob", text)
+        self.assertNotIn("assigned Bob to", text)
+
+
 class ConversationTest(FeedBase):
     def comment(self, author, minutes, item=None, text="Hm"):
         comment = ops.add_comment(item or self.todo, author=author, content=text)

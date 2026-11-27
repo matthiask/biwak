@@ -6444,6 +6444,16 @@ msgstr "hat %(subject)s beantwortet"
 
 #: biwak/templates/activity/_event.html
 #, python-format
+msgid "created %(subject)s and took it on"
+msgstr "hat %(subject)s erstellt und übernommen"
+
+#: biwak/templates/activity/_event.html
+#, python-format
+msgid "created %(subject)s and assigned it to %(assigned)s"
+msgstr "hat %(subject)s erstellt und %(assigned)s zugewiesen"
+
+#: biwak/templates/activity/_event.html
+#, python-format
 msgid "created %(subject)s"
 msgstr "hat %(subject)s erstellt"
 
@@ -7589,6 +7599,10 @@ msgid "Nobody"
 msgstr "Niemand"
 
 #: biwak/templates/items/_todo_view.html
+msgid "No due date"
+msgstr "Kein Fälligkeitsdatum"
+
+#: biwak/templates/items/_todo_view.html
 msgid "Repeats"
 msgstr "Wiederholt sich"
 
@@ -7596,10 +7610,6 @@ msgstr "Wiederholt sich"
 #, python-format
 msgid "Until %(day)s."
 msgstr "Bis %(day)s."
-
-#: biwak/templates/items/_todo_view.html
-msgid "No due date"
-msgstr "Kein Fälligkeitsdatum"
 
 #: biwak/templates/items/_todo_view.html
 #, python-format

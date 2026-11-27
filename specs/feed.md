@@ -25,6 +25,14 @@ From the events (`biwak/activity/`, `notifications.md`);
   entries (decided 2026-11-22): after 50 events or later, looking ahead up to another 50 for
   a place where no entry, conversation or pair cancelling out is split
   (`feed._edge()`); only a merge reaching further is still split.
+- **Created and assigned in one line** (decided 2026-11-27): a to-do
+  its creator assigns when creating it (the first assignment by the
+  same person within a minute) is one event in the feed, "Ada created
+  Pack and took it on" (the creator alone) or "Ada created Pack and assigned
+  it to Bob, Cleo" (`feed.with_assignments()`). Merged, it's one of the
+  created ones ("Ada created 5 to-dos"). The person filter and the
+  action filter work on the events as before: filtered by "assigned",
+  the assignment shows alone.
 - **Conversations, nothing collapses** (decided 2026-11-21): comments
   on the same item, by anyone, each within an hour of the one before and
   on the same day, become one entry, "Conversation on Order the tent",

@@ -15,6 +15,14 @@
   {% endif %}
 {% elif event.action == "created" and event.item.kind == "answer" %}
   {% blocktranslate %}answered {{ subject }}{% endblocktranslate %}
+{% elif event.action == "created" and event.assigned_with and not what %}
+  {# Assigned with its creation, one line (feed.with_assignments()) #}
+  {% if event.assigned_with.is_self_assigned %}
+    {% blocktranslate %}created {{ subject }} and took it on{% endblocktranslate %}
+  {% else %}
+    {% capture as assigned %}{{ event.assigned_with.assignee_links.values|join:", " }}{% endcapture %}
+    {% blocktranslate %}created {{ subject }} and assigned it to {{ assigned }}{% endblocktranslate %}
+  {% endif %}
 {% elif event.action == "created" %}
   {% blocktranslate %}created {{ subject }}{% endblocktranslate %}
 {% elif event.action == "edited" %}

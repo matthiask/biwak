@@ -430,6 +430,8 @@ def _edge(events, size):
     for entry in merge(events):
         for newer, older in itertools.pairwise(entry.events):
             link(newer, older)
+    for assigned, created in _created_with(events).items():
+        link(assigned, created)
     last = {}  # item ID and actor -> the older event of what may cancel
     for event in reversed(events):
         if event.action in NET_CHANGES and event.item_id:
@@ -466,6 +468,45 @@ def _others(events):
     )
 
 
+# An assignment this close after its creation was made with it
+WITH_CREATION = dt.timedelta(minutes=1)
+
+
+def _created_with(events):
+    """``{assigned event: created event}`` for to-dos assigned by their
+    creator when they were created"""
+    created = {
+        (e.item_id, e.actor_id): e
+        for e in events
+        if e.action == Action.CREATED and e.item_id is not None
+    }
+    pairs = {}
+    # Oldest first: the first assignment after the creation
+    for event in reversed(events):
+        if event.action != Action.ASSIGNED:
+            continue
+        creation = created.pop((event.item_id, event.actor_id), None)
+        if (
+            creation is not None
+            and event.created_at - creation.created_at <= WITH_CREATION
+        ):
+            pairs[event] = creation
+    return pairs
+
+
+def with_assignments(events):
+    """Events without the assignments made with a creation, which the
+    created event carries as ``assigned_with``: "created Pack and assigned
+    it to Bob" is one line (decided 2026-11-27)"""
+    pairs = _created_with(events)
+    for assigned, created in pairs.items():
+        assigned.is_self_assigned = assigned.data.get("assignees") == [
+            assigned.actor_id
+        ]
+        created.assigned_with = assigned
+    return [event for event in events if event not in pairs]
+
+
 def merge(events):
     """Entries from events newest first: comments on the same item become
     conversations (``conversations()``); consecutive events of the same
@@ -481,6 +522,7 @@ def merge(events):
         events, together=_together, others=others
     )
     events = [event for event in events if event.pk not in hidden]
+    events = with_assignments(events)
     entries = []
     for event in conversations(events):
         if isinstance(event, Conversation):
