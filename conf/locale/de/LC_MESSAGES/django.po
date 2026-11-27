@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 07:59+0100\n"
+"POT-Creation-Date: 2026-11-27 08:06+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -6686,6 +6686,11 @@ msgstr "hat %(name)s entfernt"
 #, python-format
 msgid "in %(where)s"
 msgstr "(in %(where)s)"
+
+#: biwak/templates/activity/_event.html
+#: biwak/templates/items/_timeline_line.html
+msgid "Basecamp import"
+msgstr "Basecamp-Import"
 
 #: biwak/templates/activity/_lantern_groups.html
 #: biwak/templates/activity/_subject.html biwak/templates/activity/lantern.html

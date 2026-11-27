@@ -61,10 +61,13 @@ def _mergeable(earlier, data):
 _quiet = ContextVar("events_quiet", default=False)
 _occurred_at = ContextVar("events_occurred_at", default=None)
 _importing = ContextVar("events_importing", default=False)
+# What the importer changes in its own name, not Basecamp's history: the
+# events say where it came from (``data["imported"]``)
+_noted = ContextVar("events_noted", default=None)
 
 
 @contextmanager
-def importing(*, at=None):
+def importing(*, at=None, noted=None):
     """For the importer (specs/import-basecamp.md): events recorded inside
     notify nobody, and carry ``at`` (when given) instead of now. Nested
     uses replace ``at``; the quiet part stays. Inside, the operations also
@@ -72,13 +75,17 @@ def importing(*, at=None):
     importer creates people without an account inactive (decided
     2026-11-21). The projects' activity times aren't touched per event:
     the importer recomputes them once per project
-    (``projects.operations.recompute_activity()``, decided 2026-11-23)."""
+    (``projects.operations.recompute_activity()``, decided 2026-11-23).
+    ``noted`` ("basecamp"): the events are the import's own doing, now,
+    and say so (``data["imported"]``, decided 2026-11-27)."""
     quiet = _quiet.set(True)
     importer = _importing.set(True)
     occurred = _occurred_at.set(at if at is not None else _occurred_at.get())
+    note = _noted.set(noted)
     try:
         yield
     finally:
+        _noted.reset(note)
         _importing.reset(importer)
         _occurred_at.reset(occurred)
         _quiet.reset(quiet)
@@ -110,6 +117,8 @@ def record(*, actor, action, project, item=None, internal=False, **data):
     ``STAFF_ONLY`` events are internal whatever the item, and so are
     ``internal`` ones (a reaction to a completing clients didn't see)."""
     visible = False
+    if _noted.get():
+        data["imported"] = _noted.get()
     if item is not None:
         data.setdefault("title", item.title)
         visible = (
