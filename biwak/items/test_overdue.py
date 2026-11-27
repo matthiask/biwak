@@ -189,5 +189,5 @@ class EmptyFactsTest(Base):
 
     def test_labels_shown_with_a_date(self):
         facts = self.facts(self.todo(self.today + DAY))
-        self.assertIn("<dt>Due on</dt>", facts)
+        self.assertRegex(facts, r"<dt\s*>Due on</dt>")
         self.assertNotIn("No due date", facts)
