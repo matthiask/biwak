@@ -453,7 +453,8 @@ class CardsTest(OverviewTestCase):
     def test_no_activity_no_time(self):
         Project.objects.update(last_activity_at=None, last_client_activity_at=None)
         _, response = self.names(self.ada)
-        self.assertNotContains(response, "ago")
+        # With the space: the random CSRF token may contain "ago"
+        self.assertNotContains(response, " ago")
 
     def test_clients_badge_staff_only(self):
         _, response = self.names(self.cleo)
