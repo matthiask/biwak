@@ -896,8 +896,9 @@ RECORDING_TYPES = {
 
 
 class FakeClient:
-    """``BasecampClient``'s ``get()``, ``paginate()``, ``download()`` and
-    ``archive_project()`` over recorded data, counting the requests"""
+    """``BasecampClient``'s ``get()``, ``paginate()``, ``download()``,
+    ``archive_project()`` and ``identify()`` over recorded data, counting
+    the requests"""
 
     def __init__(self, data=None, files=None):
         made, made_files = make_data()
@@ -911,6 +912,8 @@ class FakeClient:
         # Called with the path of each request, to fail in the middle
         self.on_request = None
         self.on_wait = None
+        self.on_renew = None
+        self.renew_token = None
 
     @property
     def request_count(self):
@@ -944,6 +947,9 @@ class FakeClient:
 
     def archive_project(self, project_id):
         self.archived_projects.append(project_id)
+
+    def identify(self):
+        return self._lookup("/my/profile.json", {})
 
     def download(self, url, *, accept=None, cache=True):
         self.downloads.append(url)

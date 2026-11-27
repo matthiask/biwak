@@ -15,7 +15,7 @@ class Transport:
         self.methods = []
 
     def __call__(self, url, headers, method="GET"):
-        self.requests.append((url, headers))
+        self.requests.append((url, dict(headers)))
         self.methods.append(method)
         return self.responses.pop(0)
 
@@ -155,6 +155,55 @@ class ClientTest(ClientCase):
         client = self.make(Response(403))
         with self.assertRaisesMessage(api.ApiError, "not allowed"):
             client.archive_project(42)
+
+
+class TokenTest(ClientCase):
+    """A 401: the Basecamp CLI's OAuth tokens last an hour, a big project's
+    import longer (found 2026-11-27)"""
+
+    def test_without_renewing_it_stops(self):
+        """Not an ``ApiError``, which the importer reports and goes on
+        with: every request after it would fail the same way"""
+        client = self.make(Response(401))
+        with self.assertRaises(api.Unauthorized):
+            client.get("/x.json")
+        self.assertFalse(issubclass(api.Unauthorized, api.ApiError))
+
+    def test_a_renewed_token_is_used_from_then_on(self):
+        client = self.make(Response(401), ok({"id": 1}), ok({"id": 2}))
+        renewed = []
+        client.renew_token = lambda: "fresh"
+        client.on_renew = lambda: renewed.append(True)
+        self.assertEqual(client.get("/x.json"), {"id": 1})
+        self.assertEqual(client.get("/y.json"), {"id": 2})
+        tokens = [headers["Authorization"] for _url, headers in self.transport.requests]
+        self.assertEqual(tokens, ["Bearer secret", "Bearer fresh", "Bearer fresh"])
+        self.assertEqual(renewed, [True])
+
+    def test_the_same_token_again_stops(self):
+        client = self.make(Response(401))
+        client.renew_token = lambda: "secret"
+        with self.assertRaises(api.Unauthorized):
+            client.get("/x.json")
+
+    def test_a_renewed_token_refused_too_stops(self):
+        client = self.make(Response(401), Response(401))
+        client.renew_token = lambda: "fresh"
+        with self.assertRaises(api.Unauthorized):
+            client.get("/x.json")
+        self.assertEqual(len(self.transport.requests), 2)
+
+    def test_downloads_renew_too(self):
+        client = self.make(
+            Response(401),
+            Response(302, {"Location": "https://storage.example.org/blob?sig=1"}),
+            Response(200, {}, b"file"),
+        )
+        client.renew_token = lambda: "fresh"
+        self.assertEqual(
+            client.download("https://3.basecampapi.com/x/download/a.png"), b"file"
+        )
+        self.assertNotIn("Authorization", self.transport.requests[2][1])
 
 
 STORAGE = "https://storage.example.org/blob-1"
@@ -315,6 +364,24 @@ class AnswerCacheTest(ClientCase):
         self.assertEqual(client.answer_counts, {})
         # and stored again
         self.assertEqual(self.make().get("/x.json"), {"v": 2})
+
+    def test_a_renewed_token_reads_the_same_answers(self):
+        """Once the person is known, the answers are theirs: a token
+        renewed while running (or for the run after a dry run) still finds
+        them"""
+        first = self.make(ok({"id": 7}), ok({"id": 1}))
+        self.assertEqual(first.identify(), {"id": 7})
+        first.get("/x.json")
+        client = self.make(ok({"id": 7}), token="fresh")
+        client.identify()
+        self.assertEqual(client.get("/x.json"), {"id": 1})
+        self.assertEqual(client.answer_counts, {"cached": 1})
+
+    def test_the_profile_is_always_asked(self):
+        """It says who asks: not from the cache"""
+        self.make(ok({"id": 7})).identify()
+        client = self.make(ok({"id": 8}))
+        self.assertEqual(client.identify(), {"id": 8})
 
     def test_another_token_asks_again(self):
         """Who asks decides what the answer contains (addresses)"""

@@ -1,5 +1,7 @@
 import datetime as dt
 import os
+import shlex
+import subprocess
 from pathlib import Path
 
 from django.core.management import BaseCommand, CommandError
@@ -10,18 +12,40 @@ from biwak.importer import client as api
 from biwak.importer.importer import Importer, ImportRefused
 
 
-def make_client(account, token, *, cache_dir=None, answers_max_age=0):
+def make_client(account, token, *, cache_dir=None, answers_max_age=0, renew_token=None):
     """``cache_dir``: where downloads are cached, None for no cache; the
     API's answers are cached in its ``answers/`` for ``answers_max_age``
-    seconds (0: not)"""
+    seconds (0: not). ``renew_token``: called for a new token after a 401"""
     if cache_dir is None:
-        return api.BasecampClient(account, token)
+        return api.BasecampClient(account, token, renew_token=renew_token)
     answers = None
     if answers_max_age > 0:
         answers = api.AnswerCache(Path(cache_dir) / "answers", answers_max_age)
     return api.BasecampClient(
-        account, token, cache=api.FileCache(cache_dir), answers=answers
+        account,
+        token,
+        cache=api.FileCache(cache_dir),
+        answers=answers,
+        renew_token=renew_token,
     )
+
+
+def token_from(command):
+    """The token a command prints (``basecamp auth token``), run
+    without ``BASECAMP_TOKEN``, which the Basecamp CLI would just echo"""
+    env = {k: v for k, v in os.environ.items() if k != "BASECAMP_TOKEN"}
+    try:
+        result = subprocess.run(
+            shlex.split(command),
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env,
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise CommandError(f"--token-command {command!r} failed: {exc}") from exc
+    return result.stdout.strip()
 
 
 class Command(BaseCommand):
@@ -115,6 +139,14 @@ class Command(BaseCommand):
                 " (staff); default: the person the token belongs to"
             ),
         )
+        parser.add_argument(
+            "--token-command",
+            help=(
+                "A command printing an OAuth token, run for the token without"
+                " BASECAMP_TOKEN and again whenever Basecamp refuses it (401;"
+                ' the Basecamp CLI\'s last an hour), e.g. "basecamp auth token"'
+            ),
+        )
 
     def handle(
         self,
@@ -131,13 +163,17 @@ class Command(BaseCommand):
         cache_dir,
         no_cache,
         answers_max_age,
+        token_command,
         **options,
     ):
         if not project and not templates:
             raise CommandError("Give --project, --templates or both.")
-        token = os.environ.get("BASECAMP_TOKEN")
+        renew_token = token_command and (lambda: token_from(token_command))
+        token = os.environ.get("BASECAMP_TOKEN") or (renew_token and renew_token())
         if not token:
-            raise CommandError("Set BASECAMP_TOKEN to an OAuth token.")
+            raise CommandError(
+                "Set BASECAMP_TOKEN to an OAuth token, or give --token-command."
+            )
         if no_cache and cache_dir:
             raise CommandError("Give --cache-dir or --no-cache, not both.")
         if not no_cache:
@@ -147,8 +183,13 @@ class Command(BaseCommand):
             token,
             cache_dir=None if no_cache else cache_dir,
             answers_max_age=answers_max_age * 3600,
+            renew_token=renew_token,
         )
-        email = user or client.get("/my/profile.json").get("email_address")
+        try:
+            profile = client.identify()
+        except api.Unauthorized as exc:
+            raise CommandError(_refused(token_command)) from exc
+        email = user or profile.get("email_address")
         actor = User.objects.filter(email__iexact=email or "", is_active=True).first()
         if actor is None or actor.is_client:
             raise CommandError(
@@ -168,6 +209,7 @@ class Command(BaseCommand):
             progress(f"    waiting {seconds:.0f} s ({why})")
 
         client.on_wait = waiting
+        client.on_renew = lambda: progress("    token renewed")
         importer = Importer(
             client,
             actor=actor,
@@ -187,4 +229,19 @@ class Command(BaseCommand):
                 importer.run_templates()
         except ImportRefused as exc:
             raise CommandError(str(exc)) from exc
+        except api.Unauthorized as exc:
+            raise CommandError(_refused(token_command)) from exc
         self.stdout.write(importer.report.as_text())
+
+
+def _refused(token_command):
+    if token_command:
+        return (
+            f"Basecamp refused the token, also the one {token_command!r} gave"
+            " (401). Log in again; a rerun continues where this one stopped."
+        )
+    return (
+        "Basecamp refused the token (401), it probably expired: give"
+        ' --token-command "basecamp auth token" to renew it while'
+        " running. A rerun continues where this one stopped."
+    )
