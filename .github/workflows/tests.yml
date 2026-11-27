@@ -60,7 +60,9 @@ jobs:
           TESTING: "True"
         # A process per CPU, no coverage: nothing reads it (decided
         # 2026-11-21, COVERAGE=1 ./runtests.sh measures it locally)
-        run: uv run ./manage.py test -v2 --parallel auto --exclude-tag e2e
+        run: |
+          uv run ./manage.py makemigrations --check --dry-run
+          PYTHONWARNINGS=all uv run ./manage.py test -v2 --parallel auto --exclude-tag e2e
 
   # The browser tests (Playwright), next to the Django tests
   e2e:
@@ -104,7 +106,7 @@ jobs:
           TESTING: "True"
         # Two processes, each with its server and Chromium, on the runner's
         # four CPUs
-        run: uv run ./manage.py test -v2 --parallel 2 --tag e2e
+        run: PYTHONWARNINGS=all uv run ./manage.py test -v2 --parallel 2 --tag e2e
 
   checks:
     runs-on: ubuntu-latest
