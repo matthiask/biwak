@@ -529,6 +529,11 @@ class Line:
         return _text_list(phrases(self.events))
 
     @property
+    def imported(self):
+        """Done by the importer itself (``data["imported"]``)"""
+        return any(e.data.get("imported") for e in self.events)
+
+    @property
     def completion(self):
         """The completing people react to (specs/reactions.md): the line's
         last ``completed`` event if the line says it completed the to-do;
@@ -594,6 +599,7 @@ def merge(entries):
             last = result[-1]
             if (
                 last.events[-1].actor_id == entry.events[0].actor_id
+                and last.imported == entry.imported
                 and entry.events[0].created_at - last.created_at <= MERGE_WINDOW
             ):
                 last.events.extend(entry.events)

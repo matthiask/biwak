@@ -38,6 +38,15 @@ goes into internal containers, archived recordings skipped.
   the last run (every one with `--full`) gets Basecamp's state, also
   where it was changed in Biwak meanwhile (a to-do completed in Biwak
   and open in Basecamp is reopened); comments made in Biwak stay.
+  **Undoing Biwak's change happens now** (decided 2026-11-27): when the
+  to-do's last completing (or reopening) in Biwak is newer than
+  Basecamp's time (the completion's, or `updated_at`, Basecamp doesn't
+  say when it was reopened), the importer completes or reopens it at the
+  time of the run, without a person ("Biwak"), the event noted as its
+  own (`data["imported"] = "basecamp"`, `importing(noted=)`): "Biwak
+  reopened this (Basecamp import)" in the timeline and the feed, after
+  what it undid. At Basecamp's time it sorted before the change it
+  undid, in a line of the creator's, and the timeline left it out.
   Unchanged recordings aren't touched. `--since` skips leaves
   (to-dos, cards, messages, docs, files, answers, comments) last updated
   before the date; containers are always read.

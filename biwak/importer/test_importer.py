@@ -736,6 +736,71 @@ class SecondRunTest(ImportCase):
         self.assertEqual(Item.objects.filter(title="Peel potatoes").count(), 1)
 
 
+class UndoingBiwakTest(ImportCase):
+    """A second run sets Basecamp's state over what was changed in Biwak
+    meanwhile; when Biwak's change is newer than Basecamp's, that happens
+    now, by Biwak, noted as the Basecamp import (decided 2026-11-27)"""
+
+    def run_again(self):
+        importer = Importer(self.client_, actor=self.ada, full=True)
+        importer.run(support.PROJECT)
+
+    def last_event(self, item):
+        return Event.objects.filter(item=item).latest("created_at", "pk")
+
+    def lines(self, item):
+        from biwak.activity import timeline
+
+        return [
+            str(line.text)
+            for line in timeline.entries_for(item, self.ada, [])
+            if getattr(line, "is_line", False)
+        ]
+
+    def test_completed_in_biwak_is_reopened_now(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.complete(item, actor=self.ada)
+        before = timezone.now()
+        self.run_again()
+        self.assertFalse(item.todo.__class__.objects.get(item=item).is_completed)
+        event = self.last_event(item)
+        self.assertEqual(event.action, Action.REOPENED)
+        self.assertIsNone(event.actor)
+        self.assertGreaterEqual(event.created_at, before)
+        self.assertEqual(event.data["imported"], "basecamp")
+        self.assertEqual(self.lines(item)[-2:], ["completed this", "reopened this"])
+
+    def test_reopened_in_biwak_is_completed_now(self):
+        self.run_import()
+        item = self.item("Pick a camp date")
+        ops.reopen(item, actor=self.ada)
+        before = timezone.now()
+        self.run_again()
+        event = self.last_event(item)
+        self.assertEqual(event.action, Action.COMPLETED)
+        self.assertIsNone(event.actor)
+        self.assertGreaterEqual(event.created_at, before)
+        self.assertEqual(event.data["imported"], "basecamp")
+
+    def test_the_page_says_so(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.complete(item, actor=self.ada)
+        self.run_again()
+        self.client.force_login(self.ada)
+        page = " ".join(
+            self.client.get(item.get_absolute_url()).content.decode().split()
+        )
+        self.assertRegex(
+            page, r"Biwak</strong> reopened this <span[^>]*>\(Basecamp import\)"
+        )
+        feed = " ".join(self.client.get("/feed/").content.decode().split())
+        self.assertRegex(
+            feed, r"reopened .*Raise the rate for Cleo.*\(Basecamp import\)"
+        )
+
+
 class UnchangedTest(ImportCase):
     """A later run skips recordings whose ``updated_at`` and comment count
     are as stored: no update, no requests for comments and subscribers"""

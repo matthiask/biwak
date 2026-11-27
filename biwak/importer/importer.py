@@ -22,6 +22,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.db import DatabaseError, transaction
+from django.db.models import Max
 from django.utils import timezone, translation
 
 from biwak import schedules
@@ -1551,8 +1552,7 @@ class Importer(Resolver):
             assigned_at = rec["created_at"] if created else rec.get("updated_at")
             with importing(at=parse_time(assigned_at)):
                 self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
-            with importing(at=parse_time(rec.get("updated_at"))):
-                self._completion(todo, rec)
+            self._completion(todo, rec, new=bool(created))
             self._stamp(todo, rec)
         self._follow(bc_type, rec, todo)
 
@@ -1600,10 +1600,11 @@ class Importer(Resolver):
         with importing(at=parse_time(rec.get("updated_at"))):
             ops.update_todo(item, actor=item.creator, **repeat)
 
-    def _completion(self, todo, rec):
+    def _completion(self, todo, rec, *, new=False):
         """Archived to-dos come in completed (specs/archiving.md), at the
         time Basecamp last changed them (the archiving), by the importing
-        person: the API doesn't say who archived"""
+        person: the API doesn't say who archived. A ``new`` to-do has
+        nothing done in Biwak to undo."""
         done = Todo.objects.get(item=todo).is_completed
         archived = rec.get("status") == "archived"
         if (rec.get("completed") or archived) and not done:
@@ -1611,6 +1612,10 @@ class Importer(Resolver):
             when = parse_time(completion.get("created_at")) or parse_time(
                 rec["updated_at"]
             )
+            if not new and self._undoes_biwak(todo, [Action.REOPENED], when):
+                with importing(at=timezone.now(), noted="basecamp"):
+                    ops.complete(todo, actor=None)
+                return
             by = self._user(completion.get("creator")) or (
                 self.actor if archived and not rec.get("completed") else todo.creator
             )
@@ -1618,8 +1623,27 @@ class Importer(Resolver):
                 ops.complete(todo, actor=by)
             Todo.objects.filter(pk=todo.pk).update(completed_at=when)
         elif not (rec.get("completed") or archived) and done:
-            with importing():
+            # Basecamp doesn't say when it was reopened
+            when = parse_time(rec.get("updated_at"))
+            if self._undoes_biwak(
+                todo, [Action.COMPLETED, Action.MARKED_OBSOLETE], when
+            ):
+                with importing(at=timezone.now(), noted="basecamp"):
+                    ops.reopen(todo, actor=None)
+                return
+            with importing(at=when):
                 ops.reopen(todo, actor=todo.creator)
+
+    def _undoes_biwak(self, todo, actions, when):
+        """Whether the to-do's last ``actions`` event (reopening, or
+        completing) is newer than Basecamp's change: then Basecamp's state
+        undoes what was done in Biwak, which happens now, by Biwak, noted
+        as the Basecamp import (decided 2026-11-27); at Basecamp's time it
+        would sort before what it undoes"""
+        last = Event.objects.filter(item=todo, action__in=actions).aggregate(
+            last=Max("created_at")
+        )["last"]
+        return last is not None and (when is None or last > when)
 
     # Card tables -----------------------------------------------------------------------
 

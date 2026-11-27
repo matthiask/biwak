@@ -161,3 +161,5 @@
 {% if where %}{% blocktranslate %}in {{ where }}{% endblocktranslate %}{% endif %}
 {# No client badge in the feed and the lantern (decided 2026-11-21) #}
 {% if not own_excerpt %}{% include "activity/_excerpt.html" %}{% endif %}
+{# Done by the importer itself, now (data["imported"], specs/import-basecamp.md) #}
+{% if event.data.imported %}<span class="text-body-secondary">({% translate "Basecamp import" %})</span>{% endif %}
