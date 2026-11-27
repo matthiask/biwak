@@ -12,6 +12,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  UV_LOCKED: 1
+
 jobs:
   # The Django tests without the browser tests: fast, they fail early
   tests:
