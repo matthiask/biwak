@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 21:36+0100\n"
+"POT-Creation-Date: 2026-11-27 07:59+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3350,7 +3350,7 @@ msgstr "Diese Woche"
 msgid "Next week"
 msgstr "Nächste Woche"
 
-#: biwak/items/due.py biwak/templates/items/_todo_view.html
+#: biwak/items/due.py
 msgid "No date"
 msgstr "Kein Datum"
 
@@ -7596,6 +7596,10 @@ msgstr "Wiederholt sich"
 #, python-format
 msgid "Until %(day)s."
 msgstr "Bis %(day)s."
+
+#: biwak/templates/items/_todo_view.html
+msgid "No due date"
+msgstr "Kein Fälligkeitsdatum"
 
 #: biwak/templates/items/_todo_view.html
 #, python-format

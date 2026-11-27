@@ -170,3 +170,24 @@ class TodoPageBadgeTest(Base):
         item = self.todo(self.today - DAY)
         html = self.client.get(item.get_absolute_url()).content.decode()
         self.assertEqual(html.count('data-due="overdue"'), 1)
+
+
+class EmptyFactsTest(Base):
+    """Without a due date or a repeat the facts say so in one phrase, the
+    label only for screen readers (decided 2026-11-27)"""
+
+    def facts(self, item):
+        html = self.client.get(item.get_absolute_url()).content.decode()
+        return html[html.index('<dl class="wb-facts">') : html.index("</dl>")]
+
+    def test_no_due_date_and_no_repeat(self):
+        facts = self.facts(self.todo(None))
+        self.assertRegex(facts, r'<dt class="visually-hidden">Due on</dt>')
+        self.assertIn("No due date", facts)
+        self.assertRegex(facts, r'<dt class="visually-hidden">Repeats</dt>')
+        self.assertIn("Doesn't repeat", facts)
+
+    def test_labels_shown_with_a_date(self):
+        facts = self.facts(self.todo(self.today + DAY))
+        self.assertIn("<dt>Due on</dt>", facts)
+        self.assertNotIn("No due date", facts)

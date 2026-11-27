@@ -144,8 +144,9 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
 ## The to-do's page
 
 - **View mode** (decided 2026-11-21): the title as the heading, then one
-  card with the facts (assigned to, due on, repeats: "Nobody", "No
-  date", "Doesn't repeat" when empty; the overdue or "Today" badge next
+  card with the facts (assigned to, due on, repeats: "Nobody" when
+  empty; "No due date" and "Doesn't repeat" alone, the label only for
+  screen readers, decided 2026-11-27; the overdue or "Today" badge next
   to the date; last "Created 3 Dec 2026 by Ada", the person through
   `{% person_page %}`, not editable, decided 2026-11-22; a moment, so
   "Created 2 hours ago by Ada" within seven days, `ui.md`). Start and

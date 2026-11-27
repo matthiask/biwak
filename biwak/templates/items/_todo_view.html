@@ -29,18 +29,19 @@
         </div>
       {% endif %}
       <div class="wb-fact wb-edit-hit" data-edit-focus="due_on">
-        <dt>{% translate "Due on" %}</dt>
+        {# Empty, the value says it alone: "No due date" (decided 2026-11-27) #}
+        <dt {% if not todo.due_on %}class="visually-hidden"{% endif %}>{% translate "Due on" %}</dt>
         <dd>
           {% if todo.due_on %}<span
               title="{{ todo.due_on|dateformat:'WEEKDAY_DATE_FORMAT' }}"
             >{{ todo.due_on|dateformat:"SHORT_DATE_FORMAT" }}</span>
             {% due_badge todo badge_only=True %}{% else %}<span
               class="text-body-secondary"
-            >{% translate "No date" %}</span>{% endif %}
+            >{% translate "No due date" %}</span>{% endif %}
         </dd>
       </div>
       <div class="wb-fact wb-edit-hit" data-edit-focus="recurrence_frequency">
-        <dt>{% translate "Repeats" %}</dt>
+        <dt {% if not todo.recurrence %}class="visually-hidden"{% endif %}>{% translate "Repeats" %}</dt>
         <dd>
           {% if todo.recurrence %}
             {{ todo.recurrence_description|capfirst }}.
