@@ -391,6 +391,11 @@ class StartingLaterBase(StartDatesBase):
         later = found[0] if found else ""
         return html.replace(later, ""), later
 
+    def titles(self, html):
+        # The rows' titles, not words anywhere: the random CSRF token
+        # sometimes contains "Now"
+        return re.findall(r'class="wb-todo-title[^"]*"\s*>([^<]*)</a>', html)
+
 
 class StartingLaterTest(StartingLaterBase):
     def test_my_to_dos_and_the_to_dos_page(self):
@@ -399,17 +404,15 @@ class StartingLaterTest(StartingLaterBase):
                 for url in ["/todos/", f"/projects/{self.project.pk}/todos/"]:
                     with self.subTest(user=user, params=params, url=url):
                         current, later = self.page(user, url, **params)
-                        for title in ["Now", "Today", "No date"]:
-                            self.assertIn(title, current)
-                            self.assertNotIn(title, later)
-                        self.assertNotIn("Later", current)
-                        self.assertIn("Later", later)
+                        self.assertCountEqual(
+                            self.titles(current), ["Now", "Today", "No date"]
+                        )
+                        self.assertCountEqual(
+                            self.titles(later),
+                            ["Later"] if hidden else ["Later", "Secret later"],
+                        )
                         count = 1 if hidden else 2
                         self.assertIn(f"Starting later ({count})", later)
-                        if hidden:
-                            self.assertNotIn(hidden, current + later)
-                        else:
-                            self.assertIn("Secret later", later)
 
     def test_nothing_starting_later_nothing_shown(self):
         _current, later = self.page(self.bob, "/todos/")
@@ -420,12 +423,11 @@ class StartingLaterTest(StartingLaterBase):
             ops.complete(item, actor=self.ada)
         current, later = self.page(self.ada, "/todos/", state="completed")
         self.assertEqual(later, "")
-        self.assertIn("Now", current)
-        self.assertIn("Later", current)
+        self.assertCountEqual(self.titles(current), ["Now", "Later"])
 
     def test_lists_and_search_show_it_as_always(self):
         current, later = self.page(self.cleo, self.list.get_absolute_url())
-        self.assertIn("Later", current)
+        self.assertIn("Later", self.titles(current))
         self.assertEqual(later, "")
 
     def test_home(self):
@@ -436,11 +438,11 @@ class StartingLaterTest(StartingLaterBase):
             with self.subTest(user=user):
                 html, later = self.page(user, "/")
                 due = between(html, 'data-home="due"', "</section>")
-                self.assertIn("Now", due)
-                self.assertIn("Today", due)
-                self.assertNotIn("Later", due)
-                self.assertIn("Later", later)
-                self.assertNotIn("Far later", later)
+                self.assertCountEqual(self.titles(due), ["Now", "Today"])
+                self.assertCountEqual(
+                    self.titles(later),
+                    ["Later"] if hidden else ["Later", "Secret later"],
+                )
                 if hidden:
                     self.assertNotIn(hidden, html + later)
                     self.assertIn("Starting later (1)", later)
