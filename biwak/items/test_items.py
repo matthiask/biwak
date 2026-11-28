@@ -311,9 +311,9 @@ class VisibilityTest(TestCase):
         )
 
     def test_affected_counts_active_and_invited_clients(self):
-        """Deactivated clients see nothing, invited ones will (decided
+        """Clients who left see nothing, invited ones will (decided
         2026-11-28); the same count when moving shows to-dos"""
-        gone = person("Gus", client=True, is_active=False)
+        gone = person("Gus", client=True, is_active=False, left_at=timezone.localdate())
         invited = person("Ivy", client=True, invited_at=timezone.now())
         for user in [gone, invited]:
             Membership.objects.create(project=self.project, user=user)
