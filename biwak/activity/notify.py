@@ -314,6 +314,24 @@ def _tell(people, event):
     # already, which is told before this notify() runs. Read in the lantern
     # meanwhile: unread again, the change is new (specs/lantern.md).
     existing.filter(user__in=unsent, sent_at=None).update(created_at=now, read_at=None)
+    # Marked unread by hand (never mailed): a first mention merged in since
+    # tells them, mailed and pushed (decided 2026-11-28, specs/lantern.md)
+    marked = dict(
+        existing.filter(
+            user__in=unsent, sent_at=None, marked_unread_at__isnull=False
+        ).values_list("user", "marked_unread_at")
+    )
+    if marked:
+        mentioned_after_marking = {
+            user
+            for user, created_at in Mention.objects.filter(
+                item=event.item, comment=None, user__in=marked
+            ).values_list("user", "created_at")
+            if created_at > marked[user]
+        }
+        existing.filter(user__in=mentioned_after_marking, sent_at=None).update(
+            marked_unread_at=None, pushed_at=None
+        )
     new = [
         user
         for user in people

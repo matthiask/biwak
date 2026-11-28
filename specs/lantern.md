@@ -117,7 +117,9 @@ and pages that update while they're open.
   **Marked unread means no mail** (decided 2026-11-21): such a
   notification is never mailed afterwards
   (`Notification.marked_unread_at`); an edit merged into it stays
-  unmailed, a new event is mailed as usual.
+  unmailed, a new event is mailed as usual. An edit merged into it that
+  mentions them for the first time since is mailed and pushed (decided
+  2026-11-28: a first mention tells, `notify._tell()`).
 - **Switching mail back from "none":** whatever is unread and wasn't
   marked unread by hand goes with the next mail or digest.
 - A merged edit moving an unsent notification forward makes it unread

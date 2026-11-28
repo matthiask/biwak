@@ -97,7 +97,8 @@ Seite „Alle Benachrichtigungen“ hat die ganze Liste mit „Ungelesen“ und
   und bringt dich zum Eintrag, zum Kommentar, um den es geht.
 - **Alle als gelesen markieren**, oder markiere einen Eintrag als
   gelesen oder ungelesen. Was du als ungelesen markierst, bleibt in der
-  Laterne und wird nicht mehr gemailt.
+  Laterne und wird nicht mehr gemailt, ausser eine Änderung daran
+  erwähnt dich zum ersten Mal.
 - Ein To-do, das dieselbe Person erledigt und wieder öffnet, zeigt nur
   die Änderung am Ende, oder nichts, wenn es wieder ist wie am Anfang;
   Mails tun dasselbe.

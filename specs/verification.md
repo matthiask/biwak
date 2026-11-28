@@ -130,7 +130,8 @@ with `--replace`) and check-ins' people asked who were deactivated
 and activates through `activate()`; deactivating and "Reset sign-in…"
 remove push devices; single sign-on's 24-hour end keeps the push device
 (nothing audited is written then, so the connection's previous name
-doesn't matter there anymore).
+doesn't matter there anymore); a first mention merged into an edit
+marked unread is mailed and pushed.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -187,8 +188,6 @@ part's spec with the fix):
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
 - **Notifications:**
-  - A first mention merged into an edit whose notification was marked
-    unread is mailed and pushed (decided; today neither).
   - Unsubscribing from a to-do also stops hearing about its column moves
     as a list's watcher; the mail's unsubscribe link unsubscribes from
     the to-do only (decided).

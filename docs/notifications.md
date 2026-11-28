@@ -83,7 +83,8 @@ shows what you've read already in the same entry, quieter. The page "All notific
 - **Opening an entry reads it** (with the item's comments) and takes you
   to the item, at the comment where it applies.
 - **Mark all as read**, or mark one item as read or unread. What you
-  mark as unread stays in the lantern and isn't mailed any more.
+  mark as unread stays in the lantern and isn't mailed any more, unless
+  a change to it mentions you for the first time.
 - A to-do completed and reopened by the same person shows only the
   change in the end, or nothing when it's back where it started; mails
   do the same.
