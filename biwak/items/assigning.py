@@ -60,9 +60,12 @@ class AssignForm(Form):
 
     def __init__(self, *args, todos, user, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only who can be assigned to every one of them
+        # Only who can be assigned to every one of them, and who is assigned
+        # already (kept with "Instead of the current assignees")
         self.fields["people"].queryset = (
-            ops.assignable_to_all(todos, user) if todos else User.objects.none()
+            ops.assignable_to_all_or_assigned(todos, user)
+            if todos
+            else User.objects.none()
         )
         # Teams add their members (specs/teams.md)
         projects = {todo.project for todo in todos}

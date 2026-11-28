@@ -700,6 +700,24 @@ def assignable_to_all(items, by=None):
     return people.order_by(Lower("full_name"), "email")
 
 
+def assignable_to_all_or_assigned(items, by=None):
+    """``assignable_to_all()`` and those assigned to any of the to-dos (a
+    deactivated co-assignee repeated with ``replace``): ``assign_todos()``
+    keeps them where they're assigned and refuses them elsewhere, like the
+    edit form of one to-do (``assignable_or_assigned()``)"""
+    assignable = assignable_to_all(items, by)
+    assigned = User.objects.filter(assigned_todos__pk__in=[item.pk for item in items])
+    if not assigned.exclude(pk__in=assignable.values("pk")).exists():
+        return assignable
+    people = User.objects.filter(
+        Q(pk__in=assignable.values("pk")) | Q(pk__in=assigned.values("pk"))
+    )
+    projects = {item.project_id for item in items}
+    if len(projects) == 1:
+        return _members_first(people, items[0].project)
+    return people.order_by(Lower("full_name"), "email")
+
+
 class AssignRefused(ValueError):
     """Assigning several to-dos at once changed nothing: somebody can't be
     assigned to some of them"""

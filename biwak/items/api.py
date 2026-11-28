@@ -529,11 +529,16 @@ def todo_list_completed(
     )
 
 
-def _assignees(request, item, ids):
-    """People who can see the to-do, by ID; 400 for anybody else"""
+def _assignees(request, item, ids, *, keep=False):
+    """People who can see the to-do, by ID; 400 for anybody else. ``keep``:
+    those assigned already stay possible (a deactivated person, a client
+    on a to-do made internal), as in the edit form
+    (``ops.assignable_or_assigned()``), so a change never needs them taken
+    out."""
     if ids is None:
         return None
-    people = list(ops.assignable_people(item, request.user).filter(pk__in=ids))
+    people = ops.assignable_or_assigned if keep else ops.assignable_people
+    people = list(people(item, request.user).filter(pk__in=ids))
     if len(people) != len(set(ids)):
         bad_request(_("Only people who can see the to-do can be assigned."))
     return people
@@ -787,7 +792,11 @@ def todos_assign(request, data: AssignManyIn):
     todos, missing = todos_for(request.user, list(dict.fromkeys(data.ids)))
     if missing:
         bad_request(missing_message(missing))
-    people = list(ops.assignable_to_all(todos, request.user).filter(pk__in=data.people))
+    people = list(
+        ops.assignable_to_all_or_assigned(todos, request.user).filter(
+            pk__in=data.people
+        )
+    )
     if len(people) != len(set(data.people)):
         bad_request(
             _(
@@ -971,7 +980,9 @@ def todo_update(request, todo_id: int, data: TodoPatch):
     for field in {"title", "notes"} & changes.keys():
         changes[field] = resolve_mentions(item, changes[field], author=request.user)
     if "assignees" in given:
-        changes["assignees"] = _assignees(request, item, data.assignees or [])
+        changes["assignees"] = _assignees(
+            request, item, data.assignees or [], keep=True
+        )
     if "recurrence" in given:
         anchor = changes.get("due_on", item.todo.due_on)
         changes["recurrence"] = _rule(data.recurrence, anchor)

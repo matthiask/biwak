@@ -103,7 +103,9 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   „Auswahl aufheben“ leert die Auswahl.
 - **Zuweisen…** in der Leiste unten öffnet ein Formular: Wähle die
   Personen (angeboten werden nur die, die jedem gewählten To-do
-  zugewiesen werden können) und ob sie „Statt der bisherigen
+  zugewiesen werden können, und die bereits Zugewiesenen, damit „Statt
+  der bisherigen Zugewiesenen“ eine deaktivierte Person behalten kann)
+  und ob sie „Statt der bisherigen
   Zugewiesenen“ kommen; sonst werden sie hinzugefügt. Jede neue
   zugewiesene Person bekommt eine Benachrichtigung für alle („Ada hat
   dir 23 To-dos zugewiesen“). Wer herausgenommen wird, erfährt es nicht.
@@ -186,7 +188,7 @@ bist, und Tippen geht zurück ins Feld.
   benachrichtigt. Erledigte To-dos behalten sie. Deaktivierte Personen
   bleiben zugewiesen, bis jemand ihre To-dos übergibt; ihr Profilbild
   ist ausgegraut und „(inaktiv)“ folgt ihrem Namen. Für neue Zuweisungen
-  werden sie nicht angeboten.
+  werden sie nicht angeboten, bleiben aber, wenn du die anderen änderst.
 - **Fällig am:** ein Datum. Überfällige To-dos sind markiert.
 - **Beginnt am:** für Arbeit, die noch nicht beginnen kann, ein Beginn
   (das Feld vor der Fälligkeit); er braucht eine Fälligkeit, darf nicht

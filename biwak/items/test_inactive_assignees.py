@@ -2,6 +2,7 @@
 show; the to-dos page lists their open to-dos (specs/handover.md)"""
 
 from django.test import TestCase
+from django.urls import reverse
 
 from biwak.items import operations as ops
 from biwak.organizations import activation
@@ -92,3 +93,58 @@ class InactiveAssigneesTest(TestCase):
         self.assertEqual((gil["id"], gil["is_active"]), (self.gil.pk, False))
         data = self.client.get(f"/api/v1/todos/?assignee={self.gil.pk}").json()
         self.assertEqual([t["id"] for t in data["results"]], [self.todo.pk])
+
+    def test_the_api_keeps_them_when_changing_assignees(self):
+        # Like the edit form (``assignable_or_assigned()``): sending the
+        # assignees back with somebody added doesn't need Gil taken out
+        self.client.force_login(self.ada)
+        response = self.client.patch(
+            f"/api/v1/todos/{self.todo.pk}/",
+            {"assignees": [self.gil.pk, self.ada.pk]},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(self.todo.todo.assignees.all()), {self.gil, self.ada})
+        # Not added where they aren't assigned
+        other = ops.create_todo(todolist=self.todolist, title="Other", creator=self.ada)
+        response = self.client.patch(
+            f"/api/v1/todos/{other.pk}/",
+            {"assignees": [self.gil.pk]},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(other.todo.assignees.exists())
+
+    def test_assigning_several_keeps_them_with_replace(self):
+        # The handover skill repeats co-assignees with ``--replace``
+        bob = person("Bob")
+        self.website.memberships.create(user=bob)
+        other = ops.create_todo(
+            todolist=self.todolist,
+            title="Other",
+            creator=self.ada,
+            assignees=[self.ada],
+        )
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            "/api/v1/todos/assign/",
+            {"ids": [self.todo.pk], "people": [bob.pk, self.gil.pk], "replace": True},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(self.todo.todo.assignees.all()), {self.gil, bob})
+        # The page too
+        response = self.client.post(
+            f"{reverse('todos_assign')}?items={self.todo.pk}",
+            {"people": [self.ada.pk, self.gil.pk], "replace": "on"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(set(self.todo.todo.assignees.all()), {self.gil, self.ada})
+        # Not added to to-dos they aren't assigned to: all or nothing
+        response = self.client.post(
+            "/api/v1/todos/assign/",
+            {"ids": [self.todo.pk, other.pk], "people": [self.gil.pk]},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(set(other.todo.assignees.all()), {self.ada})

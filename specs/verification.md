@@ -124,7 +124,8 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: nothing yet.
+Fixed: the API keeps deactivated assignees (one to-do and "Assign…"
+with `--replace`).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -180,9 +181,8 @@ part's spec with the fix):
   - Copying a list, a project from a template, or a template's check-in
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
-  - The API can't keep a deactivated assignee when changing assignees
-    (`assignable_people()`; the page uses `assignable_or_assigned()`);
-    the same for check-ins' people (`_check_people()`).
+  - The API can't keep a deactivated person asked when changing a
+    check-in's people (`_check_people()`).
   - The Django admin: moving someone out of the own organization or
     making staff a client keeps their subscriptions (`_access_changed()`
     not called); reactivating keeps `left_at`, so an active person is
@@ -289,8 +289,7 @@ that isn't valid any more (the bug above stops asking for everybody).
   saving pending typing; attachments by someone who lost access stay
   unlinked; read-only isn't immediate for open editors; public links
   survive a move into a limited project.
-- API and CLI: search pages by `-updated_at`; the handover skill's
-  `--replace` with a co-assignee who left; a client may filter
+- API and CLI: search pages by `-updated_at`; a client may filter
   `todos/?assignee=` by people they may not know; the API accepts
   `visible_to_clients` in projects without clients.
 - Who did what: the name is per connection (a reconnect in a long run,
