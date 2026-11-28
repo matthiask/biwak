@@ -950,6 +950,66 @@ class CheckinsChangedTest(ImportCase):
         self.assertEqual((event.actor, event.data["imported"]), (None, "basecamp"))
 
 
+class MembersLaterTest(ImportCase):
+    """The project's mapping remembers which of Basecamp's people were
+    made members (and the importing person's bookmarks): only new ones
+    are added, so what was removed in Biwak stays removed, and a run
+    stopped among them goes on (decided 2026-11-28, verification round 2:
+    every run added everybody again, in the importing person's name)"""
+
+    def members(self):
+        return set(self.project.memberships.values_list("user__email", flat=True))
+
+    def test_a_member_removed_in_biwak_stays_removed(self):
+        self.run_import()
+        cleo = User.objects.get(email="cleo@example.org")
+        project_ops.remove_member(self.project, cleo, actor=self.ada)
+        events = Event.objects.count()
+        self.run_import()
+        self.assertNotIn("cleo@example.org", self.members())
+        self.assertEqual(Event.objects.count(), events)
+
+    def test_a_run_stopped_among_the_people_goes_on(self):
+        class Stop(Exception):
+            pass
+
+        def fail(path):
+            if path == f"/people/{support.BOB['id']}.json":
+                raise Stop
+
+        self.client_.on_request = fail
+        with self.assertRaises(Stop):
+            self.run_import()
+        self.assertEqual(self.members(), {"ada@example.org"})
+        self.client_.on_request = None
+        self.run_import()
+        self.assertEqual(
+            self.members(), {"ada@example.org", "bob@example.org", "cleo@example.org"}
+        )
+        # As in one run: added at the project's creation, by who imports
+        added = Event.objects.filter(action=Action.ADDED, project=self.project)
+        self.assertEqual({e.actor for e in added}, {self.ada})
+        self.assertEqual(len({e.created_at for e in added}), 1)
+
+    def test_somebody_new_in_basecamp_is_added(self):
+        self.run_import()
+        self.client_.data[f"/projects/{support.PROJECT}/people.json"].append(
+            support.EVE
+        )
+        self.run_import()
+        self.assertIn("eve@example.org", self.members())
+        event = Event.objects.filter(action=Action.ADDED).latest("pk")
+        # Basecamp's change names nobody
+        self.assertEqual((event.actor, event.data["imported"]), (None, "basecamp"))
+
+    def test_a_bookmark_removed_in_biwak_stays_removed(self):
+        self.run_import()
+        self.assertEqual(Bookmark.objects.count(), 1)
+        Bookmark.objects.all().delete()
+        self.run_import()
+        self.assertEqual(Bookmark.objects.count(), 0)
+
+
 class SinceLaterTest(ImportCase):
     def test_skipped_comments_come_with_the_next_run(self):
         """A recording whose older comments ``--since`` skipped isn't stored

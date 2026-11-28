@@ -260,6 +260,21 @@ project. Waiting for Basecamp's account export to confirm the plan.
 - **The person importing** becomes a member of every project they were
   only added to for the import (the importer copies Basecamp's
   members); that's fine (decided 2026-11-22).
+- **Members and bookmarks once** (decided 2026-11-28 by the user,
+  verification round 2: every run added all of Basecamp's people again,
+  also who was removed in Biwak since, in the importing person's name
+  at the project's creation; removed bookmarks came back too). The
+  project's mapping notes what was done (`ImportedObject.done`): the
+  Basecamp people made members, written person by person, and the
+  importing person's bookmarks. A later run adds only who isn't noted,
+  so a member removed in Biwak stays removed, a run stopped among the
+  people (their profile images are fetched there) goes on where it
+  stopped, and somebody new in the Basecamp project is added, by nobody
+  and now, as the import's (Basecamp says neither who nor when).
+  "Only at the first import" was the first idea; the user pointed out
+  that an interrupted first import would have lost the rest for good.
+  Projects imported before this was noted get everybody once more at
+  their next run. People who left the Basecamp project stay members.
 - **Archived projects** depend on the export: if it makes a browsable
   archive easily, archived projects may not be imported at all;
   otherwise a cutoff by `updated_at` (open).

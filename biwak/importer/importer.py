@@ -940,10 +940,46 @@ class Importer(Resolver):
             pid = int(found[1]) if found else None
         return self._users.get(pid) if pid else None
 
-    def _add_member(self, project, user):
-        # Inactive people too (``importing()``): once somebody activates
-        # them they are members
-        project_ops.add_member(project, user, actor=self.actor)
+    def _done(self, bc_type, bc_id):
+        """The mapping of a project (or template) and its ``done``, to
+        note what isn't done again; (None, {}) in a dry run of a new one"""
+        mapped, _found = self._mapping(bc_type, bc_id)
+        return mapped, (mapped.done if mapped is not None else {})
+
+    def _members(self, rec, project, people):
+        """Basecamp's people of the project become members once each
+        (decided 2026-11-28, verification round 2: every run added
+        everybody again, also who was removed in Biwak since). Noted per
+        person on the project's mapping, so a run stopped among them goes
+        on. The first import's are added at the project's creation by who
+        imports, as before; people new in Basecamp later by nobody, now,
+        as the import's (Basecamp doesn't say who added them, or when).
+        Projects imported before this was noted: everybody once more."""
+        mapped, done = self._done(PROJECT, rec["id"])
+        members = set(done.get("members", ()))
+        first = not done.get("members_complete")
+        for person in people:
+            user = self._user(person)
+            self._image(person, user)
+            if user is None or project is None or self.dry or mapped is None:
+                continue
+            if person["id"] in members:
+                continue
+            # Inactive people too (``importing()``): once somebody
+            # activates them they are members
+            with transaction.atomic():
+                if first:
+                    with importing(at=parse_time(rec["created_at"])):
+                        project_ops.add_member(project, user, actor=self.actor)
+                else:
+                    with importing(noted="basecamp"):
+                        project_ops.add_member(project, user, actor=None)
+                members.add(person["id"])
+                mapped.done = mapped.done | {"members": sorted(members)}
+                mapped.save(update_fields=["done"])
+        if first and mapped is not None and not self.dry:
+            mapped.done = mapped.done | {"members_complete": True}
+            mapped.save(update_fields=["done"])
 
     # Texts ---------------------------------------------------------------------
 
@@ -1097,12 +1133,7 @@ class Importer(Resolver):
             self.say(f"  {len(people)} people")
             for person in people:
                 self._people_by_sgid[person.get("attachable_sgid")] = person["id"]
-            for person in people:
-                user = self._user(person)
-                self._image(person, user)
-                if user is not None and project is not None and not self.dry:
-                    with importing(at=parse_time(rec["created_at"])):
-                        self._add_member(project, user)
+            self._members(rec, project, people)
             self._dock(rec, project)
             self._finish(project_id, project)
         if self.archive and rec.get("status") != "archived":
@@ -2490,7 +2521,21 @@ class Importer(Resolver):
     # After the project --------------------------------------------------------------------
 
     def _bookmarks(self, project):
-        """The bookmarks of the person whose token it is"""
+        """The bookmarks of the person whose token it is, once each (noted
+        on the project's mapping like its members): one removed in Biwak
+        doesn't come back"""
+        bc_id = (
+            ImportedObject.objects
+            .filter(
+                basecamp_type__in=[PROJECT, TEMPLATE],
+                content_type=ContentType.objects.get_for_model(project),
+                object_id=project.pk,
+            )
+            .values_list("basecamp_type", "basecamp_id")
+            .first()
+        )
+        mapped, done = self._done(*bc_id) if bc_id else (None, {})
+        marked = set(done.get("bookmarks", ()))
         try:
             bookmarks = list(self.client.paginate("/my/bookmarks.json"))
         except api.NotFound:
@@ -2503,8 +2548,17 @@ class Importer(Resolver):
         for bookmark in bookmarks:
             recording = bookmark["recording"]
             item = self._find(recording["type"], recording["id"])
-            if isinstance(item, Item) and item.project_id == project.pk:
+            key = f"{self.actor.pk}:{recording['id']}"
+            if (
+                isinstance(item, Item)
+                and item.project_id == project.pk
+                and key not in marked
+            ):
                 bookmark_ops.add_bookmark(self.actor, item=item)
+                marked.add(key)
+        if mapped is not None and marked != set(done.get("bookmarks", ())):
+            mapped.done = mapped.done | {"bookmarks": sorted(marked)}
+            mapped.save(update_fields=["done"])
 
 
 def recurrence_of(schedule):
