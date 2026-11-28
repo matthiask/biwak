@@ -98,9 +98,18 @@ goes into internal containers, archived recordings skipped.
   are done, so an interrupted run reads it again; rows from before have
   none and are read completely once. The children of containers (lists,
   groups, folders, card tables' columns, questions' answers) are still
-  listed, new children don't change the parent; what the listing already
-  gives (visibility, completion, assignees, archived) is still compared,
-  costing no request. `--since` skips older leaves before any of this.
+  listed, new children don't change the parent. **An unchanged recording
+  isn't touched at all** (decided 2026-11-28 by the user, found in
+  verification round 1: the listing's visibility, completion, assignees
+  and archived state undid what was changed in Biwak, a to-do completed,
+  a list hidden from clients, an archived project): what was changed in
+  Biwak since stays, also where the listing gives Basecamp's state
+  without a request. Changes in Basecamp which don't change `updated_at`
+  (the visibility switch, like subscriptions) come along only with
+  `--full`; undoing a switch made in Biwak after Basecamp's `updated_at`
+  happens now, noted as the import's, like reopening above. A check-in question asks those who answered since the last
+  run; who answered before was asked then, and may have been taken off
+  in Biwak. `--since` skips older leaves before any of this.
 - **Several tools of a kind** (two to-do sets, several message boards
   or Docs & Files) are merged as they come (decided 2026-11-22): their
   lists, messages and files land together in the project. The report

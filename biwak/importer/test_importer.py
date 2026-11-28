@@ -51,8 +51,8 @@ class ImportCase(TestCase):
         self.ada = person("Ada", is_admin=True)
         self.client_ = support.FakeClient()
 
-    def run_import(self, *, dry_run=False, since=None):
-        importer = Importer(self.client_, actor=self.ada, dry_run=dry_run, since=since)
+    def run_import(self, **kwargs):
+        importer = Importer(self.client_, actor=self.ada, **kwargs)
         return importer.run(support.PROJECT)
 
     def titles(self, qs):
@@ -481,11 +481,12 @@ class VisibilityTest(ImportCase):
         self.assertFalse(prices.visible_to_clients)
 
     def test_visible_in_basecamp_but_a_container_changed(self):
-        # A second run follows Basecamp: the list turned internal
+        # A second run follows Basecamp: the list turned internal (with
+        # --full: switching doesn't change ``updated_at``)
         self.run_import()
         data = self.client_.data
         data["/todosets/300/todolists.json"][1]["visible_to_clients"] = False
-        self.run_import()
+        self.run_import(full=True)
         food = self.item("Buy giraffe food")
         self.assertFalse(food.is_client_visible)
         self.assertEqual(visibility.check(), [])
@@ -803,10 +804,13 @@ class SecondRunTest(ImportCase):
         self.assertEqual(rules.title, "Camp rules")
 
     def test_the_visibility_switch_follows_basecamp(self):
+        """Switching doesn't change ``updated_at``: only ``--full`` sees it"""
         self.run_import()
         message = self.client_.data["/message_boards/200/messages.json"][1]
         message["visible_to_clients"] = False
         self.run_import()
+        self.assertTrue(self.item("We have a camp").is_client_visible)
+        self.run_import(full=True)
         self.assertFalse(self.item("We have a camp").is_client_visible)
 
     def test_an_interrupted_run_continues(self):
@@ -902,6 +906,104 @@ class UndoingBiwakTest(ImportCase):
         self.assertRegex(
             feed, r"reopened .*Raise the rate for Cleo.*\(Basecamp import\)"
         )
+
+
+class BiwakChangesStayTest(ImportCase):
+    """A recording unchanged in Basecamp isn't touched at all: what was
+    changed in Biwak since stays (decided 2026-11-28); toggles which don't
+    change ``updated_at`` come with ``--full`` only"""
+
+    def test_a_completion(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.complete(item, actor=self.ada)
+        self.run_import()
+        self.assertTrue(Todo.objects.get(item=item).is_completed)
+
+    def test_an_assignment(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.assign(item, [self.ada], actor=self.ada)
+        self.run_import()
+        self.assertEqual(list(item.todo.assignees.all()), [self.ada])
+
+    def test_a_list_hidden_from_clients(self):
+        self.run_import()
+        plan = self.item("Kitchen plan")
+        ops.set_visibility(plan, visible=False, actor=self.ada)
+        events = Event.objects.count()
+        self.run_import()
+        plan.refresh_from_db()
+        self.assertFalse(plan.is_client_visible)
+        self.assertEqual(Event.objects.count(), events)
+
+    def test_a_list_unarchived(self):
+        self.run_import()
+        old = self.item("Old ideas")
+        ops.unarchive(old, actor=self.ada)
+        self.run_import()
+        old.refresh_from_db()
+        self.assertEqual(old.status, Status.ACTIVE)
+
+    def test_an_archived_project(self):
+        from biwak.projects import operations as project_ops
+
+        self.run_import()
+        project_ops.archive_project(self.project, actor=self.ada)
+        self.run_import()
+        self.assertIsNotNone(self.project.archived_at)
+
+    def test_the_people_asked(self):
+        from biwak.checkins import operations as checkin_ops
+
+        self.run_import()
+        item = self.item("What did you cook today?", Kind.QUESTION)
+        checkin_ops.set_people(item, [self.ada], actor=self.ada)
+        self.run_import()
+        self.assertEqual(list(item.question.people.all()), [self.ada])
+
+    def test_new_answers_ask_their_authors(self):
+        self.run_import()
+        item = self.item("What did you cook today?", Kind.QUESTION)
+        bob = User.objects.get(full_name="Bob Example")
+        from biwak.checkins import operations as checkin_ops
+
+        checkin_ops.set_people(item, [self.ada], actor=self.ada)
+        answers = self.client_.data["/questions/5001/answers.json"]
+        answers.append(
+            answers[1]
+            | {
+                "id": 5104,
+                "group_on": "2026-02-16",
+                "created_at": "2026-02-16T17:00:00.000Z",
+                "updated_at": "2026-02-16T17:00:00.000Z",
+            }
+        )
+        self.run_import()
+        self.assertEqual(set(item.question.people.all()), {self.ada, bob})
+
+    def test_full_undoes_a_switch_now(self):
+        """After what it undoes, as for completions (decided 2026-11-27)"""
+        self.run_import()
+        plan = self.item("Kitchen plan")
+        ops.set_visibility(plan, visible=False, actor=self.ada)
+        before = timezone.now()
+        self.run_import(full=True)
+        plan.refresh_from_db()
+        self.assertTrue(plan.is_client_visible)
+        event = Event.objects.filter(item=plan).latest("created_at", "pk")
+        self.assertEqual(
+            (event.action, event.actor, event.data["imported"]),
+            (Action.VISIBILITY_CHANGED, None, "basecamp"),
+        )
+        self.assertGreaterEqual(event.created_at, before)
+
+    def test_full_brings_basecamps_state(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.assign(item, [self.ada], actor=self.ada)
+        self.run_import(full=True)
+        self.assertEqual(list(item.todo.assignees.all()), [])
 
 
 class UnchangedTest(ImportCase):

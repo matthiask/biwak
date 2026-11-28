@@ -358,8 +358,10 @@ class Importer(Resolver):
         self.full = full
         self.include_disabled = include_disabled
         self.archive = archive
-        # (Basecamp type, ID) of the recordings unchanged since the last run
+        # (Basecamp type, ID) of the recordings unchanged since the last run,
+        # and of those created in this one
         self._skipped = set()
+        self._created = set()
         self.report = Report(dry_run=dry_run)
         self.report.files = client.file_counts
         self.report.answers = client.answer_counts
@@ -514,6 +516,7 @@ class Importer(Resolver):
             if found is None:
                 found = create()
                 self._remember(bc_type, rec["id"], found)
+                self._created.add((bc_type, rec["id"]))
             elif update is not None:
                 update(found)
             if not follow:
@@ -1065,11 +1068,8 @@ class Importer(Resolver):
             )
 
         template = self._upsert(TEMPLATE, rec, create=create, update=update)
-        if template is not None and rec.get("status") == "archived":
-            if template.archived_at is None:
-                project_ops.archive_project(template, actor=self.actor)
-        elif template is not None and template.archived_at is not None:
-            project_ops.unarchive_project(template, actor=self.actor)
+        if template is not None and self._touch(TEMPLATE, rec):
+            self._archived(template, rec)
         return template
 
     def _archived_recordings(self, project_id):
@@ -1115,12 +1115,17 @@ class Importer(Resolver):
             )
 
         project = self._upsert(PROJECT, rec, create=create, update=update)
-        if project is not None and rec.get("status") == "archived":
+        if project is not None and self._touch(PROJECT, rec):
+            self._archived(project, rec)
+        return project
+
+    def _archived(self, project, rec):
+        """A project or template archived as in Basecamp"""
+        if rec.get("status") == "archived":
             if project.archived_at is None:
                 project_ops.archive_project(project, actor=self.actor)
-        elif project is not None and project.archived_at is not None:
+        elif project.archived_at is not None:
             project_ops.unarchive_project(project, actor=self.actor)
-        return project
 
     def _dock(self, rec, project):
         """The tools we import (the schedule, chat and pings aren't); switched-off ones only with ``include_disabled``, otherwise
@@ -1271,11 +1276,18 @@ class Importer(Resolver):
             )
         return item, found
 
+    def _touch(self, bc_type, rec):
+        """Whether what ``_upsert()`` returned for the recording may be
+        written on (its visibility, completion, assignees, archiving, times):
+        not when it was skipped as unchanged since the last run, which may
+        have been changed in Biwak since and isn't touched at all (decided
+        2026-11-28: Biwak's change stays; found 2026-11-27: every rerun
+        reset their times)"""
+        return (bc_type, rec["id"]) not in self._skipped
+
     def _restamp(self, bc_type, item, rec):
-        """``_stamp()`` after ``_upsert()``, not for what it skipped as
-        unchanged: those weren't touched, and may have been changed in
-        Biwak since (found 2026-11-27: every rerun reset their times)"""
-        if (bc_type, rec["id"]) not in self._skipped:
+        """``_stamp()`` after ``_upsert()``, not for what it skipped"""
+        if self._touch(bc_type, rec):
             self._stamp(item, rec)
 
     def _stamp(self, item, rec):
@@ -1298,7 +1310,14 @@ class Importer(Resolver):
         client (messages); the importer sets what Basecamp had"""
         item.refresh_from_db()
         if item.has_switch and item.visible_to_clients != visible:
-            with self._from_basecamp(rec):
+            # Undoing a switch in Biwak (``--full``: switching doesn't
+            # change ``updated_at``) happens now, as for completions
+            when = parse_time(rec.get("updated_at"))
+            if self._undoes_biwak(item, [Action.VISIBILITY_CHANGED], when):
+                changing = importing(at=timezone.now(), noted="basecamp")
+            else:
+                changing = self._from_basecamp(rec)
+            with changing:
                 ops.set_visibility(item, visible=visible, actor=None)
 
     def _status(self, item, rec):
@@ -1425,10 +1444,10 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Todolist", rec, create=create, update=update, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Todolist", rec):
             self._top_visibility(item, visible, rec)
             self._status(item, rec)
-            self._restamp("Todolist", item, rec)
+            self._stamp(item, rec)
         self._list_content(rec, item, visible, project)
         self._follow("Todolist", rec, item, comments=False)
 
@@ -1541,7 +1560,7 @@ class Importer(Resolver):
         todo = self._upsert(bc_type, rec, create=create, update=update, follow=True)
         if (bc_type, rec["id"]) in self._skipped:
             self._fill_schedule(todo, repeat, rec)
-        if todo is not None:
+        if todo is not None and self._touch(bc_type, rec):
             # Basecamp doesn't say when somebody was assigned: a new to-do's
             # assignees at its creation, before its comments; those added
             # since the last run when Basecamp last changed it
@@ -1554,7 +1573,7 @@ class Importer(Resolver):
                 with self._from_basecamp(rec):
                     self._sync_assignees(todo, rec.get("assignees", []), None)
             self._completion(todo, rec, new=bool(created))
-            self._restamp(bc_type, todo, rec)
+            self._stamp(todo, rec)
         self._follow(bc_type, rec, todo)
 
     def _repeat(self, rec, title):
@@ -1675,9 +1694,9 @@ class Importer(Resolver):
         item = self._upsert(
             "Kanban::Board", rec, create=create, update=update, follow=True
         )
-        if item is not None:
+        if item is not None and self._touch("Kanban::Board", rec):
             self._top_visibility(item, visible, rec)
-            self._restamp("Kanban::Board", item, rec)
+            self._stamp(item, rec)
         self._container, self._container_is_board = rec, True
         self._container_project = project
         self._preload(COLUMN, rec.get("lists", []))
@@ -1763,9 +1782,9 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Message", rec, create=create, update=update, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Message", rec):
             self._top_visibility(item, visible, rec)
-            self._restamp("Message", item, rec)
+            self._stamp(item, rec)
         self._follow("Message", rec, item)
         if item is not None:
             # From the original times, for the board's order
@@ -1838,10 +1857,10 @@ class Importer(Resolver):
         item = self._upsert(
             "Inbox::Forward", rec, create=create, update=update, follow=True
         )
-        if item is not None:
+        if item is not None and self._touch("Inbox::Forward", rec):
             # Internal also when a client forwarded it
             self._top_visibility(item, visible=False, rec=rec)
-            self._restamp("Inbox::Forward", item, rec)
+            self._stamp(item, rec)
         self._follow(
             "Inbox::Forward",
             rec,
@@ -1889,9 +1908,9 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Vault", rec, create=create, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Vault", rec):
             self._top_visibility(item, visible, rec)
-            self._restamp("Vault", item, rec)
+            self._stamp(item, rec)
         self._follow("Vault", rec, item, comments=False)
         self._vault(
             rec["id"],
@@ -1940,9 +1959,9 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Document", rec, create=create, update=update, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Document", rec):
             self._top_visibility(item, visible, rec)
-            self._restamp("Document", item, rec)
+            self._stamp(item, rec)
         self._follow("Document", rec, item)
 
     def _upload(self, rec, project, parent, parent_visible, nested, internal):
@@ -1996,9 +2015,9 @@ class Importer(Resolver):
             )
         except _Skip:
             return
-        if item is not None:
+        if item is not None and self._touch("Upload", rec):
             self._top_visibility(item, visible, rec)
-            self._restamp("Upload", item, rec)
+            self._stamp(item, rec)
         self._follow("Upload", rec, item)
 
     # Check-ins ------------------------------------------------------------------------------------
@@ -2040,12 +2059,16 @@ class Importer(Resolver):
         self._preload("Question::Answer", answers)
         if item is not None:
             self._restamp("Question", item, rec)
+        # Those who answered since the last run are asked; who answered
+        # before was asked then, and may have been taken off in Biwak since
+        # (decided 2026-11-28: Biwak's change stays)
         asked = []
         for answer in answers:
             if self._skip(answer):
                 continue
             user = self._answer(answer, rec, item, visible)
-            if user is not None and user not in asked:
+            new = ("Question::Answer", answer["id"]) in self._created
+            if user is not None and new and user not in asked:
                 asked.append(user)
         if item is not None and asked:
             who = [u for u in asked if u.is_active]

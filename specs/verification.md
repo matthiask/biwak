@@ -124,21 +124,13 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: nothing yet.
+Fixed: the import's later runs leave recordings unchanged in Basecamp
+alone (Biwak's changes stay).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
 
 - **Import, later runs** (`import-basecamp.md`):
-  - A recording unchanged in Basecamp isn't touched at all: today the
-    listing's visibility, completion, assignees and archived state still
-    undo what was changed in Biwak (a to-do completed, an assignment, a
-    list hidden from clients, an archived project), and the visibility
-    events are dated before the change they undo; check-in questions put
-    the people taken off back on (`importer.py` `_todo`, `_todolist`,
-    `_top_visibility`, `_status`, `_project`, `_question`). Decided:
-    Biwak's change stays; toggles that don't change `updated_at` come
-    with `--full` only.
   - A dry run writes for projects imported before (completion,
     assignees, archiving, events): the callers of `_upsert()` keep
     writing on the object it returns.
