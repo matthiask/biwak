@@ -3,6 +3,7 @@
 import click
 
 from biwak_cli.core import (
+    actor,
     cli,
     clients,
     console,
@@ -373,7 +374,7 @@ def lantern(unread, mentions, read_item, read_all, limit, as_json):
             ("new" if any(not e["read"] for e in group) else "")
             + (" @" if any(e["mentioned"] for e in group) else "")
             + (" bookmarked" if entry["bookmarked"] else ""),
-            event["actor"]["short_name"],
+            actor(event),
             event["action"].replace("_", " ") + more,
             str(item_id or ""),
             link(item.get("title", ""), item.get("url")),

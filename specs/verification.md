@@ -136,7 +136,10 @@ a group's "Keep untouched to-dos for a year"; copies keep deactivated
 assignees and people asked instead of failing; archived lists and
 lists in archived projects take no new or moved to-dos; the next to-do
 of a repeating one keeps deactivated assignees and subscribes the
-list's watchers.
+list's watchers;
+`biwak feed` and `biwak lantern` name events without an actor
+"Biwak" (CLI 0.76.0); the API's cursors are positions in the whole
+ordering (`api-cli.md`).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -203,13 +206,6 @@ part's spec with the fix):
     conflict check skips the saver's own versions).
   - An editor left open while its doc moves to another project uploads
     attachments to the old project, never linked, deleted a day later.
-- **API and CLI:**
-  - `biwak feed` and `biwak lantern` crash on events without an actor
-    (stale to-dos, the import), every CLI down to `MINIMUM`; the skills
-    don't say `actor` may be null.
-  - Cursor pagination skips or repeats rows when something leaves or
-    joins an earlier page where the first ordering field is shared
-    (messages: `pin_key`; `todos/`: the project, the due date).
 - **Who did what:**
   - A live save names the authors of the typing it merges (decided;
     today whoever triggered it, also a client who only opened the page).

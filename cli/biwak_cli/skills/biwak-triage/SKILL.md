@@ -27,10 +27,11 @@ item can have several):
     biwak lantern --unread --limit 200 --json
 
 Each entry has `mentioned`, `bookmarked` and an `event`: its `action`
-(`assigned`, `commented`, `created`, `completed`, …), the `actor`, the
-`item` (`id`, `kind`, `title`, `url`, `visible_to_clients`), `data` (the
-people assigned or mentioned, by ID: `assignees`, `mentioned`) and an
-`excerpt` of the comment or message. If there are 200, say that there are more and work with these.
+(`assigned`, `commented`, `created`, `completed`, …), the `actor`
+(null when Biwak itself acted, e.g. marking a stale to-do obsolete or
+importing: name it "Biwak"), the `item` (`id`, `kind`, `title`, `url`,
+`visible_to_clients`), `data` (the people assigned or mentioned, by ID:
+`assignees`, `mentioned`) and an `excerpt` of the comment or message. If there are 200, say that there are more and work with these.
 
 The user's open to-dos by due date, and those they assigned to others:
 

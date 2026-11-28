@@ -3,6 +3,7 @@
 import click
 
 from biwak_cli.core import (
+    actor,
     cli,
     clients,
     console,
@@ -46,7 +47,7 @@ def feed(project, person, kind, action, since, limit, as_json):
         item = event["item"] or {}
         t.add_row(
             event["created_at"][:16].replace("T", " "),
-            event["actor"]["short_name"],
+            actor(event),
             event["action"].replace("_", " "),
             link(
                 item.get("title")

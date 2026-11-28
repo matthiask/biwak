@@ -286,6 +286,12 @@ def clients(item):
     return "[clients]" if item.get("visible_to_clients") else ""
 
 
+def actor(event):
+    """Who did it: an event's ``actor`` is null when Biwak itself acted
+    (stale to-dos marked obsolete, the importer), named as the pages do"""
+    return event["actor"]["short_name"] if event["actor"] else "Biwak"
+
+
 def names(people, *, away=False, notes=False):
     """Short names, "(inactive)" after people who left; with ``away``
     "(away until 2026-12-03)" after people away, with ``notes`` their note

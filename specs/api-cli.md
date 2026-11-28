@@ -34,6 +34,20 @@ API first: everything the web interface does is possible through the API
   member, own staff only, themselves included (clients and externals get
   403, for themselves too: nobody leaves, decided 2026-11-22,
   `organizations.md`).
+- Cursors (fixed 2026-11-28): the position of the last row in the
+  list's whole ordering (`paginated()` in `biwak/api_conventions.py`),
+  so rows leaving or joining earlier pages (a to-do completed, a message
+  trashed while reading) neither skip nor repeat others; before, ninja's
+  cursor took the first ordering field and an offset. The answers keep
+  `next`, `previous` and `results`; cursors from before are refused
+  with 400 ("Invalid cursor."), the next run starts again. Reordering
+  (positions renumbered) can still repeat or skip the rows it moves.
+  The ordering's fields are never null (coalesced annotations).
+- Events without an actor (`"actor": null`: Biwak itself, marking a
+  stale to-do obsolete, the importer) are named "Biwak" in the CLI, as
+  on the pages; the skills say so (fixed 2026-11-28, CLI 0.76.0; older
+  CLIs crash on them in `feed` and `lantern`, `MINIMUM` stays: updating
+  helps them as much).
 - No webhooks (decided 2026-11-22: no use case now); specified before
   building when one comes up.
 

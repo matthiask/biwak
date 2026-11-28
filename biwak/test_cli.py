@@ -18,6 +18,7 @@ from rich.color import ColorSystem
 from biwak import api_conventions, cli_version
 from biwak.accounts.models import APIToken
 from biwak.activity.models import LevelOverride
+from biwak.activity.operations import subscribe
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
 from biwak.items.models import Comment, Item, Todo
@@ -751,6 +752,30 @@ class CLICommandsTest(CLITest):
         result = self.biwak("notifications", "--project", other.pk)
         self.assertEqual(result.exit_code, 1)
         self.assertIn("404", result.output)
+
+
+class CLIEventsWithoutActorTest(CLITest):
+    """Biwak itself acts without an actor (stale to-dos marked obsolete,
+    specs/stale-todos.md; the importer): the API answers ``"actor": null``
+    and the CLI names it "Biwak", as the pages do"""
+
+    def setUp(self):
+        super().setUp()
+        self.cleo = person("Cleo")
+        self.todo = ops.create_todo(todolist=self.list, title="Old", creator=self.cleo)
+        subscribe(self.ada, self.todo)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.mark_obsolete(self.todo, actor=None)
+
+    def test_feed(self):
+        result = self.biwak("feed", "--project", self.project.pk)
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertRegex(result.output, r"Biwak +marked obsolete")
+
+    def test_lantern(self):
+        result = self.biwak("lantern")
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertRegex(result.output, r"Biwak +marked obsolete")
 
 
 class CLIImageTest(CLITest):
