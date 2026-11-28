@@ -143,7 +143,9 @@ ordering (`api-cli.md`); the mails' signed links ("Keep open",
 unsubscribing) are logged as their recipient; names in the audit log
 lose their accents instead of turning into escapes; a live save is
 logged as who typed it, not who caused it; a client's open list page
-is told when a to-do leaves it for an internal list.
+is told when a to-do leaves it for an internal list; moving internal
+to-dos into a list clients see asks first, the API and CLI with
+`show_to_clients` (`access.md`, CLI 0.77.0).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -197,9 +199,6 @@ part's spec with the fix):
   - The admins' notice says the outbox keeps mails 30 days; it's 90.
   - A held summary still goes out after the person chose "No mails",
     unsubscribed, or every answer was trashed (`send_held_summaries()`).
-- **Visibility:**
-  - Moving internal to-dos into a list clients see asks first, like the
-    switch; the API and CLI need an explicit flag (decided).
 - **Check-ins:** one stored rule that isn't valid any more stops asking
   the rest and the summaries every minute (`latest_due()` on `None`).
 - **Docs and files:**

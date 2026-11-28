@@ -599,12 +599,20 @@ def todo_edit(todo_id, title, notes, due, starts, assign, attach, repeat, as_jso
     is_flag=True,
     help="Into another project: move although people are added or dropped.",
 )
+@click.option(
+    "--show-to-clients",
+    is_flag=True,
+    help="Into a list clients see: move internal to-dos although clients"
+    " will see them and their comments.",
+)
 @json_option
-def todo_move(todo_ids, several, list_id, group, confirm, as_json):
+def todo_move(todo_ids, several, list_id, group, confirm, show_to_clients, as_json):
     """Move TODO (or several, next to each other in this order) to the end
     of a list, into a group or ungrouped: all or nothing. Into another
     project (staff) people who don't see them there are added or dropped:
-    the error says who, --confirm moves anyway."""
+    the error says who, --confirm moves anyway. Internal to-dos into a list
+    clients see: the error says what clients will see, --show-to-clients
+    moves anyway."""
     if bool(todo_ids) == bool(several):
         terminate("Give either TODO or --todos.")
     if several:
@@ -620,6 +628,7 @@ def todo_move(todo_ids, several, list_id, group, confirm, as_json):
             "list_id": list_id,
             "group_id": group,
             "confirm": confirm,
+            "show_to_clients": show_to_clients,
         },
     )
     if as_json:

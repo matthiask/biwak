@@ -99,7 +99,9 @@ somebody leaves and their to-dos go to someone else:
   after the list they come from, or "Moved to-dos"; rename it later),
   visible to clients when the lists they come from are. Before to-dos
   clients see go into an internal list, the form says clients won't
-  see them any more. Into another project, the form first says who will be added to it
+  see them any more; before internal ones go into a list clients see,
+  it asks first, saying what clients will see ("Move to…" of one to-do
+  too). Into another project, the form first says who will be added to it
   and who won't see the to-dos there (they're unassigned and
   unsubscribed); their comments and history come along, and the
   project they left shows one line in its activity ("moved 23 to-dos to
@@ -117,8 +119,10 @@ Every change is all or nothing: if one of the to-dos was trashed or you
 can't see it anymore, nothing changes.
 
 `biwak todos assign 12 13 14 --to 7 [--replace]`, `biwak todos move 12
-13 --list 5 [--group 8] [--confirm]` (`--confirm` into another project,
-once you've read who's added and dropped) and `biwak todos dates 12 13 --due 2026-12-20`
+13 --list 5 [--group 8] [--confirm] [--show-to-clients]` (`--confirm` into another project,
+once you've read who's added and dropped; `--show-to-clients` for
+internal to-dos into a list clients see, once you've read what they'll
+see) and `biwak todos dates 12 13 --due 2026-12-20`
 (or `--shift 7`, `--remove`) do the same.
 
 ## A to-do

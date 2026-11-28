@@ -57,6 +57,30 @@ def affected(item):
     }
 
 
+def shown_by_moving(todos, todolist):
+    """What moving the to-dos into the list ``todolist`` shows clients,
+    for asking first like the switch (decided 2026-11-28): the internal
+    ones going into a list clients see, their comments, and the active
+    clients among the list's project's members; None if it shows
+    nothing"""
+    if not todolist.is_client_visible:
+        return None
+    hidden = [todo.pk for todo in todos if not todo.is_client_visible]
+    if not hidden:
+        return None
+    return {
+        "items": len(hidden),
+        "comments": Comment.objects.filter(item__in=hidden).count(),
+        "clients": (
+            todolist.project.memberships
+            .filter(user__is_client=True, user__is_active=True)
+            .values("user")
+            .distinct()
+            .count()
+        ),
+    }
+
+
 def check():
     """Items whose stored visibility differs from the tree's, as a list of
     (item, stored, expected)"""
