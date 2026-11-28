@@ -18,7 +18,7 @@ from django.utils.text import get_text_list
 from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 from biwak.forms import ComboboxSelect, Confirming, next_url
-from biwak.items import operations as ops
+from biwak.items import operations as ops, visibility
 from biwak.items.models import Kind
 from biwak.items.views import item_for, show_texts
 from biwak.modals import form_response
@@ -115,13 +115,7 @@ def copy_notes(item, project, visible, viewer):
         )
     clients = 0
     if visible:
-        clients = (
-            project.memberships
-            .filter(user__is_client=True, user__is_active=True)
-            .values("user")
-            .distinct()
-            .count()
-        )
+        clients = visibility.clients_of(project)
     clients_note = ""
     if clients:
         todos = ops.open_todos(item).count()

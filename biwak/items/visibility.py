@@ -37,11 +37,25 @@ def set_switch(item, *, visible):
     recompute(item)
 
 
+def clients_of(project):
+    """How many clients the "visible to N clients" of the questions counts:
+    the project's active client members, invited ones included,
+    deactivated ones not (decided 2026-11-28)"""
+    return (
+        project.memberships
+        .filter(user__is_client=True, user__is_active=True)
+        .values("user")
+        .distinct()
+        .count()
+    )
+
+
 def affected(item):
     """What turning the switch on would show, for the switch's question:
-    the item's descendants, their comments and its own, and the clients among the
-    project's members who would see them. Not drafts (only their creators
-    see them) and not what's in the trash."""
+    the item's descendants, their comments and its own, and the clients
+    among the project's members who would see them (``clients_of()``).
+    Not drafts (only their creators see them) and not what's in the
+    trash."""
 
     pks = list(
         Item.objects
@@ -53,15 +67,15 @@ def affected(item):
     return {
         "items": len(pks),
         "comments": Comment.objects.filter(item__in=[item.pk, *pks]).count(),
-        "clients": item.project.memberships.filter(user__is_client=True).count(),
+        "clients": clients_of(item.project),
     }
 
 
 def shown_by_moving(todos, todolist):
     """What moving the to-dos into the list ``todolist`` shows clients,
     for asking first like the switch (decided 2026-11-28): the internal
-    ones going into a list clients see, their comments, and the active
-    clients among the list's project's members; None if it shows
+    ones going into a list clients see, their comments, and the clients
+    of the list's project (``clients_of()``); None if it shows
     nothing"""
     if not todolist.is_client_visible:
         return None
@@ -71,13 +85,7 @@ def shown_by_moving(todos, todolist):
     return {
         "items": len(hidden),
         "comments": Comment.objects.filter(item__in=hidden).count(),
-        "clients": (
-            todolist.project.memberships
-            .filter(user__is_client=True, user__is_active=True)
-            .values("user")
-            .distinct()
-            .count()
-        ),
+        "clients": clients_of(todolist.project),
     }
 
 

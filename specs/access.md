@@ -123,8 +123,8 @@ through every entry point (`AGENTS.md`).
   switch (decided by the user 2026-11-28, verification round 1; before,
   they and every comment written while internal were shown without a
   word): `visibility.shown_by_moving()` counts the internal to-dos
-  going into a list clients see, their comments and the active clients
-  of the list's project, and `shown_note()` (`biwak/items/views.py`)
+  going into a list clients see, their comments and the clients of the
+  list's project (`clients_of()`), and `shown_note()` (`biwak/items/views.py`)
   says "Makes 2 to-dos and 5 comments visible to 3 clients.", also
   with no clients yet (like the switch: staff prepare). The entry
   points:
@@ -221,7 +221,10 @@ Like Basecamp's bright yellow:
   clients." The text is built per kind by the view (`show_texts()` in
   `biwak/items/views.py`, `visibility.affected()`). It counts neither drafts
   (anybody's, only their creators see them) nor what's in the trash
-  (decided 2026-11-21). The POST with `visible=1`
+  (decided 2026-11-21). "N clients" counts the project's active client
+  members, invited ones included, deactivated ones not
+  (`visibility.clients_of()`, decided 2026-11-28; before, every client
+  membership), the same in every such question. The POST with `visible=1`
   shows the item, without it hides it. Staff only (403 for clients).
   The switch is an entry of the item's "More" menu, "Show to clients…"
   or "Hide from clients" (`items/_more_entries.html`, also the tiles'

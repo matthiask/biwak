@@ -158,7 +158,8 @@ Fixed (each in its part's spec):
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
   it for an internal list; moving internal to-dos into a list clients
-  see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0).
+  see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0);
+  "visible to N clients" counts active and invited clients only.
 - **Docs and files:** a whole-text save from an old `base_version` is
   refused over the saver's own version with somebody else's typing
   merged into it (versions remember their co-authors); a form left open
@@ -210,7 +211,6 @@ decided, marked "consistent"):
     deleting and deactivating; "Reset sign-in…" counts push devices
     (consistent).
 - **Visibility:**
-  - "Visible to N clients" counts active and invited clients (decided).
   - Moving an item to another project ends its public links (decided).
   - Moving internal docs and files into a visible folder, and visible
     to-dos into another project's visible list (new clients), ask first
