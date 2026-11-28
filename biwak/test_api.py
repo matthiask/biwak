@@ -338,3 +338,63 @@ class APITest(TestCase):
         schema = self.client.get("/api/v1/openapi.json").json()
         self.assertIn("/api/v1/lists/{list_id}/todos/", schema["paths"])
         self.assertEqual(self.client.get("/api/v1/docs").status_code, 200)
+
+    # Found 2026-11-28, verification round 2 -------------------------------
+
+    def test_a_refused_request_changes_nothing(self):
+        """ninja answers errors inside the view, so ``ATOMIC_REQUESTS``
+        alone committed what was done before the refusal: a doc's
+        read-only option was lifted by a save answered with 409"""
+        from biwak.files import operations as file_ops
+
+        bob = person("Bob")
+        self.project.memberships.create(user=bob)
+        doc = ops.create_doc(
+            project=self.project, title="Contract", content="v1", creator=self.ada
+        )
+        base = doc.doc.versions.first().pk
+        file_ops.update_doc(doc, actor=bob, content="# Contract\n\nv2")
+        file_ops.set_read_only(doc, read_only=True, actor=bob)
+        response = self.send(
+            "patch",
+            f"docs/{doc.pk}/",
+            self.api(self.ada),
+            {"read_only": False, "content": "# Contract\n\nmine", "base_version": base},
+        )
+        self.assertEqual(response.status_code, 409, response.content)
+        doc.doc.refresh_from_db()
+        self.assertEqual(doc.doc.content, "# Contract\n\nv2")
+        self.assertTrue(doc.doc.read_only)
+
+    def test_archived_null_is_refused(self):
+        headers = self.api(self.ada)
+        for path in [f"projects/{self.project.pk}/", f"lists/{self.shared.pk}/"]:
+            with self.subTest(path=path):
+                response = self.send("patch", path, headers, {"archived": None})
+                self.assertEqual(response.status_code, 400)
+        self.assertFalse(Event.objects.filter(action=Action.UNARCHIVED).exists())
+
+    def test_a_nul_character_is_a_400(self):
+        self.client.raise_request_exception = False
+        headers = self.api(self.ada)
+        for path, data in [
+            (f"lists/{self.shared.pk}/todos/", {"title": "a\x00b"}),
+            (f"items/{self.todo.pk}/comments/", {"content": "a\x00b"}),
+        ]:
+            with self.subTest(path=path):
+                response = self.send("post", path, headers, data)
+                self.assertEqual(response.status_code, 400)
+
+    def test_invitations_dont_name_projects_the_reader_cant_open(self):
+        from biwak.projects import operations as project_ops
+
+        root = person("Root", is_admin=True)
+        limited = project("Hidden", all_access=False, members=[root])
+        project_ops.invite(self.project, email="dora@example.org", actor=root)
+        project_ops.invite(limited, email="dora@example.org", actor=root)
+        [invitation] = self.get("invitations/", self.api(self.ada)).json()
+        self.assertEqual(invitation["project_ids"], [self.project.pk])
+        [invitation] = self.get("invitations/", self.api(root)).json()
+        self.assertEqual(
+            sorted(invitation["project_ids"]), sorted([self.project.pk, limited.pk])
+        )

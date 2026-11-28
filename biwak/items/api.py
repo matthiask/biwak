@@ -189,7 +189,9 @@ def list_update(request, list_id: int, data: ListPatch):
     changes = {
         f: getattr(data, f) for f in ["title", "description", "view"] if f in given
     }
-    if any(value is None for value in changes.values()):
+    if any(value is None for value in changes.values()) or (
+        "archived" in given and data.archived is None
+    ):
         bad_request(_("Leave out what doesn't change instead of sending null."))
     if changes:
         ops.update_list(item, actor=request.user, **changes)

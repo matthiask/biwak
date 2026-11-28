@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import sys
 import tempfile
 import urllib.parse
 from pathlib import Path
@@ -21,7 +22,7 @@ from biwak.activity.models import LevelOverride
 from biwak.activity.operations import subscribe
 from biwak.files.models import Attachment
 from biwak.items import operations as ops
-from biwak.items.models import Comment, Item, Todo
+from biwak.items.models import Comment, Item, Kind, Todo
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
@@ -824,3 +825,47 @@ class CLIImageTest(CLITest):
         result = self.biwak("me", "image", path)
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("JPEG, PNG or WebP", result.output)
+
+
+class CLIExpiredLoginTest(CLITest):
+    """An expired token, in a terminal: the CLI logs in again through the
+    browser and repeats the request (found 2026-11-28, verification round
+    2: the repeat sent the file read to its end, an empty upload)"""
+
+    def run_expired(self, *args):
+        from types import SimpleNamespace
+
+        biwak_cli.core.write_config({
+            "url": "http://testserver",
+            "token": "biwak_expired",
+            "access": "write",
+        })
+
+        def browser_login(url, access):
+            _token, secret = APIToken.create_for(
+                user=self.ada, title="T", access=access
+            )
+            biwak_cli.core.save_login(url, secret, access)
+            return secret
+
+        terminal = SimpleNamespace(
+            stdin=SimpleNamespace(isatty=lambda: True), stderr=sys.stderr, exit=sys.exit
+        )
+        with (
+            patch.object(biwak_cli.core, "browser_login", browser_login),
+            patch.object(biwak_cli.core, "sys", terminal),
+        ):
+            result = CliRunner().invoke(biwak_cli.cli, [str(a) for a in args])
+        if result.exception and not isinstance(result.exception, SystemExit):
+            raise result.exception
+        return result
+
+    def test_the_repeated_upload_has_the_file(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "plan.txt"
+        path.write_bytes(b"The whole plan")
+        result = self.run_expired("files", "upload", self.project.pk, path)
+        self.assertEqual(result.exit_code, 0, result.output)
+        version = Item.objects.get(kind=Kind.FILE).upload.versions.get()
+        self.assertEqual(version.size, len(b"The whole plan"))

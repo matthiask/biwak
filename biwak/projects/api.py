@@ -440,6 +440,8 @@ def project_update(request, project_id: int, data: ProjectPatch):
         project_ops.update_project(project, actor=request.user, **changes)
     except ValueError as exc:
         raise HttpError(400, str(exc)) from exc
+    if "archived" in given and data.archived is None:
+        raise HttpError(400, _("%(field)s can't be empty.") % {"field": "archived"})
     if "archived" in given and data.archived != bool(project.archived_at):
         if data.archived:
             project_ops.archive_project(project, actor=request.user)
@@ -569,13 +571,20 @@ class InvitationOut(Schema):
     project_ids: list[int]
 
 
-def invitation_out(user):
+def invitation_out(user, reader):
+    """``project_ids``: those the reader can open (verification round 2:
+    own staff read the IDs of limited projects)"""
     return {
         "person": person_out(user),
         "email": user.email,
         "invited_by": person_out(user.invited_by),
         "invited_at": user.invited_at,
-        "project_ids": [p.pk for p in project_ops.invitation_projects(user)],
+        "project_ids": list(
+            project_ops
+            .invitation_projects(user)
+            .filter(pk__in=Project.objects.accessible_to(reader))
+            .values_list("pk", flat=True)
+        ),
     }
 
 
@@ -598,7 +607,7 @@ def invitations_list(request):
     if not project_ops.can_manage_members(request.user):
         raise HttpError(403, _("Only staff manage invitations."))
     return [
-        invitation_out(user)
+        invitation_out(user, request.user)
         for user in User.objects.invited().select_related("organization", "invited_by")
     ]
 
@@ -609,7 +618,7 @@ def invitation_resend(request, person_id: int):
     in now"""
     user = invitation_for(request, person_id)
     project_ops.resend_invitation(user, actor=request.user)
-    return invitation_out(user)
+    return invitation_out(user, request.user)
 
 
 class WithdrawnOut(Schema):

@@ -185,6 +185,9 @@ def request(method, path, **kwargs):
     if response.status_code == 401 and access and sys.stdin.isatty():
         click.secho("Your access has expired.", fg="yellow", err=True)
         token = browser_login(url, access)
+        # The files were read to their end by the first try
+        for _name, file in (kwargs.get("files") or {}).values():
+            file.seek(0)
         response = _send(method, url, path, token, **kwargs)
     _check_version(
         response.headers.get("x-biwak-cli-latest"),
