@@ -73,7 +73,9 @@ Gruppe kommt (eine Spalte des Boards): So taugt ein Board für Kanban.
 Ein To-do in eine andere Gruppe zu verschieben, benachrichtigt auch
 alle, die es abonniert haben; innerhalb seiner Gruppe, in eine andere
 Liste oder in ein anderes Projekt verschoben, benachrichtigt es
-niemanden. Die Liste nicht mehr zu abonnieren, beendet das Beobachten.
+niemanden. Die Liste nicht mehr zu abonnieren, beendet das Beobachten;
+ein To-do nicht mehr zu abonnieren (auch mit dem Link in seinem Mail),
+beendet, dass du davon hörst, auch von seinem Verschieben.
 Andere Einträge haben keine Stufe: abonnieren oder nicht mehr
 abonnieren. Auf der Personenseite eines Projekts sehen Mitarbeitende,
 wer „Nur wenn markiert“ benachrichtigt wird und wer über „Alles Neue“,
@@ -97,7 +99,8 @@ Seite „Alle Benachrichtigungen“ hat die ganze Liste mit „Ungelesen“ und
   und bringt dich zum Eintrag, zum Kommentar, um den es geht.
 - **Alle als gelesen markieren**, oder markiere einen Eintrag als
   gelesen oder ungelesen. Was du als ungelesen markierst, bleibt in der
-  Laterne und wird nicht mehr gemailt.
+  Laterne und wird nicht mehr gemailt, ausser eine Änderung daran
+  erwähnt dich zum ersten Mal.
 - Ein To-do, das dieselbe Person erledigt und wieder öffnet, zeigt nur
   die Änderung am Ende, oder nichts, wenn es wieder ist wie am Anfang;
   Mails tun dasselbe.
@@ -130,7 +133,10 @@ In den Einstellungen unter „Mails“:
 
 Was du in der Laterne gelesen hast, bevor die Mail hinausgeht, wird
 nicht gemailt, und eine Mail, in der nichts übrig bleibt, wird nicht
-gesendet. Mails enthalten den ganzen Text; die erste Zeile sagt, wenn
+gesendet. Was an einem Eintrag passiert ist, der im Papierkorb ist
+(oder den du nicht sehen kannst), wenn seine Mail fällig ist, wird
+nicht gemailt, auch nicht, nachdem er wiederhergestellt ist; die
+Laterne hat es dann wieder, ungelesen. Mails enthalten den ganzen Text; die erste Zeile sagt, wenn
 Kund:innen den Eintrag sehen können.
 
 **Die tägliche Zusammenfassung** beginnt mit deinen To-dos:
@@ -231,8 +237,9 @@ alles sofort.
 endgültig abgelehnt oder als Spam markiert, sendet Biwak ihr keine
 Benachrichtigungsmails, Zusammenfassungen und Check-in-Fragen mehr; was
 passiert, bleibt in ihrer Laterne. Ihre Aktivitätsseite sagt es (den
-Mitarbeitenden und ihr selbst), und ihre Einstellungsseite auch. Es
-geht wieder los, sobald ein Admin die Adresse ändert oder es in der
+Mitarbeitenden und ihr selbst), und ihre Einstellungsseite auch.
+Solche Mails, die noch auf einen weiteren Versuch warten, werden
+verworfen. Es geht wieder los, sobald ein Admin die Adresse ändert oder es in der
 Administration zurücksetzt (Personen, „Mails an die ausgewählten
 Personen funktionieren wieder“); was dazwischen passiert ist, wird nicht
 nachträglich gemailt, es ist in der Laterne.

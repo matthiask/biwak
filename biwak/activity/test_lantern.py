@@ -194,6 +194,47 @@ class ReadNotMailedTest(LanternTestCase):
         self.assertEqual([m for m in mail.outbox if m.to == [self.bob.email]], [])
         self.assertEqual(lantern.unread_count(self.bob), 1)
 
+    def test_a_first_mention_merged_into_one_marked_unread_is_mailed(self):
+        """A merged edit mentioning them for the first time tells them
+        (decided 2026-11-28): mailed and pushed, marked unread or not"""
+        from biwak.activity import push
+        from biwak.activity.test_push import subscribe_device
+
+        subscribe_device(self.bob)
+        self.act(lambda: ops.update_todo(self.todo, actor=self.ada, notes="First"))
+        lantern.read(self.bob)
+        self.assertTrue(lantern.unread(self.bob, item=self.todo))
+        self.act(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=f"First, {mentions.syntax(self.bob)}"
+            )
+        )
+        (notification,) = Notification.objects.filter(user=self.bob)
+        self.assertEqual(list(push.pending().filter(user=self.bob)), [notification])
+        self.send(timezone.now() + dt.timedelta(minutes=11))
+        self.assertEqual(
+            [m.subject for m in mail.outbox if m.to == [self.bob.email]],
+            [f"[{self.project.name}] Order the tent"],
+        )
+
+    def test_an_edit_merged_into_one_marked_unread_mentioning_again(self):
+        """Mentioned before marking it unread: the merged edit stays
+        unmailed"""
+        self.act(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=f"{mentions.syntax(self.bob)}"
+            )
+        )
+        lantern.read(self.bob)
+        self.assertTrue(lantern.unread(self.bob, item=self.todo))
+        self.act(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=f"{mentions.syntax(self.bob)} too"
+            )
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=11))
+        self.assertEqual([m for m in mail.outbox if m.to == [self.bob.email]], [])
+
 
 @override_settings(BASE_URL="https://biwak.example.org")
 class ListingTest(LanternTestCase):

@@ -58,7 +58,8 @@ def record(event, *, now=None):
             .first()
         )
         if row is None:
-            # Not ours (another app on the account), or deleted after 30 days
+            # Not ours (another app on the account), or deleted after
+            # ``sending.RETENTION``
             return False
         if delivery == Delivery.BOUNCED:
             row.delivery_detail = " ".join(

@@ -90,7 +90,8 @@ somebody leaves and their to-dos go to someone else:
   and those assigned already, so "Instead of" can keep a deactivated
   co-assignee) and whether they come "Instead of the current assignees"; without it
   they're added. Each new assignee gets one notification for all of
-  them ("Ada assigned you 23 to-dos"). People taken out aren't told.
+  them ("Ada assigned you 23 to-dos"), also across projects and in the
+  daily digest. People taken out aren't told.
   If one of the to-dos was trashed or you can't see it anymore, nothing
   changes and the form says so. Taking somebody off is done per to-do.
 - **Move…** moves them, completed ones too, to a list or one of its

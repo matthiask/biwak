@@ -151,34 +151,25 @@ renames and archiving of projects and templates name nobody, at
 Basecamp's time; new files in texts changed in Basecamp are linked;
 `--since` doesn't store a recording as read completely when it skipped
 older comments; changed check-in questions and answers are updated;
-trashed in Basecamp is trashed here, deleted here isn't imported again.
+trashed in Basecamp is trashed here, deleted here isn't imported again;
+a first mention merged into an edit
+marked unread is mailed and pushed; unsubscribing from a to-do stops
+its column moves, also through the mail's link; notifications of an
+item trashed or hidden when their mail is due are kept unmailed; one
+"Assign…" across projects is one entry in the digest; the outbox gives
+up retries to deactivated people and undeliverable addresses; the
+admins' notice names the outbox's retention (`RETENTION`, 90 days); a
+held check-in summary is checked again when it goes; a stored check-in
+rule that isn't valid any more skips its question only.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
 
-- **Notifications:**
-  - A first mention merged into an edit whose notification was marked
-    unread is mailed and pushed (decided; today neither).
-  - Unsubscribing from a to-do also stops hearing about its column moves
-    as a list's watcher; the mail's unsubscribe link unsubscribes from
-    the to-do only (decided).
-  - Notifications of a trashed item (or one the person can't see for
-    now) are kept unmailed, not deleted, so restoring brings them back
-    unread (decided; `mails._prepare()` deletes them).
-  - One "Assign…" across projects is one entry in the digest (today one
-    per project).
-  - The outbox gives up retries to deactivated people and undeliverable
-    addresses (decided).
-  - The admins' notice says the outbox keeps mails 30 days; it's 90.
-  - A held summary still goes out after the person chose "No mails",
-    unsubscribed, or every answer was trashed (`send_held_summaries()`).
 - **Visibility:**
   - Moving internal to-dos into a list clients see asks first, like the
     switch; the API and CLI need an explicit flag (decided).
   - A client's open list page isn't told when a to-do leaves it for an
     internal list (`live.changed()` takes the target's visibility).
-- **Check-ins:** one stored rule that isn't valid any more stops asking
-  the rest and the summaries every minute (`latest_due()` on `None`).
 - **Docs and files:**
   - A whole-text save with an old `base_version` overwrites someone
     else's typing merged into a version credited to the saver (the

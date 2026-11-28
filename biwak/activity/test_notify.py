@@ -466,6 +466,17 @@ class WatchingListsTest(TestCase):
             self.told(self.move(None, actor=self.dan)), {self.ada, self.bob}
         )
 
+    def test_unsubscribing_from_the_to_do_stops_its_moves(self):
+        """Unsubscribing is how to stop hearing about one item: also about
+        its moves as the list's watcher (decided 2026-11-28)"""
+        self.watch(self.bob)
+        unsubscribe(self.bob, self.todo)
+        self.assertEqual(self.told(self.move(self.doing)), set())
+        # The list's other to-dos still tell, also when not subscribed
+        self.todo = ops.create_todo(todolist=self.board, title="New", creator=self.ada)
+        Subscription.objects.filter(user=self.bob, item=self.todo).delete()
+        self.assertEqual(self.told(self.move(self.doing)), {self.bob})
+
     def test_reordering_within_a_group_tells_nobody(self):
         subscribe(self.dan, self.todo)
         self.watch(self.bob)

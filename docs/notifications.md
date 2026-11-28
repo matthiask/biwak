@@ -64,7 +64,8 @@ to-do moves to another group (a column of the board): a board works for
 Kanban. Moving a to-do into another group also tells everybody
 subscribed to it; moving it within its group, to another list or to
 another project tells nobody. Unsubscribing from the list stops the
-watching. Other items have no level: subscribe or
+watching; unsubscribing from one to-do (also with the link in its
+mail) stops hearing about it, its moves too. Other items have no level: subscribe or
 unsubscribe. On a project's people page staff see who is notified "Only
 when tagged" and who about "Everything new", and change it right in
 the person's row (it's saved at once; if it can't be saved, it shakes
@@ -83,7 +84,8 @@ shows what you've read already in the same entry, quieter. The page "All notific
 - **Opening an entry reads it** (with the item's comments) and takes you
   to the item, at the comment where it applies.
 - **Mark all as read**, or mark one item as read or unread. What you
-  mark as unread stays in the lantern and isn't mailed any more.
+  mark as unread stays in the lantern and isn't mailed any more, unless
+  a change to it mentions you for the first time.
 - A to-do completed and reopened by the same person shows only the
   change in the end, or nothing when it's back where it started; mails
   do the same.
@@ -111,8 +113,11 @@ Under Settings, "Mails":
   (except what you marked as unread) with the next mail or digest.
 
 What you have read in the lantern before the mail goes out isn't mailed,
-and a mail with nothing left isn't sent. Mails carry the full text; the
-first line says when clients can see the item.
+and a mail with nothing left isn't sent. What happened on an item that
+is trashed (or that you can't see) when its mail is due isn't mailed,
+also not after it's restored; the lantern has it again then, unread.
+Mails carry the full text; the first line says when clients can see the
+item.
 
 **The daily digest** starts with your to-dos:
 
@@ -199,7 +204,8 @@ everything as it happens.
 or marked as spam, Biwak stops sending them notification mails, digests
 and check-in questions; what happens stays in their lantern. Their
 activity page says so (to staff and to themselves), and so does their
-settings page. It starts again once an admin changes the address or
+settings page. Such mails still waiting to be tried again are dropped.
+It starts again once an admin changes the address or
 clears it in the admin (People, "Mail to the selected people works
 again"); what happened in between isn't mailed afterwards, it's in the
 lantern.

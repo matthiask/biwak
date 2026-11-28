@@ -658,6 +658,20 @@ class AskingTest(CheckinTestCase):
         self.assertEqual(len(calls), 2)
         self.assertEqual(len(self.sent()), 1)
 
+    def test_a_stored_rule_which_isnt_valid_any_more(self):
+        """Gives no date (specs/todos.md): that question isn't asked and
+        its next time is cleared, the others go on, summaries too"""
+        bad = self.question("Old one", time_of_day=dt.time(8, 0))
+        Question.objects.filter(item=bad).update(rule="FREQ=DAILY;INTERVAL=0")
+        self.run_at("2027-03-22 09:00")
+        self.assertEqual(dates(self.item), [dt.date(2027, 3, 22)])
+        self.assertEqual(dates(bad), [])
+        self.assertIsNone(Question.objects.get(item=bad).next_at)
+        ops.answer(self.item, user=self.ada, content="Fine")
+        self.sent()
+        self.run_at("2027-03-23 07:00")
+        self.assertEqual(self.recipients(), [self.ada.email, self.bob.email])
+
 
 @override_settings(
     BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"

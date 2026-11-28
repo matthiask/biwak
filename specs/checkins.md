@@ -106,6 +106,11 @@ Traps the tests cover (`schedule.py`):
 - **Editing the schedule** (the rule widget, `rule-widget.md`) counts
   from now: today's time only if still ahead, never a date already
   asked.
+- **A stored rule which isn't valid any more** gives no date
+  (`todos.md`): that question isn't asked and its `next_at` is cleared,
+  the others and the summaries go on (`schedule.latest_due()` returns
+  None; decided 2026-11-28 after one such rule stopped asking every
+  question every minute).
 - **A first date that doesn't match the rule:** the first date the rule
   gives on or after it; "every two weeks" counts its phase from the
   first date's week (fine as it is, 2026-11-20).
@@ -116,7 +121,7 @@ Traps the tests cover (`schedule.py`):
   installation's time zone), they get no question mail and aren't
   among the occurrence's people asked, so they aren't missing; the next
   occurrence asks them again. Their summaries wait while their mails
-  wait (`HeldSummary`).
+  wait (`HeldSummary`), checked again when they go (`quiet-hours.md`).
 
 ## Summaries and replies
 

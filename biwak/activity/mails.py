@@ -68,8 +68,10 @@ def read_unsubscribe_token(token):
 
 def unsubscribe_url(user, item):
     """For the item the person follows: the item, or for a new item the
-    container they're subscribed to"""
-    if not is_subscribed(user, item) and item.parent_id:
+    container they're subscribed to. A to-do always: its list's watchers
+    hear about its moves between the list's groups, unsubscribing from
+    the to-do stops that, the list stays (decided 2026-11-28)"""
+    if not is_subscribed(user, item) and item.parent_id and item.kind != Kind.TODO:
         parent = item.parent
         if is_subscribed(user, parent):
             item = parent
@@ -384,6 +386,27 @@ def _deliverable(notifications, user, *, others=()):
     ]
 
 
+def _unseen(notifications, user):
+    """The IDs of those about items the active person can't see now
+    (trashed, hidden from clients, not a member any more) but may see
+    again; not events internal when clients' notifications were written,
+    which they never see"""
+    if not user.is_active:
+        return set()
+    visible = set(
+        Item.objects
+        .visible_to(user)
+        .filter(pk__in={n.event.item_id for n in notifications})
+        .values_list("pk", flat=True)
+    )
+    return {
+        n.pk
+        for n in notifications
+        if n.event.item_id not in visible
+        and (n.event.is_client_visible or not user.is_client)
+    }
+
+
 # Notifications still to mail: not sent, not read in the lantern, not
 # marked unread by hand there (specs/lantern.md)
 MAILABLE = {
@@ -553,17 +576,31 @@ def digest_mail(user, notifications, *, todos=None, short=True):
         return (batch, 0 if batch else notification.event.item_id)
 
     group_batches(notifications)
+    # The to-dos of one "Assign…" or "Due date…" across projects are one
+    # entry (decided 2026-11-28), like the lantern's and the mail: under
+    # their project, or "Biwak" for several (the mail's subject)
+    batch_projects = {}
+    for notification in notifications:
+        if entry := getattr(notification, "batch_entry", None):
+            batch_projects.setdefault(entry, set()).add(notification.event.item.project)
+
+    def section(notification):
+        entry = getattr(notification, "batch_entry", None)
+        projects = batch_projects[entry] if entry else {notification.event.item.project}
+        return next(iter(projects)) if len(projects) == 1 else None
+
     notifications = sorted(
         notifications,
         key=lambda n: (
-            str(n.event.item.project).lower(),
-            n.event.item.project_id,
+            section(n) is None,
+            str(section(n)).lower(),
+            section(n).pk if section(n) else 0,
             *key(n),
         ),
     )
     for_you = []
     projects = []
-    for project, by_project in groupby(notifications, lambda n: n.event.item.project):
+    for project, by_project in groupby(notifications, section):
         items = []
         for (batch, _item_id), by_key in groupby(by_project, key):
             group = list(by_key)
@@ -587,7 +624,7 @@ def digest_mail(user, notifications, *, todos=None, short=True):
                 entry = _item(item, user) | {"entries": entries}
                 (for_you if mine else items).append(entry)
         if items:
-            projects.append({"project": project, "items": items})
+            projects.append({"project": project or "Biwak", "items": items})
     # The to-do sections only enrich a digest with notifications (decided
     # 2026-11-23): nothing happened, no mail
     if not (for_you or projects):
@@ -648,8 +685,13 @@ def _prepare(user, pks, now, build, kind):
         ):
             message = build(deliverable)
     sent = [n.pk for n in deliverable] if message else []
-    # Never sent: gone
-    Notification.objects.filter(pk__in={n.pk for n in claimed} - set(sent)).delete()
+    # About an item trashed or hidden from them for now: kept, marked sent
+    # without a mail, so restoring brings them back unread in the lantern,
+    # not mailed late (decided 2026-11-28). The rest never sent: gone.
+    unseen = _unseen(claimed, user)
+    Notification.objects.filter(
+        pk__in={n.pk for n in claimed} - set(sent) - unseen
+    ).delete()
     if message is None:
         return False
     outbox.send(message, kind)

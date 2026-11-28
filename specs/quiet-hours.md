@@ -37,7 +37,10 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
   hours and while away, like other mails: `summarize_due()` keeps a
   `HeldSummary` per person whose mails wait, `send_held_summaries()`
   (part of `checkins.run()`, so of `send_mails`) mails it once they may
-  get mail again, as its own check-in mail next to the rest.
+  get mail again, as its own check-in mail next to the rest. Checked
+  again then like `summarize_due()` (decided 2026-11-28): not after
+  choosing another mode or unsubscribing, not to who can't see the
+  question any more, not when every answer was trashed meanwhile.
 - **People away aren't asked check-in questions** (decided 2026-11-22):
   no question mail, not among the occurrence's people asked, so not
   missing in it (`_ask()`; away on the day it's asked, in the

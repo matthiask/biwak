@@ -18,6 +18,7 @@ from biwak.activity.models import (
     Mention,
     Notification,
     Subscription,
+    Unsubscription,
 )
 from biwak.activity.operations import subscribe
 from biwak.items.models import Comment, Item, Kind, Status
@@ -242,8 +243,11 @@ def candidates(event):
         Subscription.objects.filter(item__in=items).values_list("user", flat=True)
     )
     if column_move(event):
-        # Its list's watchers, also of to-dos older than their watching
-        ids |= {user.pk for user in watchers(item.parent)}
+        # Its list's watchers, also of to-dos older than their watching,
+        # unless they unsubscribed from the to-do (decided 2026-11-28)
+        ids |= {user.pk for user in watchers(item.parent)} - set(
+            Unsubscription.objects.filter(item=item).values_list("user", flat=True)
+        )
     ids |= set(event.data.get("mentioned", ()))
     if event.action == Action.ASSIGNED:
         ids |= set(event.data.get("assignees", ()))
@@ -314,6 +318,24 @@ def _tell(people, event):
     # already, which is told before this notify() runs. Read in the lantern
     # meanwhile: unread again, the change is new (specs/lantern.md).
     existing.filter(user__in=unsent, sent_at=None).update(created_at=now, read_at=None)
+    # Marked unread by hand (never mailed): a first mention merged in since
+    # tells them, mailed and pushed (decided 2026-11-28, specs/lantern.md)
+    marked = dict(
+        existing.filter(
+            user__in=unsent, sent_at=None, marked_unread_at__isnull=False
+        ).values_list("user", "marked_unread_at")
+    )
+    if marked:
+        mentioned_after_marking = {
+            user
+            for user, created_at in Mention.objects.filter(
+                item=event.item, comment=None, user__in=marked
+            ).values_list("user", "created_at")
+            if created_at > marked[user]
+        }
+        existing.filter(user__in=mentioned_after_marking, sent_at=None).update(
+            marked_unread_at=None, pushed_at=None
+        )
     new = [
         user
         for user in people

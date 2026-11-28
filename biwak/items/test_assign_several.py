@@ -9,10 +9,13 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from biwak.accounts.models import MailDelivery
 from biwak.activity import lantern
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Action, Event, Notification
+from biwak.activity.operations import subscribe
 from biwak.items import operations as ops
+from biwak.projects.operations import add_member
 from biwak.test_utils import assert_modal, assert_modal_redirect, person, project
 
 
@@ -142,6 +145,42 @@ class AssignTodosTest(TestCase):
         self.assertEqual(to_bob[0].subject, "[Biwak] Ada Example assigned you 3 to-dos")
         for item in todos:
             self.assertIn(item.get_absolute_url(), to_bob[0].body)
+
+    def test_one_entry_in_the_digest(self):
+        """Across projects, like the lantern and the mail (decided
+        2026-11-28): one entry, for the assignee and for a subscriber"""
+        eve = person("Eve", mail_delivery=MailDelivery.DIGEST)
+        for p in [self.website, self.shop]:
+            add_member(p, eve, actor=self.ada)
+        subscribe(eve, self.copy)
+        subscribe(eve, self.invoice)
+        self.bob.mail_delivery = MailDelivery.DIGEST
+        self.bob.save()
+        self.assign([self.copy, self.photos, self.invoice], [self.bob])
+        with self.captureOnCommitCallbacks(execute=True):
+            send_mails(now=timezone.now() + dt.timedelta(days=1, hours=8))
+        (to_bob,) = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertEqual(to_bob.body.count("Ada Example assigned you 3 to-dos."), 1)
+        self.assertNotIn("assigned you a to-do", to_bob.body)
+        (to_eve,) = [m for m in mail.outbox if m.to == [eve.email]]
+        self.assertEqual(to_eve.body.count("assigned people to"), 1, to_eve.body)
+        self.assertIn("assigned people to 2 to-dos.", to_eve.body)
+
+    def test_one_entry_after_being_away(self):
+        """The mail after quiet hours or being away, the digest's form"""
+        self.bob.away_until = timezone.localdate() + dt.timedelta(days=1)
+        self.bob.save()
+        subscribe(self.bob, self.budget)
+        self.assign([self.copy, self.photos, self.invoice], [self.bob])
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.add_comment(self.budget, author=self.ada, content="Hi")
+        self.send()
+        self.assertEqual([m for m in mail.outbox if m.to == [self.bob.email]], [])
+        with self.captureOnCommitCallbacks(execute=True):
+            send_mails(now=timezone.now() + dt.timedelta(days=2, hours=8))
+        (to_bob,) = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertEqual(to_bob.body.count("Ada Example assigned you 3 to-dos."), 1)
+        self.assertIn("Hi", to_bob.body)
 
     def test_two_assigns_far_apart_are_two_mails(self):
         self.assign([self.copy, self.photos], [self.bob])

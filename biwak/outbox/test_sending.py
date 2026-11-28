@@ -136,6 +136,8 @@ class OutboxTest(TestCase):
             "https://biwak.example.org/admin/outbox/outgoingmail/?state=given_up",
             notice.body,
         )
+        # As long as they're kept (RETENTION)
+        self.assertIn("kept in the outbox for 90 days", notice.body)
         self.assertEqual(OutgoingMail.objects.count(), 2)
         self.assertEqual(outbox.retry(now=later), {})
 
@@ -161,6 +163,48 @@ class OutboxTest(TestCase):
         )
         # Nothing sent, and nothing for the admins to do
         self.assertEqual(mail.outbox, [])
+
+    def test_retries_to_deactivated_people_given_up(self):
+        """Whatever the kind, sign-in mails too (decided 2026-11-28):
+        given up quietly, the last error kept"""
+        bob = person("Bob")
+        rows = []
+        with failing(), self.assertLogs("biwak.outbox.sending", "WARNING"):
+            for kind in [Kind.NOTIFICATION, Kind.INVITATION, Kind.ACCOUNT]:
+                rows.append(self.queue(kind=kind, to=bob.email.upper()))
+            self.queue(to="someone@example.org")
+        bob.is_active = False
+        bob.save()
+        self.assertEqual(
+            outbox.retry(now=timezone.now() + dt.timedelta(minutes=2)),
+            {"dropped": 3, "sent": 1},
+        )
+        self.assertEqual([m.to for m in mail.outbox], [["someone@example.org"]])
+        for row in rows:
+            row.refresh_from_db()
+            self.assertIsNotNone(row.given_up_at)
+            self.assertEqual(
+                row.last_error, "Not sent: the recipient was deactivated. OSError: down"
+            )
+
+    def test_retries_to_undeliverable_addresses_given_up(self):
+        """Notifications, digests, check-ins and stale to-dos (what the mark
+        stops, decided 2026-11-28); what somebody asked for still goes"""
+        bob = person("Bob")
+        with failing(), self.assertLogs("biwak.outbox.sending", "WARNING"):
+            for kind in [Kind.NOTIFICATION, Kind.DIGEST, Kind.CHECKIN, Kind.STALE]:
+                self.queue(kind=kind, to=bob.email)
+            for kind in [Kind.INVITATION, Kind.ACCOUNT, Kind.REPLY_REFUSED]:
+                self.queue(kind=kind, to=bob.email)
+        bob.mail_undeliverable_at = timezone.now()
+        bob.save()
+        self.assertEqual(
+            outbox.retry(now=timezone.now() + dt.timedelta(minutes=2)),
+            {"dropped": 4, "sent": 3},
+        )
+        self.assertEqual(
+            OutgoingMail.objects.filter(given_up_at__isnull=False).count(), 4
+        )
 
     def test_rate_limited_not_counted(self):
         with failing(RateLimited()), self.assertLogs("biwak.outbox.sending"):
