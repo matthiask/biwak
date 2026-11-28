@@ -167,7 +167,12 @@ Fixed (each in its part's spec):
 - **Docs and files:** a whole-text save from an old `base_version` is
   refused over the saver's own version with somebody else's typing
   merged into it (versions remember their co-authors); a form left open
-  while its item moves to another project links what it uploaded.
+  while its item moves to another project links what it uploaded;
+  lists' descriptions link their files (the import's were deleted after
+  a day); `fairy_tasks` saves typing left over before deleting unlinked
+  files; the files in typing kept from somebody who lost access are
+  linked; typing checks access again too, so a lost message doesn't let
+  an open editor type into a doc made read-only.
 - **API and CLI:** `biwak feed` and `biwak lantern` name events without
   an actor "Biwak" (CLI 0.76.0); the API's cursors are positions in the
   whole ordering.
@@ -218,11 +223,6 @@ decided, marked "consistent"):
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).
-- **Docs and files:** `fairy_tasks` saves pending typing before deleting
-  unlinked attachments; attachments inserted by someone who lost access
-  are linked when their typing is kept; lists' descriptions link their
-  attachments (`create_list`/`update_list` never call `link()`, to
-  check); read-only takes effect for open editors at once (to check).
 - **Import:** links to a list's group lead to the list in Biwak;
   archived to-dos without a completion are completed by nobody, at
   Basecamp's time; the same Basecamp attachment in two texts gets an

@@ -278,7 +278,10 @@ class DocConsumer(AsyncWebsocketConsumer):
             await self.send(bytes_data=handle_sync_message(data, doc))
             await self.send(bytes_data=create_sync_message(doc))
             return
-        if self.mode != live.WRITE:
+        # Typing checks again too (at most every RECHECK_AFTER seconds),
+        # not only what's passed on: a lost access check would otherwise let
+        # an open editor type into a doc made read-only
+        if not await self.recheck() or self.mode != live.WRITE:
             return
         update = read_message(data[1:])
         if update == EMPTY_UPDATE or not ytext.is_valid(update):

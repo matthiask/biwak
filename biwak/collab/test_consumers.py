@@ -41,7 +41,7 @@ from biwak.collab.models import LiveUpdate
 from biwak.collab.routing import websocket_urlpatterns
 from biwak.files import operations
 from biwak.items import editing, operations as ops
-from biwak.items.models import Editing, Item
+from biwak.items.models import Doc as DocModel, Editing, Item
 from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
 from biwak.test_utils import bare_doc, organization, person, project
@@ -381,6 +381,21 @@ class ConsumerTest(TransactionTestCase):
         )
         await ada.drain()
         self.assertEqual(ada.modes, [1, 0, 1])
+
+    @patch.object(consumers, "RECHECK_AFTER", 0)
+    async def test_read_only_without_a_message_stops_the_typing(self):
+        """The access check's message lost: typing checks again too (if the
+        last check is older than ``RECHECK_AFTER``), not only what's passed
+        on, so a read-only doc takes nothing from an open editor"""
+        ada = await self.connect(self.ada, self.shared)
+        await database_sync_to_async(DocModel.objects.filter(item=self.shared).update)(
+            read_only=True
+        )
+        await ada.type(0, "x")
+        await asyncio.sleep(0.1)
+        await ada.drain()
+        self.assertEqual(ada.modes, [1, 0])
+        self.assertEqual(await self.content(self.shared), "Agenda\n")
 
     async def test_a_person_made_client_or_deactivated(self):
         bob = await self.connect(self.bob, self.shared)

@@ -162,13 +162,14 @@ def merge(doc):
     locked. The updates of people who can't change the doc anymore are
     dropped, unless others' updates build on them (their text would be
     lost); either way they aren't authors. Returns the text, the authors
-    (in order, without repetitions) and who typed the mentions new in the
+    (in order, without repetitions), who typed the mentions new in the
     text, by the mentioned person's ID (the author whose updates completed
-    them)."""
+    them), and everybody whose updates are in the text (authors and those
+    kept, whose files are linked too)."""
     state = ensure_state(doc)
     updates = list(doc.live_updates.select_related("user"))
     if not updates:
-        return doc.content, [], {}
+        return doc.content, [], {}, []
     LiveUpdate.objects.filter(pk__in=[u.pk for u in updates]).delete()
     authors = {u.user_id: u.user for u in updates}
     authors = {pk: user for pk, user in authors.items() if may_write(user, doc.item)}
@@ -189,7 +190,8 @@ def merge(doc):
     state.state = y.get_update()
     state.updated_at = timezone.now()
     state.save(update_fields=["state", "updated_at"])
-    return ytext.text(y, doc.content), list(authors.values()), typed
+    typists = list({u.user_id: u.user for u in kept}.values())
+    return ytext.text(y, doc.content), list(authors.values()), typed, typists
 
 
 def _strands(state, updates, kept):

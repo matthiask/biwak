@@ -198,7 +198,7 @@ def _save(item, doc, *, actor=None, new_version=False, name_authors=False):
     version by the version rules. Returns whether anything changed.
     ``name_authors``: the audit log names who typed it (one person, or
     several short names)."""
-    content, authors, typed = live.merge(doc)
+    content, authors, typed, typists = live.merge(doc)
     if name_authors and authors:
         set_user_name(
             authors[0]
@@ -237,8 +237,10 @@ def _save(item, doc, *, actor=None, new_version=False, name_authors=False):
     if content != doc.content:
         doc.content = content
         doc.save(update_fields=["content"])
-        for author in authors:
-            attachments.link(item, content, actor=author)
+        # Also the files of those whose typing stays without them being
+        # authors (they lost access, others built on it)
+        for person in {p.pk: p for p in [*authors, *typists]}.values():
+            attachments.link(item, content, actor=person)
     if published:
         # Only its creator typed in it; quiet: the subscribers of its
         # folder aren't told, the creator tells people at "Done"

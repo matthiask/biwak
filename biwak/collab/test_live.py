@@ -2,10 +2,12 @@
 (specs/collaboration.md); the websocket is in test_consumers.py"""
 
 import datetime as dt
+from io import StringIO
 from unittest.mock import patch
 
 import time_machine
 from django.core.files.base import ContentFile
+from django.core.management import call_command
 from django.db import connection
 from django.test import TestCase
 from django.utils import timezone
@@ -293,6 +295,23 @@ class LiveTest(TestCase):
         self.assertEqual(event.actor, self.ada)
         self.assertNotIn("mentioned", event.data)
 
+    def test_files_others_built_on_stay_too(self):
+        """Bob's file in the text that stays is linked, or the cleanup
+        deletes it a day later and the text shows a plain attachment"""
+        photo = attachments.upload(
+            project=self.project,
+            file=ContentFile(b"x", name="photo.png"),
+            uploaded_by=self.bob,
+        )
+        self.type(self.bob, f"Agenda\n\n{photo.markdown}")
+        self.type(self.ada, f"Agenda\n\n{photo.markdown}\n\nApproved")
+        Project.objects.filter(pk=self.project.pk).update(is_all_access=False)
+        operations.save_live(self.doc.pk)
+        self.refresh()
+        self.assertIn(photo.key, self.doc.content)
+        photo.refresh_from_db()
+        self.assertEqual(photo.item_id, self.item.pk)
+
     def test_search_finds_what_was_typed_and_clients_still_dont(self):
         self.type(self.ada, "Agenda zeppelin")
         operations.save_live(self.doc.pk)
@@ -341,6 +360,20 @@ class LiveTest(TestCase):
         self.refresh()
         self.assertEqual(self.doc.content, "Agenda, left over")
         self.assertEqual(list(live.pending()), [])
+
+    def test_fairy_tasks_save_before_deleting_unlinked_files(self):
+        # Typing left over for more than a day (offline, a lost connection)
+        # links its file before the cleanup looks at it
+        with time_machine.travel(timezone.now() - dt.timedelta(days=2)):
+            photo = attachments.upload(
+                project=self.project,
+                file=ContentFile(b"x", name="photo.png"),
+                uploaded_by=self.ada,
+            )
+        self.type(self.ada, f"Agenda\n\n{photo.markdown}")
+        call_command("fairy_tasks", stdout=StringIO())
+        photo.refresh_from_db()
+        self.assertEqual(photo.item_id, self.item.pk)
 
     def test_deleted_docs_are_skipped(self):
         self.assertFalse(operations.save_live(0))

@@ -44,9 +44,10 @@ answering every sync, when an event may change it (moved, visibility,
 trashed, archived, project edited, member removed), when a person or
 project is saved, when the read-only option changes, when the person
 logs out or out everywhere (that login session's websockets close at
-once), every 60 seconds, and before passing on others' updates when the
-last check is older than 5 seconds (so losing access doesn't depend on
-one channel message, which Redis may evict). Not before every update: a
+once), every 60 seconds, and before passing on others' updates or
+taking the person's own typing when the last check is older than 5
+seconds (so losing access or a doc made read-only doesn't depend on one
+channel message, which Redis may evict; typing too since 2026-11-28). Not before every update: a
 few queries per keystroke of everybody. Losing access closes the session
 ("You can't see this doc anymore.", the text removed); losing only the
 right to type switches to watching.
@@ -78,14 +79,16 @@ for or removes somebody else.
   update, at least every 30 seconds while somebody types, when an
   editor leaves, and when the doc's reading view opens with unsaved
   typing ("Done" leads there while the editor's connection is still
-  closing); `fairy_tasks` saves what's left. It writes
+  closing); `fairy_tasks` saves what's left, before it deletes unlinked
+  attachments (so their files are linked first). It writes
   `Doc.content` through the doc operations: an `edited` event per
   person whose updates it merges (one per editing session of 10
   minutes), mentions credited to who typed them, a version by the rules
   of `files.md` (with several authors kept by whoever started it within
   its 10 minutes). What people typed who can't change the doc anymore is
   dropped unless others' updates build on it; then it stays without
-  credit (decided 2026-11-20).
+  credit (decided 2026-11-20), and the files it shows are linked like
+  the authors' (found 2026-11-28: the cleanup deleted them).
 - **Storing writes Markdown** (`collab/ytext.py`): the document
   serialized like the browser's editor would, keeping `Doc.content`
   where the document is what it says and the source of unchanged blocks

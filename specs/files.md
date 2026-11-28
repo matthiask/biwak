@@ -67,7 +67,9 @@ its item's.
   2026-11-28, the moved items' events say where from). Once linked
   an attachment stays with its item. Unlinked ones are visible only to
   their uploader; `fairy_tasks` deletes them after a day. Lists' and
-  projects' descriptions take no attachments.
+  projects' descriptions offer no files on the pages; lists' descriptions
+  link what's in them anyway (the import brings Basecamp's, found
+  2026-11-28).
 - **Rendering:** `attachment:KEY` becomes the download URL only for the
   rendered item's own attachments; a reference to another item's (or a
   missing) attachment renders as a plain "attachment", without link or

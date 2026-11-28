@@ -1357,6 +1357,19 @@ class NewAttachmentsTest(ImportCase):
                 attachment = Attachment.objects.get(name=f"new-{eid}.png")
                 self.assertEqual(attachment.item, self.item(title))
 
+    def test_lists_descriptions(self):
+        # The pages offer no files there, Basecamp's lists have them
+        self.client_.data["/todosets/300/todolists.json"][0] |= {
+            "description": "<div>Old.</div>"
+        }
+        self.run_import()
+        self.change(
+            self.client_.data["/todosets/300/todolists.json"][0], "description", 7105
+        )
+        self.run_import()
+        attachment = Attachment.objects.get(name="new-7105.png")
+        self.assertEqual(attachment.item, self.item("Budget"))
+
 
 class UnchangedTest(ImportCase):
     """A later run skips recordings whose ``updated_at`` and comment count
