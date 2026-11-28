@@ -1,5 +1,7 @@
 """The project page's links to its to-dos (specs/todos.md, "The to-dos page")"""
 
+import re
+
 from django.test import TestCase
 
 from biwak.test_utils import person, project
@@ -32,3 +34,30 @@ class ProjectTodoLinksTest(TestCase):
         self.client.force_login(self.ada)
         html = self.client.get("/todos/").content.decode()
         self.assertEqual(html.count("data-restore-filters"), 5)
+
+
+class SectionHeadingsTest(TestCase):
+    def test_every_heading_with_a_page_links_to_it(self):
+        """Like "Messages" and "Docs and files": "To-do lists" leads to the
+        to-dos by list, "Members" to the people, "Activity" to the
+        project's activity (the user, 2026-11-28: "the to do lists title
+        leads nowhere")"""
+        ada = person("Ada")
+        cleo = person("Cleo", client=True)
+        p = project(members=[ada, cleo])
+        for user in [ada, cleo]:
+            self.client.force_login(user)
+            html = self.client.get(p.get_absolute_url()).content.decode()
+            headings = re.findall(
+                r'<h2 class="h5[^"]*">\s*<a[^>]*href="([^"]*)"[^>]*>([^<]*)</a>', html
+            )
+            self.assertEqual(
+                [(href, text.strip()) for href, text in headings],
+                [
+                    (f"/projects/{p.pk}/todos/", "To-do lists"),
+                    (f"/projects/{p.pk}/messages/", "Messages"),
+                    (f"/projects/{p.pk}/files/", "Docs and files"),
+                    (f"/projects/{p.pk}/people/", "Members"),
+                    (f"/projects/{p.pk}/feed/", "Activity"),
+                ],
+            )
