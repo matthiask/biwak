@@ -23,6 +23,12 @@ class ImportedObject(models.Model):
     # and for what has no ``updated_at``.
     basecamp_updated_at = models.DateTimeField(null=True, blank=True)
     basecamp_comments_count = models.PositiveIntegerField(null=True, blank=True)
+    # A recording's object deleted in Biwak: never imported again (decided
+    # 2026-11-28, specs/import-basecamp.md); when the import noticed
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    # Trashed in Basecamp and so trashed in Biwak, once: restoring it in
+    # Biwak sticks
+    trashed_at = models.DateTimeField(null=True, blank=True)
 
     target = GenericForeignKey("content_type", "object_id")
 

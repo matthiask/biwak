@@ -94,7 +94,11 @@ sie kennst.
 - **Basecamp-Projekte lassen sich importieren**, durch Admins, mit
   ihren Personen, Kommentaren und Dateien. Personen bekommen die
   Organisation ihrer Firma in Basecamp, ohne Firma die Organisation der
-  Domain ihrer Adresse.
+  Domain ihrer Adresse. Erneut importiert übernimmt ein Projekt, was sich
+  in Basecamp seither geändert hat, auch Verschobenes; was du in Biwak an etwas geändert
+  hast, das in Basecamp gleich geblieben ist, bleibt. Was in Basecamp in
+  den Papierkorb kam, kommt auch hier in den Papierkorb; was hier
+  gelöscht wurde, wird nicht wieder importiert.
 
 ## Was Biwak nicht tut
 

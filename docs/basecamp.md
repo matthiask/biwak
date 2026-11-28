@@ -88,7 +88,10 @@ and public links all work much as you know them.
 - **Basecamp projects can be imported** by an admin, with their
   people, comments and files. People get the organization of their
   Basecamp company; without one, the organization of their address's
-  domain.
+  domain. Imported again, a project takes over what changed in
+  Basecamp since, also what was moved; what you changed in Biwak on something unchanged
+  in Basecamp stays. What was put in Basecamp's trash goes into the
+  trash here; what was deleted here isn't imported again.
 
 ## What Biwak doesn't do
 

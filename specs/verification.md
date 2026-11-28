@@ -142,44 +142,20 @@ list's watchers;
 ordering (`api-cli.md`); the mails' signed links ("Keep open",
 unsubscribing) are logged as their recipient; names in the audit log
 lose their accents instead of turning into escapes; a live save is
-logged as who typed it, not who caused it.
+logged as who typed it, not who caused it;
+the import's later runs (`import-basecamp.md`) leave recordings
+unchanged in Basecamp alone (Biwak's changes stay); a dry run writes
+nothing for projects imported before; moves in Basecamp are followed; a
+project archived in Basecamp is archived only at its first import;
+renames and archiving of projects and templates name nobody, at
+Basecamp's time; new files in texts changed in Basecamp are linked;
+`--since` doesn't store a recording as read completely when it skipped
+older comments; changed check-in questions and answers are updated;
+trashed in Basecamp is trashed here, deleted here isn't imported again.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
 
-- **Import, later runs** (`import-basecamp.md`):
-  - A recording unchanged in Basecamp isn't touched at all: today the
-    listing's visibility, completion, assignees and archived state still
-    undo what was changed in Biwak (a to-do completed, an assignment, a
-    list hidden from clients, an archived project), and the visibility
-    events are dated before the change they undo; check-in questions put
-    the people taken off back on (`importer.py` `_todo`, `_todolist`,
-    `_top_visibility`, `_status`, `_project`, `_question`). Decided:
-    Biwak's change stays; toggles that don't change `updated_at` come
-    with `--full` only.
-  - A dry run writes for projects imported before (completion,
-    assignees, archiving, events): the callers of `_upsert()` keep
-    writing on the object it returns.
-  - Moves in Basecamp are followed (decided): to-dos between lists,
-    cards between columns, docs and files between folders, with the new
-    place's visibility. Today nothing moves, so a to-do or doc moved
-    into an internal place stays visible to clients.
-  - A project archived in Basecamp is archived in Biwak only at its
-    first import (decided); today a rerun after `--archive` archives the
-    project people work in, ending its public links.
-  - Trashed in Basecamp means trashed in Biwak; something deleted in
-    Biwak isn't imported again (decided; today both are ignored or come
-    back).
-  - Renames of projects and templates, and their archiving, name nobody
-    at Basecamp's time (today the importing person, now; `update_project`
-    refuses `actor=None`).
-  - A new attachment in a text changed in Basecamp is never linked
-    (`attachments.link(actor=None)` links only the actor's uploads), so
-    the cleanup deletes it a day later; to-dos, messages, files.
-  - `--since` stores a recording as completely read although its older
-    comments were skipped; they come only with `--full`.
-  - Check-in questions and answers changed in Basecamp aren't updated
-    (`_upsert` without `update=`).
 - **Notifications:**
   - A first mention merged into an edit whose notification was marked
     unread is mailed and pushed (decided; today neither).

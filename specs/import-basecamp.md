@@ -21,7 +21,10 @@ the tests.
 [--include-disabled] [--user EMAIL] [--archive] [--cache-dir DIR | --no-cache]
 [--answers-max-age HOURS] [--token-command CMD]`.
 Always dry-run first: counts per kind, people to create, problems, what
-goes into internal containers, archived recordings skipped.
+goes into internal containers, archived recordings skipped. A dry run
+writes nothing, also for projects imported before (found 2026-11-28 in
+verification round 1: completions, assignees, archiving and their events
+were written on what was imported before).
 
 - The token must be an administrator's: only they get the people's
   addresses (others get them redacted; the importer reports it and
@@ -42,8 +45,16 @@ goes into internal containers, archived recordings skipped.
 - **Idempotent:** `ImportedObject(basecamp_id, basecamp_type,
   content_type, object_id)` maps what was imported, so a second run
   updates titles, texts, due dates, assignees, completion, archived
-  lists, categories and visibility, and adds new comments; it doesn't
-  change imported comments, positions or files. **Basecamp wins**
+  lists, categories and visibility, and adds new comments (a project
+  archived in Basecamp is archived only at its first import, decided
+  2026-11-28 by the user: after `--archive` Basecamp says so of the
+  project people work in, and archiving it ended its public links); it doesn't
+  change imported comments, positions or files. **Moves are followed**
+  (decided 2026-11-28 by the user, found in verification round 1: a to-do
+  moved into an internal list stayed visible to clients): a changed to-do
+  moved to another list or group, a card to another column, a doc, file
+  or folder to another folder is moved through the items' move
+  operations, with the new place's visibility, as Basecamp's change. **Basecamp wins**
   (decided 2026-11-22, for now): a recording changed in Basecamp since
   the last run (every one with `--full`) gets Basecamp's state, also
   where it was changed in Biwak meanwhile (a to-do completed in Biwak
@@ -64,13 +75,19 @@ goes into internal containers, archived recordings skipped.
   reopening, assignments changed since) is recorded at Basecamp's time
   without a person, noted as the import's ("Biwak edited this (Basecamp
   import)", `Importer._from_basecamp()`); a completion without its
-  person in Basecamp too. Assignments at a to-do's creation stay the
+  person in Basecamp too, and renames and archiving of projects and
+  templates (found 2026-11-28 in verification round 1: they named the
+  importing person, now; `update_project()` takes `actor=None` only inside
+  `importing()`). Assignments at a to-do's creation stay the
   creator's, and so do docs, whose versions need an author. The events
   earlier runs recorded in the creator's name were changed the same way
   (`activity` 0025: their times are Basecamp's, in milliseconds).
   Unchanged recordings aren't touched. `--since` skips leaves
   (to-dos, cards, messages, docs, files, answers, comments) last updated
-  before the date; containers are always read.
+  before the date; containers are always read. A recording whose older
+  comments `--since` skipped isn't stored as read completely, so the next
+  run reads it again (found 2026-11-28 in verification round 1: the
+  comments came only with `--full`).
 - **`--archive`** (decided 2026-11-22): archives each project in
   Basecamp (`PUT /projects/ID/status/archived.json`) once its import went
   through; a failed import archives nothing, projects already archived
@@ -98,9 +115,18 @@ goes into internal containers, archived recordings skipped.
   are done, so an interrupted run reads it again; rows from before have
   none and are read completely once. The children of containers (lists,
   groups, folders, card tables' columns, questions' answers) are still
-  listed, new children don't change the parent; what the listing already
-  gives (visibility, completion, assignees, archived) is still compared,
-  costing no request. `--since` skips older leaves before any of this.
+  listed, new children don't change the parent. **An unchanged recording
+  isn't touched at all** (decided 2026-11-28 by the user, found in
+  verification round 1: the listing's visibility, completion, assignees
+  and archived state undid what was changed in Biwak, a to-do completed,
+  a list hidden from clients, an archived project): what was changed in
+  Biwak since stays, also where the listing gives Basecamp's state
+  without a request. Changes in Basecamp which don't change `updated_at`
+  (the visibility switch, like subscriptions) come along only with
+  `--full`; undoing a switch made in Biwak after Basecamp's `updated_at`
+  happens now, noted as the import's, like reopening above. A check-in question asks those who answered since the last
+  run; who answered before was asked then, and may have been taken off
+  in Biwak. `--since` skips older leaves before any of this.
 - **Several tools of a kind** (two to-do sets, several message boards
   or Docs & Files) are merged as they come (decided 2026-11-22): their
   lists, messages and files land together in the project. The report
@@ -371,7 +397,11 @@ same way.
 - **Rich text:** HTML to Markdown with `markdownify`
   (`biwak/richtext/htmlmarkdown.py`, shared with pasting); mentions of the
   project's people become `[@Name](person:ID)`, others stay `@Name`;
-  files in texts are downloaded once and attached. **Links to
+  files in texts are downloaded once and attached, as the text's author;
+new ones in a text changed in Basecamp are linked to its item by the
+importer (found 2026-11-28 in verification round 1: the operations link
+only their actor's uploads, Basecamp's changes name nobody, so the
+cleanup deleted them a day later). **Links to
   recordings** (on `3.basecamp.com` and `app.basecamp.com`) keep
   Basecamp's address in the stored text and are shown as links to a
   trampoline, `/basecamp/?to=<address>` (`render_markdown()`,
@@ -393,7 +423,11 @@ same way.
   (Basecamp's has none; confirmed 2026-11-21), `start_date` the first
   date. Imported **paused**, so Biwak doesn't start mailing people
   unasked. Occurrences come from the
-  answers' `group_on`.
+  answers' `group_on`. A later run updates a changed question's title
+  and schedule (it stays paused) and a changed answer's text, as
+  Basecamp's changes (found 2026-11-28 in verification round 1: neither
+  was updated). The question's visibility isn't followed (open: its
+  answers have their own in Basecamp).
 - **Email forwards** (decided 2026-11-23 by the user): each forward
   becomes an internal message (also when a client forwarded it) in the
   category "Email forwards" with 📨, created when missing like the
@@ -460,3 +494,25 @@ same way.
 - **Not imported:** trashed recordings (anything in Basecamp's trash:
   to-dos, messages, docs, files, comments; confirmed 2026-11-21), pins of
   messages (not in the API), older versions of files, docs' history.
+- **Trashed and deleted** (decided 2026-11-28 by the user, found in
+  verification round 1: both were ignored or came back): what is trashed
+  in Basecamp after it was imported is trashed in Biwak, as Basecamp's
+  change (at its `updated_at`, by nobody), once: the mapping remembers it
+  (`trashed_at`), so restoring it in Biwak sticks. Basecamp's listings
+  leave trashed recordings out; `/projects/recordings.json?type=T&bucket=B&status=trashed`
+  lists them (the Basecamp CLI's `recordings --status trashed`), a request
+  per type and project on every run: lists, to-dos, cards, messages,
+  folders, docs, files and check-in answers (`importer.TRASHED`). Not
+  comments (Biwak can't trash one), groups and columns (Basecamp lists
+  groups as `Todolist`, Biwak has no trash for groups), check-in questions
+  and email forwards (the listing refuses their types). The report lists
+  them ("Trashed in Basecamp, trashed here:", a dry run "to trash here").
+  What was deleted in Biwak (from the trash after 30 days, or in the
+  admin) **isn't imported again**: its mapping stays, marked deleted
+  (`deleted_at`), nothing in it is imported either (new to-dos of a
+  deleted list, docs of a deleted folder, answers of a deleted question,
+  comments), and the report counts it ("1 deleted in Biwak"); a deleted
+  project or template is skipped, reported as a problem. People,
+  companies and files in texts are made again (`importer.REMADE`): the
+  people and organizations are needed, and so is a file a text changed
+  in Basecamp refers to.

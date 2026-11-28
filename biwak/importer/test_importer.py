@@ -51,8 +51,8 @@ class ImportCase(TestCase):
         self.ada = person("Ada", is_admin=True)
         self.client_ = support.FakeClient()
 
-    def run_import(self, *, dry_run=False, since=None):
-        importer = Importer(self.client_, actor=self.ada, dry_run=dry_run, since=since)
+    def run_import(self, **kwargs):
+        importer = Importer(self.client_, actor=self.ada, **kwargs)
         return importer.run(support.PROJECT)
 
     def titles(self, qs):
@@ -481,11 +481,12 @@ class VisibilityTest(ImportCase):
         self.assertFalse(prices.visible_to_clients)
 
     def test_visible_in_basecamp_but_a_container_changed(self):
-        # A second run follows Basecamp: the list turned internal
+        # A second run follows Basecamp: the list turned internal (with
+        # --full: switching doesn't change ``updated_at``)
         self.run_import()
         data = self.client_.data
         data["/todosets/300/todolists.json"][1]["visible_to_clients"] = False
-        self.run_import()
+        self.run_import(full=True)
         food = self.item("Buy giraffe food")
         self.assertFalse(food.is_client_visible)
         self.assertEqual(visibility.check(), [])
@@ -803,10 +804,13 @@ class SecondRunTest(ImportCase):
         self.assertEqual(rules.title, "Camp rules")
 
     def test_the_visibility_switch_follows_basecamp(self):
+        """Switching doesn't change ``updated_at``: only ``--full`` sees it"""
         self.run_import()
         message = self.client_.data["/message_boards/200/messages.json"][1]
         message["visible_to_clients"] = False
         self.run_import()
+        self.assertTrue(self.item("We have a camp").is_client_visible)
+        self.run_import(full=True)
         self.assertFalse(self.item("We have a camp").is_client_visible)
 
     def test_an_interrupted_run_continues(self):
@@ -831,12 +835,6 @@ class SecondRunTest(ImportCase):
         self.assertEqual(Item.objects.filter(kind=Kind.FOLDER).count(), 5)
         self.assertEqual(Membership.objects.count(), 3)
         self.assertEqual(Comment.objects.count(), 5)
-
-    def test_a_deleted_object_is_imported_again(self):
-        self.run_import()
-        self.item("Peel potatoes").delete()
-        self.run_import()
-        self.assertEqual(Item.objects.filter(title="Peel potatoes").count(), 1)
 
 
 class UndoingBiwakTest(ImportCase):
@@ -902,6 +900,462 @@ class UndoingBiwakTest(ImportCase):
         self.assertRegex(
             feed, r"reopened .*Raise the rate for Cleo.*\(Basecamp import\)"
         )
+
+
+class CheckinsChangedTest(ImportCase):
+    """Check-in questions and answers changed in Basecamp are updated, as
+    Basecamp's changes (found 2026-11-28)"""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def test_a_question(self):
+        self.run_import()
+        rec = self.client_.data["/questionnaires/500/questions.json"][0]
+        rec |= {"title": "What did you bake today?", "updated_at": self.LATER}
+        rec["schedule"] |= {"days": [1, 3], "hour": 16}
+        self.run_import()
+        item = self.item("What did you bake today?", Kind.QUESTION)
+        question = Question.objects.get(item=item)
+        self.assertEqual(
+            (question.rule, question.time_of_day),
+            ("FREQ=WEEKLY;BYDAY=MO,WE", dt.time(16, 0)),
+        )
+        self.assertIsNotNone(question.paused_at)
+        # (pausing at the creation is an edit too)
+        event = Event.objects.filter(item=item, action=Action.EDITED).latest(
+            "created_at"
+        )
+        self.assertEqual(
+            (event.actor, event.created_at, event.data["imported"]),
+            (None, at("2026-03-01T08:00:00+00:00"), "basecamp"),
+        )
+
+    def test_an_answer(self):
+        self.run_import()
+        entry = support.file_entry(7201, "cake.png")
+        self.client_.files[entry["download_url"]] = support.PNG + b"cake"
+        rec = self.client_.data["/questions/5001/answers.json"][2]
+        rec |= {
+            "content": f"<div>Pizza{support.image(entry)}</div>",
+            "content_attachments": [entry],
+            "updated_at": self.LATER,
+        }
+        self.run_import()
+        answer = Answer.objects.get(item__created_at__date="2026-02-13")
+        self.assertTrue(answer.content.startswith("Pizza"))
+        self.assertEqual(Attachment.objects.get(name="cake.png").item, answer.item)
+        event = Event.objects.filter(item=answer.item, action=Action.EDITED).get()
+        self.assertEqual((event.actor, event.data["imported"]), (None, "basecamp"))
+
+
+class SinceLaterTest(ImportCase):
+    def test_skipped_comments_come_with_the_next_run(self):
+        """A recording whose older comments ``--since`` skipped isn't stored
+        as read completely (found 2026-11-28: they came only with --full)"""
+        data = self.client_.data
+        data["/todolists/301/todos.json"][0]["updated_at"] = "2026-03-01T08:00:00.000Z"
+        self.run_import(since=at("2026-02-05T00:00:00+00:00"))
+        food = self.item("Buy giraffe food")
+        self.assertEqual(Comment.objects.filter(item=food).count(), 0)
+        self.run_import()
+        self.assertEqual(Comment.objects.filter(item=food).count(), 2)
+
+
+class BiwakChangesStayTest(ImportCase):
+    """A recording unchanged in Basecamp isn't touched at all: what was
+    changed in Biwak since stays (decided 2026-11-28); toggles which don't
+    change ``updated_at`` come with ``--full`` only"""
+
+    def test_a_completion(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.complete(item, actor=self.ada)
+        self.run_import()
+        self.assertTrue(Todo.objects.get(item=item).is_completed)
+
+    def test_an_assignment(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.assign(item, [self.ada], actor=self.ada)
+        self.run_import()
+        self.assertEqual(list(item.todo.assignees.all()), [self.ada])
+
+    def test_a_list_hidden_from_clients(self):
+        self.run_import()
+        plan = self.item("Kitchen plan")
+        ops.set_visibility(plan, visible=False, actor=self.ada)
+        events = Event.objects.count()
+        self.run_import()
+        plan.refresh_from_db()
+        self.assertFalse(plan.is_client_visible)
+        self.assertEqual(Event.objects.count(), events)
+
+    def test_a_list_unarchived(self):
+        self.run_import()
+        old = self.item("Old ideas")
+        ops.unarchive(old, actor=self.ada)
+        self.run_import()
+        old.refresh_from_db()
+        self.assertEqual(old.status, Status.ACTIVE)
+
+    def test_an_archived_project(self):
+        from biwak.projects import operations as project_ops
+
+        self.run_import()
+        project_ops.archive_project(self.project, actor=self.ada)
+        self.run_import()
+        self.assertIsNotNone(self.project.archived_at)
+
+    def test_the_people_asked(self):
+        from biwak.checkins import operations as checkin_ops
+
+        self.run_import()
+        item = self.item("What did you cook today?", Kind.QUESTION)
+        checkin_ops.set_people(item, [self.ada], actor=self.ada)
+        self.run_import()
+        self.assertEqual(list(item.question.people.all()), [self.ada])
+
+    def test_new_answers_ask_their_authors(self):
+        self.run_import()
+        item = self.item("What did you cook today?", Kind.QUESTION)
+        bob = User.objects.get(full_name="Bob Example")
+        from biwak.checkins import operations as checkin_ops
+
+        checkin_ops.set_people(item, [self.ada], actor=self.ada)
+        answers = self.client_.data["/questions/5001/answers.json"]
+        answers.append(
+            answers[1]
+            | {
+                "id": 5104,
+                "group_on": "2026-02-16",
+                "created_at": "2026-02-16T17:00:00.000Z",
+                "updated_at": "2026-02-16T17:00:00.000Z",
+            }
+        )
+        self.run_import()
+        self.assertEqual(set(item.question.people.all()), {self.ada, bob})
+
+    def test_full_undoes_a_switch_now(self):
+        """After what it undoes, as for completions (decided 2026-11-27)"""
+        self.run_import()
+        plan = self.item("Kitchen plan")
+        ops.set_visibility(plan, visible=False, actor=self.ada)
+        before = timezone.now()
+        self.run_import(full=True)
+        plan.refresh_from_db()
+        self.assertTrue(plan.is_client_visible)
+        event = Event.objects.filter(item=plan).latest("created_at", "pk")
+        self.assertEqual(
+            (event.action, event.actor, event.data["imported"]),
+            (Action.VISIBILITY_CHANGED, None, "basecamp"),
+        )
+        self.assertGreaterEqual(event.created_at, before)
+
+    def test_full_brings_basecamps_state(self):
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.assign(item, [self.ada], actor=self.ada)
+        self.run_import(full=True)
+        self.assertEqual(list(item.todo.assignees.all()), [])
+
+
+class ArchivedProjectTest(ImportCase):
+    """A project archived in Basecamp is archived in Biwak only at its first
+    import (decided 2026-11-28): after ``--archive`` people work in it"""
+
+    def archived_in_basecamp(self):
+        self.client_.data[f"/projects/{support.PROJECT}.json"] |= {
+            "status": "archived",
+            "updated_at": "2026-03-05T08:00:00.000Z",
+        }
+
+    def test_at_the_first_import(self):
+        self.archived_in_basecamp()
+        self.run_import()
+        self.assertIsNotNone(self.project.archived_at)
+
+    def test_renames_and_archiving_name_nobody(self):
+        """At Basecamp's time, without a person (decided 2026-11-28)"""
+        self.archived_in_basecamp()
+        self.run_import()
+        self.client_.data[f"/projects/{support.PROJECT}.json"] |= {
+            "name": "Camp kitchen 2",
+            "updated_at": "2026-03-06T08:00:00.000Z",
+        }
+        self.run_import()
+        events = Event.objects.filter(
+            action__in=[Action.EDITED_PROJECT, Action.ARCHIVED], item=None
+        )
+        self.assertEqual(
+            sorted(
+                (
+                    (
+                        e.action,
+                        e.actor,
+                        e.created_at.isoformat(),
+                        e.data.get("imported"),
+                    )
+                    for e in events
+                ),
+                key=lambda event: event[0],
+            ),
+            [
+                (Action.ARCHIVED, None, "2026-03-05T08:00:00+00:00", "basecamp"),
+                (Action.EDITED_PROJECT, None, "2026-03-06T08:00:00+00:00", "basecamp"),
+            ],
+        )
+
+    def test_not_after_it(self):
+        self.run_import(archive=True)
+        self.assertEqual(self.client_.archived_projects, [support.PROJECT])
+        # What Basecamp says from now on
+        self.archived_in_basecamp()
+        self.run_import()
+        self.assertIsNone(self.project.archived_at)
+        self.run_import(full=True)
+        self.assertIsNone(self.project.archived_at)
+
+
+class TrashedTest(ImportCase):
+    """Trashed in Basecamp means trashed in Biwak; deleted in Biwak isn't
+    imported again (decided 2026-11-28). Basecamp's listings leave trashed
+    recordings out; the recordings' listing with ``status=trashed`` has
+    them."""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def trash_in_basecamp(self, listing, index, bc_type):
+        rec = self.client_.data[listing].pop(index)
+        rec |= {"status": "trashed", "updated_at": self.LATER}
+        key = (
+            f"/projects/recordings.json?bucket={support.PROJECT}"
+            f"&status=trashed&type={bc_type}"
+        )
+        self.client_.data.setdefault(key, []).append(rec)
+        return rec
+
+    def test_trashed_here_by_nobody_at_basecamps_time(self):
+        self.run_import()
+        self.trash_in_basecamp("/todolists/301/todos.json", 1, "Todo")
+        self.trash_in_basecamp("/vaults/410/documents.json", 0, "Document")
+        report = self.run_import()
+        for title in ("Raise the rate for Cleo", "Public doc"):
+            with self.subTest(title):
+                item = self.item(title)
+                self.assertEqual(item.status, Status.TRASHED)
+                event = Event.objects.get(item=item, action=Action.TRASHED)
+                self.assertEqual(
+                    (event.actor, event.created_at, event.data["imported"]),
+                    (None, at("2026-03-01T08:00:00+00:00"), "basecamp"),
+                )
+        self.assertIn(
+            "Trashed in Basecamp, trashed here:\n"
+            "  to-do: Raise the rate for Cleo\n"
+            "  doc: Public doc",
+            report.as_text(),
+        )
+
+    def test_a_list_takes_its_todos_along(self):
+        self.run_import()
+        self.trash_in_basecamp("/todosets/300/todolists.json", 1, "Todolist")
+        self.client_.data["/todolists/301/todos.json"] = []
+        self.run_import()
+        self.assertEqual(self.item("Kitchen plan").status, Status.TRASHED)
+        self.assertEqual(self.item("Buy giraffe food").status, Status.TRASHED)
+
+    def test_once_restoring_in_biwak_sticks(self):
+        self.run_import()
+        self.trash_in_basecamp("/todolists/301/todos.json", 1, "Todo")
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.restore(item, actor=self.ada)
+        self.run_import(full=True)
+        item.refresh_from_db()
+        self.assertEqual(item.status, Status.ACTIVE)
+
+    def test_a_dry_run_only_lists_them(self):
+        self.run_import()
+        self.trash_in_basecamp("/todolists/301/todos.json", 1, "Todo")
+        report = self.run_import(dry_run=True)
+        self.assertEqual(self.item("Raise the rate for Cleo").status, Status.ACTIVE)
+        self.assertIn(
+            "Trashed in Basecamp, to trash here:\n  to-do: Raise the rate for Cleo",
+            report.as_text(),
+        )
+
+    def test_deleted_in_biwak_isnt_imported_again(self):
+        self.run_import()
+        self.item("Peel potatoes").delete()
+        self.item("Kitchen plan").delete()
+        self.item("Public").delete()
+        self.item("Any worries?", Kind.QUESTION).delete()
+        self.item("We have a camp").delete()
+        # Changed and with new children in Basecamp meanwhile
+        data = self.client_.data
+        todos = data["/todolists/301/todos.json"]
+        todos.append(todos[1] | {"id": 3099, "title": "Wash the pots"})
+        data["/vaults/410/documents.json"].append(
+            data["/vaults/410/documents.json"][0] | {"id": 4199, "title": "New doc"}
+        )
+        data["/message_boards/200/messages.json"][1] |= {
+            "updated_at": self.LATER,
+            "comments_count": 2,
+        }
+        data["/recordings/2001/comments.json"].append(
+            data["/recordings/2001/comments.json"][0] | {"id": 8102}
+        )
+        answers = data["/questions/5002/answers.json"]
+        answers.append(answers[0] | {"id": 5299, "group_on": "2026-03-05"})
+        before = Item.objects.count()
+        report = self.run_import(full=True)
+        self.assertEqual(Item.objects.count(), before)
+        for title in ("Peel potatoes", "Wash the pots", "New doc", "Public doc"):
+            self.assertFalse(Item.objects.filter(title=title).exists(), title)
+        self.assertIn("lists: 0 new, 2 updated, 1 deleted in Biwak", report.as_text())
+        # Still after a project's mappings were read again
+        self.run_import()
+        self.assertEqual(Item.objects.count(), before)
+
+
+class MovesTest(ImportCase):
+    """Moves in Basecamp are followed for changed recordings, with the new
+    place's visibility (decided 2026-11-28), as Basecamp's change: at its
+    time, without a person"""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def setUp(self):
+        super().setUp()
+        self.run_import()
+
+    def move(self, source, target, index=0, **changes):
+        data = self.client_.data
+        rec = data[source].pop(index)
+        rec |= {"updated_at": self.LATER} | changes
+        data.setdefault(target, []).append(rec)
+        return rec
+
+    def assertMoved(self, item):
+        event = Event.objects.filter(item=item, action=Action.MOVED).get()
+        self.assertEqual(
+            (event.actor, event.created_at, event.data["imported"]),
+            (None, at("2026-03-01T08:00:00+00:00"), "basecamp"),
+        )
+        self.client.force_login(self.ada)
+        self.assertEqual(self.client.get(item.get_absolute_url()).status_code, 200)
+
+    def test_a_todo_into_an_internal_list(self):
+        self.move(
+            "/todolists/301/todos.json",
+            "/todolists/302/todos.json",
+            visible_to_clients=False,
+        )
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        self.assertEqual(food.parent, self.item("Budget"))
+        self.assertFalse(food.is_client_visible)
+        self.assertMoved(food)
+        self.assertEqual(visibility.check(), [])
+
+    def test_a_todo_into_a_group(self):
+        self.move("/todolists/301/todos.json", "/todolists/3014/todos.json")
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        self.assertEqual(
+            (food.parent, food.todo.group.title), (self.item("Kitchen plan"), "Week 1")
+        )
+        self.assertMoved(food)
+
+    def test_a_todo_turned_internal_in_a_visible_list(self):
+        self.client_.data["/todolists/301/todos.json"][0] |= {
+            "visible_to_clients": False,
+            "updated_at": self.LATER,
+        }
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        self.assertEqual(food.parent.title, "Kitchen plan (internal)")
+        self.assertFalse(food.is_client_visible)
+
+    def test_a_card_into_another_column(self):
+        self.move(
+            "/card_tables/lists/6001/cards.json", "/card_tables/lists/6002/cards.json"
+        )
+        self.run_import()
+        card = self.item("New menu")
+        self.assertEqual(card.todo.group.title, "Cooking")
+        self.assertMoved(card)
+
+    def test_a_doc_into_an_internal_folder(self):
+        self.move(
+            "/vaults/410/documents.json",
+            "/vaults/420/documents.json",
+            visible_to_clients=False,
+        )
+        self.run_import()
+        doc = self.item("Public doc")
+        self.assertEqual(doc.parent, self.item("Private"))
+        self.assertFalse(doc.is_client_visible)
+        self.assertMoved(doc)
+        self.assertEqual(visibility.check(), [])
+
+    def test_a_file_out_of_a_folder(self):
+        self.move(
+            "/vaults/420/uploads.json",
+            "/vaults/400/uploads.json",
+            visible_to_clients=False,
+        )
+        self.run_import()
+        upload = self.item("salaries.png")
+        self.assertIsNone(upload.parent)
+        self.assertFalse(upload.is_client_visible)
+        self.assertMoved(upload)
+
+    def test_not_for_unchanged_ones_nor_in_a_dry_run(self):
+        food = self.item("Buy giraffe food")
+        self.move("/todolists/301/todos.json", "/todolists/302/todos.json")
+        self.run_import(dry_run=True)
+        food.refresh_from_db()
+        self.assertEqual(food.parent, self.item("Kitchen plan"))
+        # Moved in Biwak, unchanged in Basecamp: stays
+        self.client_.data["/todolists/302/todos.json"][-1]["updated_at"] = (
+            "2026-01-09T08:00:00.000Z"
+        )
+        self.run_import()
+        food.refresh_from_db()
+        self.assertEqual(food.parent, self.item("Kitchen plan"))
+
+
+class NewAttachmentsTest(ImportCase):
+    """Files new in a text changed in Basecamp are linked to its item, so
+    the cleanup of unlinked attachments leaves them (found 2026-11-28)"""
+
+    def change(self, rec, field, eid):
+        entry = support.file_entry(eid, f"new-{eid}.png")
+        self.client_.files[entry["download_url"]] = support.PNG + str(eid).encode()
+        rec |= {
+            field: f"<div>New.{support.image(entry)}</div>",
+            f"{field}_attachments": [entry],
+            "updated_at": "2026-03-01T08:00:00.000Z",
+        }
+
+    def test_todos_messages_forwards_and_files(self):
+        self.run_import()
+        data = self.client_.data
+        self.change(data["/todolists/302/todos.json"][0], "description", 7101)
+        self.change(data["/message_boards/200/messages.json"][1], "content", 7102)
+        forward = data[f"/buckets/{support.PROJECT}/inboxes/900/forwards.json"][0]
+        self.change(forward, "content", 7103)
+        self.change(data["/vaults/410/uploads.json"][0], "description", 7104)
+        self.run_import()
+        for eid, title in [
+            (7101, "Negotiate the price"),
+            (7102, "We have a camp"),
+            (7103, "Delivery on Monday"),
+            (7104, "map.png"),
+        ]:
+            with self.subTest(title):
+                attachment = Attachment.objects.get(name=f"new-{eid}.png")
+                self.assertEqual(attachment.item, self.item(title))
 
 
 class UnchangedTest(ImportCase):
@@ -1281,6 +1735,50 @@ class DryRunTest(ImportCase):
         self.assertEqual(Attachment.objects.count(), 0)
         self.assertEqual(Event.objects.count(), 0)
         self.assertEqual(self.client_.downloads, [])
+
+    def test_writes_nothing_for_what_was_imported_before(self):
+        """Completion, assignees, archiving, visibility, times, members:
+        the callers of ``_upsert()`` wrote on what it returned"""
+        self.run_import()
+        data = self.client_.data
+        later = "2026-03-01T08:00:00.000Z"
+        data["/todolists/301/todos.json"][1] |= {
+            "completed": True,
+            "completion": {"created_at": later, "creator": support.ADA},
+            "assignees": [support.ADA],
+            "updated_at": later,
+        }
+        data["/todosets/300/todolists.json"][0] |= {
+            "status": "archived",
+            "visible_to_clients": True,
+            "updated_at": later,
+        }
+        data["/message_boards/200/messages.json"][0] |= {
+            "visible_to_clients": True,
+            "updated_at": later,
+        }
+        data[f"/projects/{support.PROJECT}.json"] |= {
+            "status": "archived",
+            "updated_at": later,
+        }
+        data[f"/projects/{support.PROJECT}/people.json"].append(support.EVE)
+
+        def state():
+            return (
+                list(Item.objects.order_by("pk").values()),
+                list(Todo.objects.order_by("pk").values()),
+                list(Todo.assignees.through.objects.order_by("pk").values()),
+                list(Project.objects.values()),
+                list(Membership.objects.order_by("pk").values()),
+                list(Event.objects.order_by("pk").values()),
+                list(ImportedObject.objects.order_by("pk").values()),
+            )
+
+        before = state()
+        for full in (False, True):
+            with self.subTest(full=full):
+                self.run_import(dry_run=True, full=full)
+                self.assertEqual(state(), before)
 
     def test_counts_people_and_problems(self):
         report = self.run_import(dry_run=True)

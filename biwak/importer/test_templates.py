@@ -10,7 +10,7 @@ from unittest import mock
 from django.core.management import CommandError, call_command
 from django.test import TestCase
 
-from biwak.activity.models import Notification
+from biwak.activity.models import Action, Event, Notification
 from biwak.importer import support
 from biwak.importer.importer import Importer
 from biwak.items.models import Item, Kind
@@ -102,6 +102,40 @@ class TemplatesImportTest(TestCase):
         self.run_import()
         self.assertEqual(Project.objects.filter(is_template=True).count(), 2)
         self.assertTrue(Project.objects.filter(name="Website project").exists())
+
+    def test_renames_and_archiving_name_nobody(self):
+        """At Basecamp's time, without a person (decided 2026-11-28)"""
+        self.run_import()
+        template = self.client_.data["/templates.json"][0]
+        template |= {
+            "name": "Website project",
+            "status": "archived",
+            "updated_at": "2026-04-01T09:00:00.000Z",
+        }
+        self.run_import()
+        events = Event.objects.filter(
+            action__in=[Action.EDITED_PROJECT, Action.ARCHIVED],
+            project__name="Website project",
+            item=None,
+        )
+        self.assertEqual(
+            sorted(
+                (
+                    (
+                        e.action,
+                        e.actor,
+                        e.created_at.isoformat(),
+                        e.data.get("imported"),
+                    )
+                    for e in events
+                ),
+                key=lambda event: event[0],
+            ),
+            [
+                (action, None, "2026-04-01T09:00:00+00:00", "basecamp")
+                for action in sorted([Action.ARCHIVED, Action.EDITED_PROJECT])
+            ],
+        )
 
     def test_dry_run(self):
         report = self.run_import(dry_run=True)

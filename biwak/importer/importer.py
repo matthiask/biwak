@@ -35,6 +35,7 @@ from biwak.activity.notify import who_can_see
 from biwak.activity.operations import importing, subscribe
 from biwak.bookmarks import operations as bookmark_ops
 from biwak.checkins import operations as checkin_ops
+from biwak.checkins.models import Answer
 from biwak.files import attachments, models as file_models, operations as file_ops
 from biwak.files.titles import with_heading
 from biwak.forwarding.models import ForwardedMail
@@ -102,6 +103,27 @@ ARCHIVED_SKIPPED = {
     "Upload": "file",
 }
 
+# What is trashed in Biwak when trashed in Basecamp (decided 2026-11-28):
+# the types the recordings' listing takes (not "Question", "Inbox::Forward";
+# groups are "Todolist" there, but mapped as ``GROUP``), less comments, which
+# Biwak can't trash
+TRASHED = {
+    "Todolist": "list",
+    "Todo": "to-do",
+    "Kanban::Card": "card",
+    "Message": "message",
+    "Vault": "folder",
+    "Document": "doc",
+    "Upload": "file",
+    "Question::Answer": "check-in answer",
+}
+
+# Mappings whose object is made again when it was deleted in Biwak: not
+# recordings (people, companies) and files in texts, which a text changed
+# in Basecamp needs. Everything else deleted in Biwak isn't imported again
+# (decided 2026-11-28).
+REMADE = {PERSON, COMPANY, ATTACHMENT}
+
 # Basecamp's weekdays, 0 is Sunday
 WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
 
@@ -165,6 +187,8 @@ class Report:
         self.problems = []
         self.archived = []  # archived recordings which aren't imported
         self.archived_projects = []  # archived in Basecamp after the import
+        # Trashed in Basecamp since an earlier run: trashed (dry: to trash)
+        self.trashed = []
         # Internal items inside containers visible to clients, which go
         # into internal containers of their own
         self.internal = []
@@ -193,6 +217,8 @@ class Report:
                 )
                 if counts["unchanged"]:
                     line += f", {counts['unchanged']} unchanged"
+                if counts["deleted"]:
+                    line += f", {counts['deleted']} deleted in Biwak"
                 lines.append(line)
         if self.files["downloaded"] or self.files["cached"]:
             line = (
@@ -235,6 +261,12 @@ class Report:
                 if self.dry_run
                 else "Schedules added to to-dos imported before:",
                 self.schedules,
+            ),
+            (
+                "Trashed in Basecamp, to trash here:"
+                if self.dry_run
+                else "Trashed in Basecamp, trashed here:",
+                self.trashed,
             ),
             ("Archived in Basecamp, skipped:", self.archived),
             (
@@ -358,8 +390,13 @@ class Importer(Resolver):
         self.full = full
         self.include_disabled = include_disabled
         self.archive = archive
-        # (Basecamp type, ID) of the recordings unchanged since the last run
+        # (Basecamp type, ID) of the recordings unchanged since the last run,
+        # and of those created in this one
         self._skipped = set()
+        self._created = set()
+        # (Basecamp type, ID) of those deleted in Biwak: nothing in them is
+        # imported either
+        self._gone = set()
         self.report = Report(dry_run=dry_run)
         self.report.files = client.file_counts
         self.report.answers = client.answer_counts
@@ -463,12 +500,19 @@ class Importer(Resolver):
             ).first()
         if mapped is None:
             return None, None
+        if mapped.deleted_at is not None:
+            return mapped, None
         model = ContentType.objects.get_for_id(mapped.content_type_id).model_class()
         target = model._base_manager.filter(pk=mapped.object_id).first()
-        if target is None:
+        if target is None and bc_type in REMADE:
             mapped.delete()
             self._mappings[key] = None
             return None, None
+        if target is None:
+            # Deleted in Biwak: never imported again (decided 2026-11-28)
+            mapped.deleted_at = timezone.now()
+            if not self.dry:
+                mapped.save(update_fields=["deleted_at"])
         return mapped, target
 
     def _remember(self, bc_type, bc_id, obj):
@@ -503,6 +547,10 @@ class Importer(Resolver):
         fetches its comments and subscribers with ``_follow()``, which
         stores its state once they're done; otherwise it is stored here."""
         mapped, found = self._mapping(bc_type, rec["id"])
+        if mapped is not None and found is None:
+            self._count(bc_type, "deleted")
+            self._gone.add((bc_type, rec["id"]))
+            return None
         if found is not None and self._unchanged(mapped, rec):
             self._count(bc_type, "unchanged")
             self._skipped.add((bc_type, rec["id"]))
@@ -514,6 +562,7 @@ class Importer(Resolver):
             if found is None:
                 found = create()
                 self._remember(bc_type, rec["id"], found)
+                self._created.add((bc_type, rec["id"]))
             elif update is not None:
                 update(found)
             if not follow:
@@ -549,17 +598,20 @@ class Importer(Resolver):
         self, bc_type, rec, item, *, comments=True, subscriptions=True, replies=None
     ):
         """The comments and subscribers of a recording (two requests), not
-        for one unchanged since the last run; then its state is stored.
-        ``replies``: where an email forward's replies are, its comments"""
-        if (bc_type, rec["id"]) in self._skipped:
+        for one unchanged since the last run; then its state is stored,
+        unless ``--since`` skipped older comments (found 2026-11-28: they
+        came only with ``--full``). ``replies``: where an email forward's
+        replies are, its comments"""
+        if (bc_type, rec["id"]) in self._skipped | self._gone:
             return
+        complete = True
         if replies:
-            self._comments(rec, item, path=replies, bc_type="Inbox::Reply")
+            complete = self._comments(rec, item, path=replies, bc_type="Inbox::Reply")
         elif comments:
-            self._comments(rec, item)
+            complete = self._comments(rec, item)
         if subscriptions and item is not None:
             self._subscriptions(rec, item)
-        if item is not None:
+        if item is not None and complete:
             self._settle(bc_type, rec)
 
     def _skip(self, rec):
@@ -909,6 +961,13 @@ class Importer(Resolver):
         bang = "!" if known.is_image else ""
         return f"{bang}[{known.name}](attachment:{known.key})"
 
+    def _link(self, item, text, author):
+        """Links the files of a text changed in Basecamp: the operations link
+        their actor's uploads, and Basecamp's changes name nobody, while the
+        files were uploaded as ``author`` (``_md()``); unlinked, the cleanup
+        deleted them a day later (found 2026-11-28)"""
+        attachments.link(item, text, actor=author)
+
     def _md(self, html, rec_attachments, *, project, author, plain=False):
         """Markdown of a Basecamp text; files in it are downloaded and
         uploaded as ``author``, who saves the text next. ``plain``: a
@@ -953,13 +1012,19 @@ class Importer(Resolver):
             return self.report
         with importing(), self._recomputing():
             project = self._project(rec)
+            if (PROJECT, rec["id"]) in self._gone:
+                self.problem(
+                    f"Skipped {rec['name']} ({project_id}): deleted in Biwak, not"
+                    " imported again"
+                )
+                return self.report
             self.say(f"  {len(people)} people")
             for person in people:
                 self._people_by_sgid[person.get("attachable_sgid")] = person["id"]
             for person in people:
                 user = self._user(person)
                 self._image(person, user)
-                if user is not None and project is not None:
+                if user is not None and project is not None and not self.dry:
                     with importing(at=parse_time(rec["created_at"])):
                         self._add_member(project, user)
             self._dock(rec, project)
@@ -989,6 +1054,7 @@ class Importer(Resolver):
 
     def _finish(self, bucket_id, project):
         """What follows a project's or template's tools"""
+        self._trashed_recordings(bucket_id)
         self._archived_recordings(bucket_id)
         if not self.dry:
             self._bookmarks(project)
@@ -1013,6 +1079,8 @@ class Importer(Resolver):
             self.say(f"Template [{number}/{len(templates)}] {rec['name']}")
             with importing(), self._recomputing():
                 template = self._template(rec)
+                if (TEMPLATE, rec["id"]) in self._gone:
+                    continue
                 self._dock(rec, template)
                 self._finish(rec["id"], template)
             self.say(f"  done: {self._items} items, {self._so_far()}")
@@ -1035,6 +1103,8 @@ class Importer(Resolver):
             self.say(f"The to-do list library ({len(library['todolists'])} lists)")
             with importing(), self._recomputing():
                 template = self._template(rec)
+                if (TEMPLATE, rec["id"]) in self._gone:
+                    return self.report
                 for list_rec in sorted(
                     library["todolists"], key=lambda r: r.get("position", 0)
                 ):
@@ -1057,20 +1127,52 @@ class Importer(Resolver):
             return template
 
         def update(template):
-            project_ops.update_project(
-                template,
-                actor=self.actor,
-                name=rec["name"],
-                description=rec.get("description") or "",
-            )
+            with self._from_basecamp(rec):
+                project_ops.update_project(
+                    template,
+                    actor=None,
+                    name=rec["name"],
+                    description=rec.get("description") or "",
+                )
 
         template = self._upsert(TEMPLATE, rec, create=create, update=update)
-        if template is not None and rec.get("status") == "archived":
-            if template.archived_at is None:
-                project_ops.archive_project(template, actor=self.actor)
-        elif template is not None and template.archived_at is not None:
-            project_ops.unarchive_project(template, actor=self.actor)
+        if template is not None and self._touch(TEMPLATE, rec):
+            self._archived(template, rec)
         return template
+
+    def _trashed_recordings(self, bucket_id):
+        """What was trashed in Basecamp since it was imported is trashed in
+        Biwak (decided 2026-11-28), as Basecamp's change, once: restoring it
+        in Biwak sticks. Basecamp's listings leave trashed recordings out;
+        the recordings' listing has them with ``status=trashed``."""
+        for bc_type, label in TRASHED.items():
+            try:
+                found = list(
+                    self.client.paginate(
+                        "/projects/recordings.json",
+                        type=bc_type,
+                        bucket=bucket_id,
+                        status="trashed",
+                    )
+                )
+            except api.NotFound:
+                continue
+            self._preload(bc_type, found)
+            for rec in found:
+                mapped, item = self._mapping(bc_type, rec["id"])
+                if item is None or mapped.trashed_at is not None:
+                    continue
+                trash = item.status != Status.TRASHED
+                if trash:
+                    self.report.trashed.append(f"{label}: {item.title}")
+                if self.dry:
+                    continue
+                with transaction.atomic():
+                    if trash:
+                        with self._from_basecamp(rec):
+                            ops.trash(item, actor=None)
+                    mapped.trashed_at = timezone.now()
+                    mapped.save(update_fields=["trashed_at"])
 
     def _archived_recordings(self, project_id):
         """Archived messages, docs, files and questions aren't imported
@@ -1106,21 +1208,32 @@ class Importer(Resolver):
             return project
 
         def update(project):
-            project_ops.update_project(
-                project,
-                actor=self.actor,
-                name=rec["name"],
-                description=rec.get("description") or "",
-                is_all_access=bool(rec.get("all_access", True)),
-            )
+            with self._from_basecamp(rec):
+                project_ops.update_project(
+                    project,
+                    actor=None,
+                    name=rec["name"],
+                    description=rec.get("description") or "",
+                    is_all_access=bool(rec.get("all_access", True)),
+                )
 
         project = self._upsert(PROJECT, rec, create=create, update=update)
-        if project is not None and rec.get("status") == "archived":
-            if project.archived_at is None:
-                project_ops.archive_project(project, actor=self.actor)
-        elif project is not None and project.archived_at is not None:
-            project_ops.unarchive_project(project, actor=self.actor)
+        if project is not None and self._touch(PROJECT, rec):
+            # Archived only at the first import (decided 2026-11-28): after
+            # ``--archive`` Basecamp says so of the project people work in
+            first = (PROJECT, rec["id"]) in self._created
+            self._archived(project, rec, archive=first)
         return project
+
+    def _archived(self, project, rec, *, archive=True):
+        """A project or template archived as in Basecamp, by nobody at its
+        time; ``archive``: whether Basecamp's archiving is taken over"""
+        with self._from_basecamp(rec):
+            if rec.get("status") == "archived":
+                if archive and project.archived_at is None:
+                    project_ops.archive_project(project, actor=None)
+            elif project.archived_at is not None:
+                project_ops.unarchive_project(project, actor=None)
 
     def _dock(self, rec, project):
         """The tools we import (the schedule, chat and pings aren't); switched-off ones only with ``include_disabled``, otherwise
@@ -1235,10 +1348,15 @@ class Importer(Resolver):
         self._moved(label, rec, internal.container, "folder")
         return internal(), False
 
+    def _parent_gone(self, parent, nested):
+        """Whether the folder something goes into was deleted in Biwak (a
+        dry run has none for what it would create)"""
+        return nested and parent is None and not self.dry
+
     def _internal_list(self, todo_rec, group, creator):
         """The internal list "<list> (internal)" of the list (or card
         table) being imported, and the group of that title in it (created
-        when needed); None, None in a dry run"""
+        when needed; in a dry run None for what doesn't exist)"""
         container = self._container
         bc_type = "Kanban::Board" if self._container_is_board else "Todolist"
         key = (bc_type, container["id"])
@@ -1265,17 +1383,25 @@ class Importer(Resolver):
         if item is None or group is None:
             return item, None
         found = item.todolist.groups.filter(title=group.title).first()
-        if found is None:
+        if found is None and not self.dry:
             found = ops.create_group(
                 todolist=item.todolist, title=group.title, color=group.color
             )
         return item, found
 
+    def _touch(self, bc_type, rec):
+        """Whether what ``_upsert()`` returned for the recording may be
+        written on (its visibility, completion, assignees, archiving, times):
+        not in a dry run (found 2026-11-28: it wrote on what was imported
+        before), and not when it was skipped as unchanged since the last
+        run, which may have been changed in Biwak since and isn't touched at
+        all (decided 2026-11-28: Biwak's change stays; found 2026-11-27:
+        every rerun reset their times)"""
+        return not self.dry and (bc_type, rec["id"]) not in self._skipped
+
     def _restamp(self, bc_type, item, rec):
-        """``_stamp()`` after ``_upsert()``, not for what it skipped as
-        unchanged: those weren't touched, and may have been changed in
-        Biwak since (found 2026-11-27: every rerun reset their times)"""
-        if (bc_type, rec["id"]) not in self._skipped:
+        """``_stamp()`` after ``_upsert()``, not for what it skipped"""
+        if self._touch(bc_type, rec):
             self._stamp(item, rec)
 
     def _stamp(self, item, rec):
@@ -1298,7 +1424,14 @@ class Importer(Resolver):
         client (messages); the importer sets what Basecamp had"""
         item.refresh_from_db()
         if item.has_switch and item.visible_to_clients != visible:
-            with self._from_basecamp(rec):
+            # Undoing a switch in Biwak (``--full``: switching doesn't
+            # change ``updated_at``) happens now, as for completions
+            when = parse_time(rec.get("updated_at"))
+            if self._undoes_biwak(item, [Action.VISIBILITY_CHANGED], when):
+                changing = importing(at=timezone.now(), noted="basecamp")
+            else:
+                changing = self._from_basecamp(rec)
+            with changing:
                 ops.set_visibility(item, visible=visible, actor=None)
 
     def _status(self, item, rec):
@@ -1311,20 +1444,23 @@ class Importer(Resolver):
                 ops.unarchive(item, actor=None)
 
     def _comments(self, rec, item, *, path=None, bc_type="Comment"):
-        """``path`` and ``bc_type``: an email forward's replies"""
+        """``path`` and ``bc_type``: an email forward's replies. Whether
+        all were read (``--since`` skips older ones)."""
         if self.since and self._skip(rec):
-            return
+            return False
         if comment_count(rec) == 0:
-            return
+            return True
         try:
             comments = list(
                 self.client.paginate(path or f"/recordings/{rec['id']}/comments.json")
             )
         except api.NotFound:
-            return
+            return True
         self._preload(bc_type, comments)
+        complete = True
         for comment in comments:
             if self._skip(comment):
+                complete = False
                 continue
             author = self._user(comment.get("creator"))
             when = parse_time(comment["created_at"])
@@ -1345,6 +1481,7 @@ class Importer(Resolver):
                 return created
 
             self._upsert(bc_type, comment, create=create)
+        return complete
 
     def _subscriptions(self, rec, item):
         """Subscribers as in Basecamp, who can see the item"""
@@ -1425,10 +1562,12 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Todolist", rec, create=create, update=update, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Todolist", rec):
             self._top_visibility(item, visible, rec)
             self._status(item, rec)
-            self._restamp("Todolist", item, rec)
+            self._stamp(item, rec)
+        if ("Todolist", rec["id"]) in self._gone:
+            return
         self._list_content(rec, item, visible, project)
         self._follow("Todolist", rec, item, comments=False)
 
@@ -1485,6 +1624,9 @@ class Importer(Resolver):
         creator = self._user(rec.get("creator"))
         if not self._inherits(rec, parent_visible, "to-do"):
             item, group = self._internal_list(rec, group, creator)
+        if item is None and not self.dry:
+            # Its list was deleted in Biwak
+            return
         title = rec["title"]
 
         def notes():
@@ -1528,20 +1670,17 @@ class Importer(Resolver):
                 )
 
         def update(todo):
+            text = notes()
             with self._from_basecamp(rec):
                 ops.update_todo(
-                    todo,
-                    actor=None,
-                    title=title,
-                    notes=notes(),
-                    **dates(),
-                    **repeat,
+                    todo, actor=None, title=title, notes=text, **dates(), **repeat
                 )
+            self._link(todo, text, creator)
 
         todo = self._upsert(bc_type, rec, create=create, update=update, follow=True)
         if (bc_type, rec["id"]) in self._skipped:
             self._fill_schedule(todo, repeat, rec)
-        if todo is not None:
+        if todo is not None and self._touch(bc_type, rec):
             # Basecamp doesn't say when somebody was assigned: a new to-do's
             # assignees at its creation, before its comments; those added
             # since the last run when Basecamp last changed it
@@ -1551,11 +1690,30 @@ class Importer(Resolver):
                 with importing(at=parse_time(rec["created_at"])):
                     self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
             else:
+                self._move_todo(todo, item, group, rec)
                 with self._from_basecamp(rec):
                     self._sync_assignees(todo, rec.get("assignees", []), None)
             self._completion(todo, rec, new=bool(created))
-            self._restamp(bc_type, todo, rec)
+            self._stamp(todo, rec)
         self._follow(bc_type, rec, todo)
+
+    def _move_todo(self, todo, todolist, group, rec):
+        """Moved in Basecamp to another list, group or card table column
+        (decided 2026-11-28), with the new place's visibility"""
+        todo.refresh_from_db()
+        group_id = Todo.objects.get(item=todo).group_id
+        if (todo.parent_id, group_id) != (todolist.pk, group.pk if group else None):
+            with self._from_basecamp(rec):
+                ops.move_todo(todo, todolist=todolist, group=group, actor=None)
+
+    def _move_item(self, bc_type, item, parent, rec):
+        """A folder, doc or file moved in Basecamp to another folder (decided
+        2026-11-28), with the new place's visibility"""
+        if (bc_type, rec["id"]) not in self._created and item.parent_id != (
+            parent.pk if parent else None
+        ):
+            with self._from_basecamp(rec):
+                ops.move_item(item, parent=parent, actor=None)
 
     def _repeat(self, rec, title):
         """Basecamp's schedule (``repetition_schedule``), which only the
@@ -1675,9 +1833,11 @@ class Importer(Resolver):
         item = self._upsert(
             "Kanban::Board", rec, create=create, update=update, follow=True
         )
-        if item is not None:
+        if item is not None and self._touch("Kanban::Board", rec):
             self._top_visibility(item, visible, rec)
-            self._restamp("Kanban::Board", item, rec)
+            self._stamp(item, rec)
+        if ("Kanban::Board", rec["id"]) in self._gone:
+            return
         self._container, self._container_is_board = rec, True
         self._container_project = project
         self._preload(COLUMN, rec.get("lists", []))
@@ -1753,21 +1913,23 @@ class Importer(Resolver):
                 )
 
         def update(item):
+            text = content()
             with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
                     actor=None,
                     title=rec.get("subject") or rec["title"],
-                    content=content(),
+                    content=text,
                     category=self._category(rec),
                 )
+            self._link(item, text, creator)
 
         item = self._upsert("Message", rec, create=create, update=update, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Message", rec):
             self._top_visibility(item, visible, rec)
-            self._restamp("Message", item, rec)
+            self._stamp(item, rec)
         self._follow("Message", rec, item)
-        if item is not None:
+        if item is not None and not self.dry:
             # From the original times, for the board's order
             ops.refresh_message_activity(item)
 
@@ -1826,29 +1988,31 @@ class Importer(Resolver):
                 )
 
         def update(item):
+            text = content(item.creator)
             with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
                     actor=None,
                     title=title,
-                    content=content(item.creator),
+                    content=text,
                     category=self._category_named(*FORWARDS_CATEGORY),
                 )
+            self._link(item, text, item.creator)
 
         item = self._upsert(
             "Inbox::Forward", rec, create=create, update=update, follow=True
         )
-        if item is not None:
+        if item is not None and self._touch("Inbox::Forward", rec):
             # Internal also when a client forwarded it
             self._top_visibility(item, visible=False, rec=rec)
-            self._restamp("Inbox::Forward", item, rec)
+            self._stamp(item, rec)
         self._follow(
             "Inbox::Forward",
             rec,
             item,
             replies=f"/buckets/{bucket_id}/inbox_forwards/{rec['id']}/replies.json",
         )
-        if item is not None:
+        if item is not None and not self.dry:
             ops.refresh_message_activity(item)
 
     # Docs & Files -------------------------------------------------------------------------------
@@ -1874,6 +2038,8 @@ class Importer(Resolver):
         parent, visible = self._place(
             rec, "folder", parent, parent_visible, nested, internal
         )
+        if self._parent_gone(parent, nested):
+            return
         creator = self._user(rec.get("creator"))
         if not nested and visible:
             internal = self._internal_folder(rec, project, creator)
@@ -1889,10 +2055,13 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Vault", rec, create=create, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Vault", rec):
+            self._move_item("Vault", item, parent, rec)
             self._top_visibility(item, visible, rec)
-            self._restamp("Vault", item, rec)
+            self._stamp(item, rec)
         self._follow("Vault", rec, item, comments=False)
+        if ("Vault", rec["id"]) in self._gone:
+            return
         self._vault(
             rec["id"],
             project,
@@ -1908,6 +2077,8 @@ class Importer(Resolver):
         parent, visible = self._place(
             rec, "doc", parent, parent_visible, nested, internal
         )
+        if self._parent_gone(parent, nested):
+            return
         creator = self._user(rec.get("creator"))
 
         def content():
@@ -1940,9 +2111,10 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Document", rec, create=create, update=update, follow=True)
-        if item is not None:
+        if item is not None and self._touch("Document", rec):
+            self._move_item("Document", item, parent, rec)
             self._top_visibility(item, visible, rec)
-            self._restamp("Document", item, rec)
+            self._stamp(item, rec)
         self._follow("Document", rec, item)
 
     def _upload(self, rec, project, parent, parent_visible, nested, internal):
@@ -1956,6 +2128,8 @@ class Importer(Resolver):
         parent, visible = self._place(
             rec, "file", parent, parent_visible, nested, internal
         )
+        if self._parent_gone(parent, nested):
+            return
         creator = self._user(rec.get("creator"))
 
         def description():
@@ -1987,8 +2161,10 @@ class Importer(Resolver):
                 raise _Skip from exc
 
         def update(item):
+            text = description()
             with self._from_basecamp(rec):
-                file_ops.update_upload(item, actor=None, description=description())
+                file_ops.update_upload(item, actor=None, description=text)
+            self._link(item, text, creator)
 
         try:
             item = self._upsert(
@@ -1996,9 +2172,10 @@ class Importer(Resolver):
             )
         except _Skip:
             return
-        if item is not None:
+        if item is not None and self._touch("Upload", rec):
+            self._move_item("Upload", item, parent, rec)
             self._top_visibility(item, visible, rec)
-            self._restamp("Upload", item, rec)
+            self._stamp(item, rec)
         self._follow("Upload", rec, item)
 
     # Check-ins ------------------------------------------------------------------------------------
@@ -2035,19 +2212,36 @@ class Importer(Resolver):
                 checkin_ops.pause(item, actor=creator)
             return item
 
-        item = self._upsert("Question", rec, create=create, follow=True)
+        def update(item):
+            with self._from_basecamp(rec):
+                checkin_ops.update_question(
+                    item,
+                    actor=None,
+                    title=rec["title"],
+                    rule=rule,
+                    starts_on=starts_on,
+                    time_of_day=time_of_day,
+                )
+
+        item = self._upsert("Question", rec, create=create, update=update, follow=True)
+        if ("Question", rec["id"]) in self._gone:
+            return
         answers = list(self.client.paginate(f"/questions/{rec['id']}/answers.json"))
         self._preload("Question::Answer", answers)
         if item is not None:
             self._restamp("Question", item, rec)
+        # Those who answered since the last run are asked; who answered
+        # before was asked then, and may have been taken off in Biwak since
+        # (decided 2026-11-28: Biwak's change stays)
         asked = []
         for answer in answers:
             if self._skip(answer):
                 continue
             user = self._answer(answer, rec, item, visible)
-            if user is not None and user not in asked:
+            new = ("Question::Answer", answer["id"]) in self._created
+            if user is not None and new and user not in asked:
                 asked.append(user)
-        if item is not None and asked:
+        if item is not None and asked and not self.dry:
             who = [u for u in asked if u.is_active]
             allowed = who_can_see(item).filter(pk__in=[u.pk for u in who])
             if allowed:
@@ -2107,8 +2301,23 @@ class Importer(Resolver):
                     occurrence,
                 )
 
+        def update(item):
+            text = self._md(
+                rec.get("content"),
+                rec.get("content_attachments"),
+                project=item.project,
+                author=item.creator,
+            )
+            with self._from_basecamp(rec):
+                checkin_ops.update_answer(
+                    Answer.objects.get(item=item), text, actor=None
+                )
+            self._link(item, text, item.creator)
+
         try:
-            item = self._upsert("Question::Answer", rec, create=create, follow=True)
+            item = self._upsert(
+                "Question::Answer", rec, create=create, update=update, follow=True
+            )
         except _Skip:
             return user
         if item is not None:
