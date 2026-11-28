@@ -123,7 +123,11 @@ feedback rounds (`ui-feedback.md`).
 - **Long selects get a search field** (2026-11-21, from Workbench's):
   `data-combobox` (`ComboboxSelect`, `frontend/combobox.js`): "Add
   someone" (also finding the address), the feed's person filter; a
-  new long select gets it too. Options say who
+  new long select gets it too. A text field with suggestions (the
+  organization field) gets the same list from its `<datalist>`
+  (`input[data-combobox]`), keeping what's typed (decided 2026-11-28).
+  In a modal the list takes its place in the form, pushing what follows
+  down (a dialog would cut a list laid over it). Options say who
   someone is ("Ada Example · Example Client Ltd", "staff" for staff
   without an organization). Without JavaScript the plain select. Choosing
   several people (assignees, subscribers, whom to notify) is the people

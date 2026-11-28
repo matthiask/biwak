@@ -3031,6 +3031,12 @@ html.js .wb-nojs {
   overflow-y: auto;
 }
 
+/* A <dialog> scrolls its form and would cut a list laid over it: there the
+   list takes its place in the form, the dialog grows or scrolls */
+.wb-modal .wb-combobox-list {
+  position: static;
+}
+
 .wb-combobox-list .list-group-item {
   white-space: normal;
   overflow-wrap: anywhere;

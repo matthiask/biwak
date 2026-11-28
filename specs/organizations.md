@@ -110,7 +110,11 @@ manage none (`access.md`).
   delete and move a person ("Change organization",
   `/people/ID/organization/`, shown only where allowed).
 - **Picking an organization** (`biwak/organizations/forms.py`): a text
-  field completing existing names (a `<datalist>`, no JavaScript); a new
+  field completing existing names: the combobox's list (decided
+  2026-11-28 by the user: "should use auto complete. Or a combo box"),
+  finding the typed words anywhere in the names, from a `<datalist>`,
+  which stays the browser's own suggestions without JavaScript; what's
+  typed stays, Enter chooses only a name moved to with the keys; a new
   name asks "Create 'Exmaple Ltd'?" and creates it only once ticked,
   together with the invitation, which catches most typos. Inviting
   leaves an empty field to the address's domain; a domain of the own

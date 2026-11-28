@@ -8,12 +8,27 @@
 // The select stays the form's field (hidden): choosing dispatches its
 // change event, so filter forms submit as before, and without JavaScript
 // it's the plain select.
+//
+// A text field with suggestions, <input data-combobox list=…> (the
+// organization field, biwak/organizations/forms.py), gets the same list
+// from its <datalist> instead of the browser's own, but stays free: what's
+// typed stays, Enter chooses only an option moved to with the keys (else
+// it submits what was typed), Escape and leaving keep it. Without
+// JavaScript it's the field with the browser's datalist.
 
 let counter = 0
 
+function listFor(id) {
+  const list = document.createElement("ul")
+  list.id = `${id}-list`
+  list.className = "wb-mentions list-group wb-combobox-list"
+  list.setAttribute("role", "listbox")
+  list.hidden = true
+  return list
+}
+
 function attach(select) {
   const id = select.id || `combobox-${++counter}`
-  const listId = `${id}-list`
   const texts = {
     placeholder: select.dataset.placeholder || "Search…",
     empty: select.dataset.empty || "Nothing found",
@@ -33,14 +48,9 @@ function attach(select) {
   input.setAttribute("role", "combobox")
   input.setAttribute("aria-autocomplete", "list")
   input.setAttribute("aria-expanded", "false")
-  input.setAttribute("aria-controls", listId)
   const label = select.getAttribute("aria-label")
   if (label) input.setAttribute("aria-label", label)
-  const list = document.createElement("ul")
-  list.id = listId
-  list.className = "wb-mentions list-group wb-combobox-list"
-  list.setAttribute("role", "listbox")
-  list.hidden = true
+  const list = listFor(id)
 
   select.before(root)
   root.append(input, list, select)
@@ -62,15 +72,76 @@ function attach(select) {
     input.autofocus = true
   }
 
-  let items = []
-  let active = -1
-
   const reset = () => {
     input.value = select.value ? select.selectedOptions[0]?.text || "" : ""
   }
   reset()
   select.addEventListener("change", reset)
   select.form?.addEventListener("reset", () => setTimeout(reset))
+
+  behave(input, list, {
+    texts,
+    reset,
+    // The select's options and groups
+    *entries() {
+      for (const child of select.children) {
+        if (child.tagName === "OPTGROUP")
+          for (const option of child.children)
+            yield { option, group: child.label }
+        else yield { option: child, group: "" }
+      }
+    },
+    label: (option) => option.text,
+    selected: (option) => option.selected && option.value,
+    choose: (option) => {
+      select.value = option.value
+      select.dispatchEvent(new Event("change", { bubbles: true }))
+    },
+  })
+}
+
+// A text field with a datalist: the list from its options, the field
+// keeping what's typed
+function attachFree(input) {
+  const datalist = input.list
+  if (!datalist) return
+  const id = input.id || `combobox-${++counter}`
+  const root = document.createElement("div")
+  root.className = "wb-combobox"
+  const list = listFor(id)
+  input.before(root)
+  root.append(input, list)
+  // The browser's own suggestions would cover ours
+  input.removeAttribute("list")
+  input.autocomplete = "off"
+  input.dataset.noAutosubmit = ""
+  input.setAttribute("role", "combobox")
+  input.setAttribute("aria-autocomplete", "list")
+  input.setAttribute("aria-expanded", "false")
+  behave(input, list, {
+    free: true,
+    texts: {},
+    reset: () => {},
+    *entries() {
+      for (const option of datalist.options) yield { option, group: "" }
+    },
+    label: (option) => option.value,
+    selected: (option) => option.value === input.value,
+    choose: (option) => {
+      input.value = option.value
+      // Not "input": that searches again
+      input.dispatchEvent(new Event("change", { bubbles: true }))
+    },
+  })
+}
+
+// The list, the search and the keys, for both kinds
+function behave(input, list, how) {
+  const listId = list.id
+  input.setAttribute("aria-controls", listId)
+  let items = []
+  let active = -1
+  const { texts, reset, free } = how
 
   const isOpen = () => !list.hidden
 
@@ -94,9 +165,8 @@ function attach(select) {
   }
 
   const choose = (option) => {
-    select.value = option.value
     close()
-    select.dispatchEvent(new Event("change", { bubbles: true }))
+    how.choose(option)
   }
 
   const render = (term) => {
@@ -109,15 +179,15 @@ function attach(select) {
       if (option.disabled) return
       // The empty option only when browsing
       if (!option.value && words.length) return
-      const text = `${group} ${option.text} ${option.dataset.search || ""}`
+      const text = `${group} ${how.label(option)} ${option.dataset.search || ""}`
       if (!matches(text.toLowerCase())) return
       const item = document.createElement("li")
       item.id = `${listId}-${items.length}`
       item.className = "list-group-item list-group-item-action"
       item.setAttribute("role", "option")
       item.setAttribute("aria-selected", "false")
-      item.textContent = option.text
-      if (option.selected && option.value) {
+      item.textContent = how.label(option)
+      if (how.selected(option)) {
         item.classList.add("wb-combobox-selected")
         selected = items.length
       }
@@ -129,19 +199,29 @@ function attach(select) {
       children.push(item)
       items.push(item)
     }
-    for (const child of select.children) {
-      if (child.tagName === "OPTGROUP") {
-        const header = document.createElement("li")
-        header.className = "list-group-item wb-combobox-group"
-        header.setAttribute("role", "presentation")
-        header.textContent = child.label
-        const count = items.length
-        children.push(header)
-        for (const option of child.children) addOption(option, child.label)
-        if (items.length === count) children.pop()
-      } else {
-        addOption(child, "")
+    let group = ""
+    let header = null
+    for (const entry of how.entries()) {
+      if (entry.group !== group) {
+        // A group's heading, dropped when none of its options match
+        if (header && children.at(-1) === header) children.pop()
+        group = entry.group
+        header = null
+        if (group) {
+          header = document.createElement("li")
+          header.className = "list-group-item wb-combobox-group"
+          header.setAttribute("role", "presentation")
+          header.textContent = group
+          children.push(header)
+        }
       }
+      addOption(entry.option, entry.group)
+    }
+    if (header && children.at(-1) === header) children.pop()
+    if (!items.length && free) {
+      // A new name: nothing to suggest
+      close()
+      return
     }
     if (!items.length) {
       const empty = document.createElement("li")
@@ -152,8 +232,10 @@ function attach(select) {
     list.replaceChildren(...children)
     list.hidden = false
     input.setAttribute("aria-expanded", "true")
-    // Browsing starts at the selected option, searching at the first match
-    if (words.length) highlight(items.length ? 0 : -1)
+    // Browsing starts at the selected option, searching at the first
+    // match; a free field chooses only what the keys moved to
+    if (free) highlight(-1)
+    else if (words.length) highlight(items.length ? 0 : -1)
     else highlight(selected)
   }
 
@@ -200,6 +282,9 @@ function attach(select) {
       event.preventDefault()
       if (!isOpen()) render("")
       if (items.length) highlight(event.key === "Home" ? 0 : items.length - 1)
+    } else if (event.key === "Enter" && isOpen() && free && active < 0) {
+      // What was typed, submitted
+      close()
     } else if (event.key === "Enter" && isOpen()) {
       // Not submitting the form
       event.preventDefault()
@@ -211,20 +296,22 @@ function attach(select) {
       event.stopPropagation()
       close()
       reset()
-      input.select()
+      if (!free) input.select()
     }
   })
 }
 
 function attachAll(root) {
-  const selects = [
-    ...(root.matches?.("select[data-combobox]") ? [root] : []),
-    ...(root.querySelectorAll?.("select[data-combobox]") ?? []),
+  const selector = "select[data-combobox], input[data-combobox]"
+  const fields = [
+    ...(root.matches?.(selector) ? [root] : []),
+    ...(root.querySelectorAll?.(selector) ?? []),
   ]
-  for (const select of selects) {
-    if (select.dataset.comboboxReady || select.multiple) continue
-    select.dataset.comboboxReady = "true"
-    attach(select)
+  for (const field of fields) {
+    if (field.dataset.comboboxReady || field.multiple) continue
+    field.dataset.comboboxReady = "true"
+    if (field.tagName === "SELECT") attach(field)
+    else attachFree(field)
   }
 }
 
