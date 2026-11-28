@@ -3543,8 +3543,13 @@ main:has([data-hide-title]) [data-edit-open] {
     font-size: 1.25rem;
   }
 
+  /* One line, cut where the space ends ("Dokumente für Contentmana…"):
+     clamping lines dropped a long word that went to the hidden second
+     line, leaving "Dokumente für…" */
   .wb-tile-title {
-    -webkit-line-clamp: 1;
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 
@@ -3589,8 +3594,10 @@ main:has([data-hide-title]) [data-edit-open] {
 }
 
 @media (max-width: 575.98px) {
+  /* Room for the "…" menu laid over it: 0.75rem from the edge, 2.25rem
+     wide on touch screens, and a little space before the title */
   .wb-tiles > li > .wb-tile {
-    padding-inline-end: 2.75rem;
+    padding-inline-end: 3.5rem;
   }
 
   .wb-tile-menu {
