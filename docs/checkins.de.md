@@ -70,7 +70,9 @@ Alle Abonnent:innen wählen auf der Seite der Frage, wie sie von
 Antworten hören („Mails zu Antworten“):
 
 - **eine Zusammenfassung am nächsten Morgen** (der Standard): eine Mail
-  um 07:00 mit allen Antworten dieser Runde;
+  um 07:00 mit allen Antworten dieser Runde (während du abwesend bist
+  oder in deinen Ruhezeiten, wartet sie; sie kommt nicht, wenn du inzwischen
+  etwas anderes gewählt oder nicht mehr abonniert hast);
 - **eine Mail pro Antwort**;
 - **keine Mails**.
 

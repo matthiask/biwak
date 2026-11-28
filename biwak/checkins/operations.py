@@ -440,8 +440,10 @@ def summarize_due(*, now=None):
 
 
 def send_held_summaries(*, now=None):
-    """The summaries which waited, to those who may get mail now; returns
-    how many people's"""
+    """The summaries which waited, to those who may get mail now and still
+    would get it (``summarize_due()``'s checks again, decided 2026-11-28:
+    in summary mode, subscribed, seeing the question, answers left);
+    returns how many people's"""
     now = now or timezone.now()
     count = 0
     for held in HeldSummary.objects.select_related(
@@ -452,7 +454,12 @@ def send_held_summaries(*, now=None):
         with transaction.atomic():
             if not HeldSummary.objects.filter(pk=held.pk).delete()[0]:
                 continue
-            mails.after_commit(mails.summary_mail, held.occurrence, [held.user])
+            occurrence = held.occurrence
+            if held.user not in summary_recipients(
+                occurrence.question
+            ) or not answers_of(occurrence):
+                continue
+            mails.after_commit(mails.summary_mail, occurrence, [held.user])
         count += 1
     return count
 

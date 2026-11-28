@@ -60,7 +60,9 @@ Each subscriber chooses on the question's page how they hear about
 answers ("Mails about answers"):
 
 - **one summary the morning after** (the default): one mail at 07:00
-  with all the answers of that round;
+  with all the answers of that round (while you're away or in quiet
+  hours it waits; it doesn't come if you chose another way or
+  unsubscribed meanwhile);
 - **a mail for each answer**;
 - **no mails**.
 

@@ -116,7 +116,7 @@ Traps the tests cover (`schedule.py`):
   installation's time zone), they get no question mail and aren't
   among the occurrence's people asked, so they aren't missing; the next
   occurrence asks them again. Their summaries wait while their mails
-  wait (`HeldSummary`).
+  wait (`HeldSummary`), checked again when they go (`quiet-hours.md`).
 
 ## Summaries and replies
 
