@@ -6,6 +6,7 @@ from biwak import test_cli
 from biwak.activity.models import Action, Event
 from biwak.activity.operations import record
 from biwak.items import operations as ops
+from biwak.test_utils import person
 
 
 class FeedCLITest(test_cli.CLITest):
@@ -68,6 +69,8 @@ class FeedCLITest(test_cli.CLITest):
         )
         link = json.loads(result.stdout)
         self.assertEqual(link["kind"], "figma")
+        # "--clients" where there are clients (specs/access.md)
+        self.project.memberships.create(user=person("Cleo", client=True))
         self.biwak(
             "links",
             "create",
