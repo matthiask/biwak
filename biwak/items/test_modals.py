@@ -186,9 +186,12 @@ class MoveTodoModalTest(ItemModalBase):
         assert_page(self, self.client.get(self.url), title="Move to…")
 
     def test_moving_to_a_group(self):
+        target = f"{self.internal.pk}:{self.group.pk}"
+        # Clients won't see it any more: said first
+        # (biwak/items/test_showing_moves.py)
         response = self.client.post(
             self.url,
-            {"target": f"{self.internal.pk}:{self.group.pk}", "index": "0"},
+            {"target": target, "index": "0", "confirmed": target},
             headers=MODAL,
         )
         assert_modal_redirect(self, response, self.todo.get_absolute_url())

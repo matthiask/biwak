@@ -167,7 +167,9 @@ through every entry point (`AGENTS.md`).
     unless `show_to_clients: true`; the CLI's `biwak folders move
     --show-to-clients` (0.78.0).
   Visible to-dos into an internal list say what they hide
-  (`hidden_note()`, the selection's "Move…").
+  (`hidden_note()`, `biwak/items/views.py`) and ask again, in the
+  selection's "Move…" and "Move to…" of one to-do (consistent,
+  2026-11-28).
 
 ## One check
 

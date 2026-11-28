@@ -645,8 +645,11 @@ def todo_move_to(request, pk):
         group = None
         if group_id:
             group = get_object_or_404(Group, pk=int(group_id), todolist=target.todolist)
-        # Into a list clients see: asks first, like the switch
-        clients_note = shown_note([item], target)
+        # Into a list clients see: asks first, like the switch; out of it
+        # says so, like the selection's "Move…"
+        clients_note = hidden_note([item], target.is_client_visible) or shown_note(
+            [item], target
+        )
         if not clients_note or form.asked(form.cleaned_data["target"]):
             clients_note = ""
             try:
@@ -1031,6 +1034,19 @@ def show_texts(item, clients=None):
                 "Makes it, %(items)s and %(comments)s visible to %(clients)s."
             ) % {"items": items, **values}
     return title, intro
+
+
+def hidden_note(todos, visible):
+    """What moving the to-dos into an internal list hides from clients, as
+    a sentence (empty when the list is visible or hides nothing)"""
+    count = 0 if visible else sum(todo.is_client_visible for todo in todos)
+    if not count:
+        return ""
+    return ngettext(
+        "Clients won't see %(count)d to-do any more: the list is internal.",
+        "Clients won't see %(count)d to-dos any more: the list is internal.",
+        count,
+    ) % {"count": count}
 
 
 def shown_note(todos, todolist=None, *, project=None, visible=None):

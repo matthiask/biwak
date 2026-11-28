@@ -79,8 +79,25 @@ class ShowingMovesTest(Fixture, TestCase):
         assert_modal_redirect(self, response)
         self.assertIn_([self.budget], self.shared)
 
+    def test_move_to_says_it_hides(self):
+        """Like the selection's "Move…" (``hidden_note()``)"""
+        url = f"/todos/{self.tent.pk}/move-to/"
+        data = {"target": str(self.internal.pk), "index": "end"}
+        response = self.client.post(url, data, headers={"HX-Modal": "true"})
+        self.assertContains(
+            response, "Clients won&#x27;t see 1 to-do any more: the list is internal."
+        )
+        self.assertIn_([self.tent], self.shared)
+        response = self.client.post(
+            url,
+            data | {"confirmed": str(self.internal.pk)},
+            headers={"HX-Modal": "true"},
+        )
+        assert_modal_redirect(self, response)
+        self.assertIn_([self.tent], self.internal)
+
     def test_nothing_shown_nothing_asked(self):
-        # Visible into visible, internal into internal, visible into internal
+        # Visible into visible, internal into internal
         other = ops.create_list(
             project=self.project, title="Other", creator=self.ada, visible=True
         )
@@ -90,7 +107,6 @@ class ShowingMovesTest(Fixture, TestCase):
                 self.rate,
                 ops.create_list(project=self.project, title="X", creator=self.ada),
             ),
-            (self.tent, self.internal),
         ]:
             response = self.client.post(
                 f"/todos/{todo.pk}/move-to/", {"target": str(target.pk), "index": "end"}

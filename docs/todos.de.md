@@ -124,8 +124,8 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   eine interne Liste kommen, sagt das Formular, dass Kund:innen sie
   nicht mehr sehen; bevor interne in eine Liste kommen, die Kund:innen
   sehen, oder sichtbare in ein anderes Projekt, dessen Kund:innen sie
-  nicht sahen, fragt es vorher und sagt, was Kund:innen sehen werden (auch
-  „Verschieben nach…“ eines To-dos). In ein anderes Projekt sagt das Formular
+  nicht sahen, fragt es vorher und sagt, was Kund:innen sehen werden. „Verschieben
+  nach…“ eines To-dos tut beides auch. In ein anderes Projekt sagt das Formular
   zuerst, wer dort hinzugefügt wird und wer die To-dos dort nicht sieht
   (Zuweisungen und Abonnements fallen weg); Kommentare und Verlauf
   kommen mit, und das Projekt, das sie verlassen, zeigt eine Zeile in
