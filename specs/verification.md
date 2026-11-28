@@ -249,10 +249,9 @@ decided on 2026-11-28 are fixed (the "Fixed" list above).
 - A doc told an hour after its last change names its creator also when
   they left or were removed (`files.md`).
 
-**Data:** check production for check-in questions with a stored rule
-that isn't valid any more: since the fix they're skipped and their
-`next_at` cleared, so they're never asked again until somebody saves a
-valid rule.
+**Data:** none. Checked 2026-11-28 (read-only, through `fl
+manage-remote`): production has no check-in questions yet, so none with
+a stored rule that isn't valid any more.
 
 **Risks and questions:**
 
