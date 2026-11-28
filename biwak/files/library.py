@@ -18,11 +18,10 @@ from biwak.activity import timeline as timelines
 from biwak.files import attachments, operations, previews
 from biwak.files.common import NotifyForm, comments_context, sidebar_context
 from biwak.files.queries import folder_counts
-from biwak.forms import ColorSwatches, ComboboxSelect, Form, next_url
+from biwak.forms import ColorSwatches, ComboboxSelect, Confirming, Form, next_url
 from biwak.items import editing, glance, operations as ops
 from biwak.items.across import (
     NO_NOTES,
-    Confirming,
     asking,
     confirmed_move,
     target_projects,

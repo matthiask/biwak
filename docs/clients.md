@@ -35,7 +35,9 @@ once.
   ("Hide from clients") and hides the content again, with what clients
   wrote in it.
 - Moving an item into a visible folder or list shows it to clients;
-  moving it into an internal one hides it.
+  moving it into an internal one hides it. Moving internal to-dos into
+  a visible list asks first, like "Show to clients…" ("Makes 2 to-dos
+  and 5 comments visible to 3 clients").
 - Moving something visible to another project keeps it visible: the
   clients of that project see it, with its comments and what clients
   saw of its activity before. "Move to…" asks first when that's anybody

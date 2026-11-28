@@ -9,11 +9,11 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 from biwak.accounts.models import User
-from biwak.forms import Form, PeopleField, next_url
+from biwak.forms import Confirming, Form, PeopleField, next_url
 from biwak.items import operations as ops
-from biwak.items.across import Confirming, ProjectChoice, _names
+from biwak.items.across import ProjectChoice, _names
 from biwak.items.models import Group, Item, Kind, Status
-from biwak.items.views import MoveTodoForm, _index, item_for
+from biwak.items.views import MoveTodoForm, _index, item_for, shown_note
 from biwak.modals import form_response
 from biwak.projects.models import Project
 
@@ -315,7 +315,10 @@ def todos_move(request):
                 )
             visible = target.is_client_visible
         note = move_notes(todos, chosen, visible, request.user)
-        clients_note = hidden_note(todos, visible)
+        # Hiding them says so, showing them asks like the switch
+        clients_note = hidden_note(todos, visible) or (
+            shown_note(todos, target) if target is not None else ""
+        )
         if not (note or clients_note) or form.asked(f"{chosen.pk}:{value}"):
             try:
                 with transaction.atomic():

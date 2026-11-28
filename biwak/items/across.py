@@ -17,7 +17,7 @@ from django.shortcuts import redirect
 from django.utils.text import get_text_list
 from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
-from biwak.forms import ComboboxSelect, Form, next_url
+from biwak.forms import ComboboxSelect, Confirming, next_url
 from biwak.items import operations as ops
 from biwak.items.models import Kind
 from biwak.items.views import item_for, show_texts
@@ -137,22 +137,6 @@ def copy_notes(item, project, visible, viewer):
 class ProjectChoice(forms.ModelChoiceField):
     def __init__(self, queryset, **kwargs):
         super().__init__(queryset, widget=ComboboxSelect(), **kwargs)
-
-
-class Confirming(Form):
-    """``confirmed``: what the sentences shown were about"""
-
-    confirmed = forms.CharField(widget=forms.HiddenInput, required=False)
-
-    def asked(self, key):
-        """Whether the person saw the sentences about ``key``; if not,
-        the form shown again asks"""
-        if self.cleaned_data.get("confirmed") == key:
-            return True
-        data = self.data.copy()
-        data["confirmed"] = key
-        self.data = data
-        return False
 
 
 class MoveForm(Confirming):

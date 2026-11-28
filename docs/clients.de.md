@@ -39,7 +39,9 @@ intern, bis es gezeigt wird: lieber einmal zu wenig zeigen.
   Inhalt wieder, mit dem, was Kund:innen darin geschrieben haben.
 - Einen Eintrag in einen sichtbaren Ordner oder eine sichtbare Liste zu
   verschieben zeigt ihn den Kund:innen; ihn in einen internen zu
-  verschieben verbirgt ihn.
+  verschieben verbirgt ihn. Interne To-dos in eine sichtbare Liste zu
+  verschieben fragt vorher, wie „Kund:innen zeigen…“ („Macht 2 To-dos
+  und 5 Kommentare für 3 Kund:innen sichtbar.“).
 - Etwas Sichtbares in ein anderes Projekt zu verschieben lässt es
   sichtbar: Die Kund:innen dieses Projekts sehen es, mit seinen
   Kommentaren und dem, was Kund:innen vorher von seiner Aktivität

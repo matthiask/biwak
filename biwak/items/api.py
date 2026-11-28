@@ -53,6 +53,7 @@ from biwak.items.views import (
     changeable_group,
     changeable_list,
     item_for,
+    shown_note,
     todos_to_move,
 )
 from biwak.projects.api import project_for
@@ -858,6 +859,22 @@ def todos_dates(request, data: DatesManyIn):
     return [todo_out(found[todo.pk], request.user) for todo in todos]
 
 
+def showing(todos, target, show_to_clients):
+    """What moving the to-dos into the list shows clients and how to say
+    so, as sentences (asking like the switch, specs/access.md); empty if
+    it shows nothing or the request says ``show_to_clients``"""
+    if show_to_clients or not (note := shown_note(todos, target)):
+        return ""
+    return " ".join([note, _("Send “show_to_clients”: true to move them anyway.")])
+
+
+SHOW_TO_CLIENTS = Field(
+    default=False,
+    description="Internal to-dos into a list clients see: show them and"
+    " their comments to clients (else 400, saying what it shows).",
+)
+
+
 class MoveSelectedIn(Schema):
     ids: list[int]
     list_id: int
@@ -865,6 +882,7 @@ class MoveSelectedIn(Schema):
     index: int | None = None
     # Moving into another project adds or drops people: say so first
     confirm: bool = False
+    show_to_clients: bool = SHOW_TO_CLIENTS
 
 
 @router.post("todos/move/", response=list[TodoOut])
@@ -886,14 +904,17 @@ def todos_move_selected(request, data: MoveSelectedIn):
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
+    refused = []
     if any(todo.project_id != target.project_id for todo in todos):
         if request.user.is_client:
             raise HttpError(403, _("Only staff move to-dos into other projects."))
         note = move_notes(todos, target.project, target.is_client_visible, request.user)
         if note and not data.confirm:
-            bad_request(
-                " ".join([note, _("Send “confirm”: true to move them anyway.")])
-            )
+            refused += [note, _("Send “confirm”: true to move them anyway.")]
+    if shown := showing(todos, target, data.show_to_clients):
+        refused.append(shown)
+    if refused:
+        bad_request(" ".join(refused))
     try:
         ops.move_todos_to(
             todos, todolist=target, group=group, index=data.index, actor=request.user
@@ -1033,6 +1054,7 @@ class MoveIn(Schema):
     list_id: int | None = None
     group_id: int | None = None
     index: int | None = None
+    show_to_clients: bool = SHOW_TO_CLIENTS
 
 
 @router.post("todos/{todo_id}/move/", response=TodoOut)
@@ -1047,6 +1069,8 @@ def todo_move(request, todo_id: int, data: MoveIn):
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
+    if shown := showing([item], target, data.show_to_clients):
+        bad_request(shown)
     try:
         ops.move_todo(
             item, todolist=target, group=group, index=data.index, actor=request.user
@@ -1061,6 +1085,7 @@ class MoveManyIn(Schema):
     todo_ids: list[int]
     group_id: int | None = None
     index: int | None = None
+    show_to_clients: bool = SHOW_TO_CLIENTS
 
 
 @router.post("lists/{list_id}/todos/move/", response=list[TodoOut])
@@ -1074,6 +1099,8 @@ def todos_move(request, list_id: int, data: MoveManyIn):
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
+    if shown := showing(todos.values(), target, data.show_to_clients):
+        bad_request(shown)
     try:
         ops.move_todos(
             [todos[pk] for pk in ids],

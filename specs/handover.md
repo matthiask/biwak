@@ -173,9 +173,11 @@ across projects, told once about dates, moving telling nobody.
   first says who's added and who's dropped (`move_notes()`, "Bob
   Example will be added to Shop.", "Cleo Example won't see the to-dos
   in Shop: they'll be unassigned and unsubscribed.", as a warning) and
-  `confirmed` is set, as "Move to…" of lists; there is no question about
-  showing them to clients: the list's choice says "(clients can see
-  this)", as for one to-do moved between lists. Hiding them is said
+  `confirmed` is set, as "Move to…" of lists. Showing internal to-dos
+  to clients asks first (decided 2026-11-28, `access.md`, "Moving
+  internal to-dos into a visible list"): the dialog's `clients_note`
+  says "Makes 2 to-dos and 1 comment visible to 3 clients." and asks
+  again. Hiding them is said
   first (decided 2026-11-23): where to-dos clients see go into an
   internal list (any list, a new one too), the dialog's `clients_note`
   says "Clients won't see 2 to-dos any more: the list is internal."
@@ -241,17 +243,21 @@ across projects, told once about dates, moving telling nobody.
   without `due_on` ("Send the due date."), `shift` without `days`, a
   to-do gone or a start date after the date. `POST /api/v1/todos/move/`
   (built 2026-11-22) with `ids`, `list_id` (any project), `group_id`,
-  `index`, `confirm`: all or nothing, completed to-dos too, answering
-  the to-dos; into another project a 400 with who's added and dropped
-  ("… Send “confirm”: true to move them anyway.") unless `confirm`, a
+  `index`, `confirm`, `show_to_clients`: all or nothing, completed
+  to-dos too, answering the to-dos; into another project a 400 with
+  who's added and dropped ("… Send “confirm”: true to move them
+  anyway.") unless `confirm`; internal to-dos into a list clients see a
+  400 saying what it shows ("… Send “show_to_clients”: true to move
+  them anyway.") unless `show_to_clients` (both in one 400); a
   403 for clients ("Only staff move to-dos into other projects."); 400
   for no to-dos, a to-do gone, archived projects or templates. A
   repeated ID counts once, as in `/todos/dates/` and `/todos/assign/`
   (decided 2026-11-23). No new list through the API: create it first. **CLI**
   (0.62.0): `biwak todos dates TODO… --due DATE|--shift DAYS|--remove`
   prints each to-do with its dates; `biwak todos move TODO… --list ID
-  [--group ID] [--confirm]` goes through `/todos/move/`, across
-  projects too (`--todos 1,2` still works).
+  [--group ID] [--confirm] [--show-to-clients]` goes through
+  `/todos/move/`, across projects too (`--todos 1,2` still works;
+  `--show-to-clients` since 0.77.0).
 - Tests: `biwak/items/test_several_todos.py`,
   `biwak/test_cli_handover.py`, the bar's buttons in
   `biwak/test_e2e_handover.py` (`SelectingTodosTest`).

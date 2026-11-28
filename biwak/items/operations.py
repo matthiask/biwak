@@ -1256,13 +1256,14 @@ def move_todos(
     for list_id, group_id in sources:
         if (list_id, group_id) != (todolist.pk, group.pk if group else None):
             _renumber(list(_todos_in(list_id, group_id)))
-    # The lists' open pages: reordered, and the lists the to-dos left
-    live.changed(
-        todolist,
-        action="reordered",
-        actor=actor,
-        also={list_id for list_id, _group in sources},
-    )
+    # The lists' open pages: reordered, and the lists the to-dos left, each
+    # by its own visibility (a client's page of the list a to-do left for
+    # an internal one loses the row, and hears nothing of where it went)
+    live.changed(todolist, action="reordered", actor=actor)
+    for source in Item.objects.filter(
+        pk__in={list_id for list_id, _group in sources} - {todolist.pk}
+    ):
+        live.changed(source, action="reordered", actor=actor)
 
 
 @transaction.atomic

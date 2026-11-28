@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:01+0100\n"
+"POT-Creation-Date: 2026-11-28 11:06+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3185,6 +3185,10 @@ msgid "Send the due date."
 msgstr "Sende die Fälligkeit."
 
 #: biwak/items/api.py
+msgid "Send “show_to_clients”: true to move them anyway."
+msgstr "Sende „show_to_clients“: true, um sie trotzdem zu verschieben."
+
+#: biwak/items/api.py
 msgid "Only staff move to-dos into other projects."
 msgstr "Nur Mitarbeitende verschieben To-dos in andere Projekte."
 
@@ -3950,6 +3954,11 @@ msgstr[1] "%(count)d Einträge darin"
 #, python-format
 msgid "Makes it, %(items)s and %(comments)s visible to %(clients)s."
 msgstr "Macht den Eintrag, %(items)s und %(comments)s für %(clients)s sichtbar."
+
+#: biwak/items/views.py
+#, python-format
+msgid "Makes %(todos)s and %(comments)s visible to %(clients)s."
+msgstr "Macht %(todos)s und %(comments)s für %(clients)s sichtbar."
 
 #: biwak/items/views.py
 msgid "Show to clients"

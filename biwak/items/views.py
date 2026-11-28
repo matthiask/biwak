@@ -33,7 +33,7 @@ from biwak.activity.operations import (
     subscribe,
     unsubscribe,
 )
-from biwak.forms import ColorSwatches, Form, PeopleField, next_url
+from biwak.forms import ColorSwatches, Confirming, Form, PeopleField, next_url
 from biwak.items import due, editing, glance, operations as ops, stale, visibility
 from biwak.items.filters import (
     ANYBODY,
@@ -576,6 +576,8 @@ def todo_move(request, pk):
     group = None
     if group_id:
         group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
+    if refused := refuse_showing(request, [item], target):
+        return refused
     try:
         ops.move_todo(
             item,
@@ -594,9 +596,10 @@ def todo_move(request, pk):
     return redirect(item if target_value else target)
 
 
-class MoveTodoForm(Form):
+class MoveTodoForm(Confirming):
     """Moving a to-do without dragging: the list or one of its groups, and
-    where in it"""
+    where in it; into a list clients see an internal to-do asks first
+    (``confirmed``)"""
 
     target = forms.ChoiceField(label=_("List and group"))
     index = forms.ChoiceField(
@@ -635,25 +638,30 @@ def todo_move_to(request, pk):
         targets=_move_targets(request, item),
         initial={"target": str(initial)},
     )
+    clients_note = ""
     if form.is_valid():
         list_id, _sep, group_id = form.cleaned_data["target"].partition(":")
         target = item_for(request, int(list_id), Kind.LIST)
         group = None
         if group_id:
             group = get_object_or_404(Group, pk=int(group_id), todolist=target.todolist)
-        try:
-            ops.move_todo(
-                item,
-                todolist=target,
-                group=group,
-                index=_index(form.cleaned_data["index"]),
-                actor=request.user,
-            )
-        except ValueError as exc:
-            # Into an archived list or project (ops.refuse_closed())
-            form.add_error(None, str(exc))
-        else:
-            return redirect(item)
+        # Into a list clients see: asks first, like the switch
+        clients_note = shown_note([item], target)
+        if not clients_note or form.asked(form.cleaned_data["target"]):
+            clients_note = ""
+            try:
+                ops.move_todo(
+                    item,
+                    todolist=target,
+                    group=group,
+                    index=_index(form.cleaned_data["index"]),
+                    actor=request.user,
+                )
+            except ValueError as exc:
+                # Into an archived list or project (ops.refuse_closed())
+                form.add_error(None, str(exc))
+            else:
+                return redirect(item)
     return form_response(
         request,
         form,
@@ -662,6 +670,9 @@ def todo_move_to(request, pk):
         parent=item.parent,
         cancel_url=item.get_absolute_url(),
         submit_label=_("Move"),
+        template="items/across_form.html",
+        destructive=bool(clients_note),
+        extra={"clients_note": clients_note},
     )
 
 
@@ -702,6 +713,8 @@ def todos_move(request, pk):
         for name in ("after", "before")
         if (value := request.POST.get(name))
     }
+    if refused := refuse_showing(request, todos.values(), target):
+        return refused
     try:
         ops.move_todos(
             [todos[pk] for pk in ids],
@@ -1018,6 +1031,34 @@ def show_texts(item, clients=None):
                 "Makes it, %(items)s and %(comments)s visible to %(clients)s."
             ) % {"items": items, **values}
     return title, intro
+
+
+def shown_note(todos, todolist):
+    """What moving the to-dos into the list shows clients, as a sentence
+    asking like the switch's (``visibility.shown_by_moving()``); empty if
+    nothing"""
+    shown = visibility.shown_by_moving(todos, todolist)
+    if shown is None:
+        return ""
+    return _("Makes %(todos)s and %(comments)s visible to %(clients)s.") % {
+        "todos": ngettext("%(count)d to-do", "%(count)d to-dos", shown["items"])
+        % {"count": shown["items"]},
+        "comments": ngettext(
+            "%(count)d comment", "%(count)d comments", shown["comments"]
+        )
+        % {"count": shown["comments"]},
+        "clients": ngettext("%(count)d client", "%(count)d clients", shown["clients"])
+        % {"count": shown["clients"]},
+    }
+
+
+def refuse_showing(request, todos, todolist):
+    """The posts of dragging (no page asks there, dragging stays within a
+    list): 400 when moving the to-dos into the list shows clients what
+    they don't see, unless ``show_to_clients`` says so; else None"""
+    if request.POST.get("show_to_clients") or not (note := shown_note(todos, todolist)):
+        return None
+    return HttpResponse(note, status=400, content_type="text/plain; charset=utf-8")
 
 
 class ShowForm(forms.Form):

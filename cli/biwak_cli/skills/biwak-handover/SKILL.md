@@ -81,7 +81,9 @@ and repeat those others in `--to` (`--to` is repeatable). Without
 `--replace` the new people are added. An error names what's wrong (a
 person who isn't a member, a to-do gone); nothing was changed then.
 Moving to a list of another project needs `--confirm` when people are
-added or dropped: show the user who first.
+added or dropped: show the user who first. Moving internal to-dos into
+a list clients see needs `--show-to-clients`: the error says what
+clients will see (the to-dos and their comments); ask the user first.
 
 Show what changed with the links, then go on with the next project.
 

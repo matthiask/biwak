@@ -124,57 +124,54 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: the API keeps deactivated assignees (one to-do and "Assign…"
-with `--replace`) and check-ins' people asked who were deactivated
-(the form too); the Django admin drops subscriptions when access is lost
-and activates through `activate()`; deactivating and "Reset sign-in…"
-remove push devices; single sign-on's 24-hour end keeps the push device
-(nothing audited is written then, so the connection's previous name
-doesn't matter there anymore);
-stale to-dos marked obsolete on the promised day; copies keep
-a group's "Keep untouched to-dos for a year"; copies keep deactivated
-assignees and people asked instead of failing; archived lists and
-lists in archived projects take no new or moved to-dos; the next to-do
-of a repeating one keeps deactivated assignees and subscribes the
-list's watchers;
-`biwak feed` and `biwak lantern` name events without an actor
-"Biwak" (CLI 0.76.0); the API's cursors are positions in the whole
-ordering (`api-cli.md`); the mails' signed links ("Keep open",
-unsubscribing) are logged as their recipient; names in the audit log
-lose their accents instead of turning into escapes; a live save is
-logged as who typed it, not who caused it;
-the import's later runs (`import-basecamp.md`) leave recordings
-unchanged in Basecamp alone (Biwak's changes stay); a dry run writes
-nothing for projects imported before; moves in Basecamp are followed; a
-project archived in Basecamp is archived only at its first import;
-renames and archiving of projects and templates name nobody, at
-Basecamp's time; new files in texts changed in Basecamp are linked;
-`--since` doesn't store a recording as read completely when it skipped
-older comments; changed check-in questions and answers are updated;
-trashed in Basecamp is trashed here, deleted here isn't imported again;
-a first mention merged into an edit
-marked unread is mailed and pushed; unsubscribing from a to-do stops
-its column moves, also through the mail's link; notifications of an
-item trashed or hidden when their mail is due are kept unmailed; one
-"Assign…" across projects is one entry in the digest; the outbox gives
-up retries to deactivated people and undeliverable addresses; the
-admins' notice names the outbox's retention (`RETENTION`, 90 days); a
-held check-in summary is checked again when it goes; a stored check-in
-rule that isn't valid any more skips its question only.
-logged as who typed it, not who caused it; a whole-text save from
-an old `base_version` is refused over the saver's own version with
-somebody else's typing merged into it (`files.md`); a form left open
-while its item moves to another project links what it uploaded into
-the old project (`files.md`).
+Fixed (each in its part's spec):
 
-**To fix** (decisions by the user, 2026-11-28; each goes into its
-part's spec with the fix):
+- **Import:** later runs leave recordings unchanged in Basecamp alone
+  (Biwak's changes stay); a dry run writes nothing for projects imported
+  before; moves in Basecamp are followed; trashed in Basecamp is trashed
+  here, deleted here isn't imported again; a project archived in
+  Basecamp is archived only at its first import; renames and archiving
+  of projects and templates name nobody, at Basecamp's time; new files
+  in texts changed in Basecamp are linked; `--since` doesn't store a
+  recording as completely read when it skipped older comments; changed
+  check-in questions and answers are updated.
+- **To-dos:** stale to-dos are marked obsolete on the promised day;
+  copies keep a group's "Keep untouched to-dos for a year" and
+  deactivated assignees and people asked instead of failing; archived
+  lists and lists in archived projects take no new or moved to-dos; the
+  next to-do of a repeating one keeps deactivated assignees and
+  subscribes the list's watchers.
+- **People:** the API keeps deactivated assignees (one to-do and
+  "Assign…" with `--replace`) and check-ins' people asked who were
+  deactivated (the form too); the Django admin drops subscriptions when
+  access is lost and activates through `activate()`; deactivating and
+  "Reset sign-in…" remove push devices; single sign-on's 24-hour end
+  keeps the push device.
+- **Notifications:** a first mention merged into an edit marked unread
+  is mailed and pushed; unsubscribing from a to-do stops its column
+  moves, also through the mail's link; notifications of an item trashed
+  or hidden when their mail is due are kept unmailed; one "Assign…"
+  across projects is one entry in the digest; the outbox gives up
+  retries to deactivated people and undeliverable addresses; the
+  admins' notice names the outbox's retention (90 days).
+- **Check-ins:** a held summary is checked again when it goes; a stored
+  rule that isn't valid any more skips its question only.
+- **Visibility:** a client's open list page is told when a to-do leaves
+  it for an internal list; moving internal to-dos into a list clients
+  see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0).
+- **Docs and files:** a whole-text save from an old `base_version` is
+  refused over the saver's own version with somebody else's typing
+  merged into it (versions remember their co-authors); a form left open
+  while its item moves to another project links what it uploaded.
+- **API and CLI:** `biwak feed` and `biwak lantern` name events without
+  an actor "Biwak" (CLI 0.76.0); the API's cursors are positions in the
+  whole ordering.
+- **Who did what:** the mails' signed links ("Keep open",
+  unsubscribing) are logged as their recipient; names lose their
+  accents instead of turning into escapes; a live save is logged as who
+  typed it, not who caused it.
 
-- **Visibility:**
-  - Moving internal to-dos into a list clients see asks first, like the
-    switch; the API and CLI need an explicit flag (decided).
-  - A client's open list page isn't told when a to-do leaves it for an
-    internal list (`live.changed()` takes the target's visibility).
+**To fix:** nothing left from the findings (all fixed 2026-11-28).
 
 **Decided, no change:**
 

@@ -86,6 +86,23 @@ class ModelForm(BootstrapMixin, forms.ModelForm):
     pass
 
 
+class Confirming(Form):
+    """``confirmed``: what the sentences shown were about (moving and
+    copying across projects, moving to-dos into a list clients see)"""
+
+    confirmed = forms.CharField(widget=forms.HiddenInput, required=False)
+
+    def asked(self, key):
+        """Whether the person saw the sentences about ``key``; if not,
+        the form shown again asks"""
+        if self.cleaned_data.get("confirmed") == key:
+            return True
+        data = self.data.copy()
+        data["confirmed"] = key
+        self.data = data
+        return False
+
+
 def people_picker_attrs(placeholder=None):
     """What turns a ``<select multiple>`` of people into the picker of
     ``frontend/people-picker.js`` and the texts it shows; without

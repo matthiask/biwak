@@ -122,7 +122,9 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   To-dos“; später umbenennen), für Kund:innen sichtbar, wenn die Listen,
   aus denen sie kommen, es sind. Bevor To-dos, die Kund:innen sehen, in
   eine interne Liste kommen, sagt das Formular, dass Kund:innen sie
-  nicht mehr sehen. In ein anderes Projekt sagt das Formular
+  nicht mehr sehen; bevor interne in eine Liste kommen, die Kund:innen
+  sehen, fragt es vorher und sagt, was Kund:innen sehen werden (auch
+  „Verschieben nach…“ eines To-dos). In ein anderes Projekt sagt das Formular
   zuerst, wer dort hinzugefügt wird und wer die To-dos dort nicht sieht
   (Zuweisungen und Abonnements fallen weg); Kommentare und Verlauf
   kommen mit, und das Projekt, das sie verlassen, zeigt eine Zeile in
@@ -142,8 +144,10 @@ Jede Änderung gilt für alle oder keines: Liegt eines der To-dos im
 Papierkorb oder kannst du es nicht mehr sehen, ändert sich nichts.
 
 `biwak todos assign 12 13 14 --to 7 [--replace]`, `biwak todos move 12
-13 --list 5 [--group 8] [--confirm]` (`--confirm` in ein anderes
-Projekt, wenn du gelesen hast, wer hinzugefügt wird und wegfällt) und `biwak todos dates 12 13 --due 2026-12-20`
+13 --list 5 [--group 8] [--confirm] [--show-to-clients]` (`--confirm` in ein anderes
+Projekt, wenn du gelesen hast, wer hinzugefügt wird und wegfällt;
+`--show-to-clients` für interne To-dos in eine Liste, die Kund:innen
+sehen, wenn du gelesen hast, was sie sehen werden) und `biwak todos dates 12 13 --due 2026-12-20`
 (oder `--shift 7`, `--remove`) tun dasselbe.
 
 ## Ein To-do

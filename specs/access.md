@@ -119,6 +119,34 @@ through every entry point (`AGENTS.md`).
     render as for a client.
 - **Turning visibility off** hides the content again, including comments
   clients wrote; the question says so.
+- **Moving internal to-dos into a visible list** asks first, like the
+  switch (decided by the user 2026-11-28, verification round 1; before,
+  they and every comment written while internal were shown without a
+  word): `visibility.shown_by_moving()` counts the internal to-dos
+  going into a list clients see, their comments and the active clients
+  of the list's project, and `shown_note()` (`biwak/items/views.py`)
+  says "Makes 2 to-dos and 5 comments visible to 3 clients.", also
+  with no clients yet (like the switch: staff prepare). The entry
+  points:
+  - "Move to…" of one to-do and the selection's "Move…" show it in the
+    dialog (`items/across_form.html`'s client banner, a destructive
+    button) and ask again (`Confirming`, `confirmed` set to the
+    target), like "Move to…" of lists to another project.
+  - Dragging stays within a list (a list's groups, the board's
+    columns), so it never asks; the posts behind it
+    (`/todos/<id>/move/`, `/lists/<id>/todos/move/`) answer 400 with the
+    sentence unless they send `show_to_clients=1`.
+  - The API (`todos/<id>/move/`, `lists/<id>/todos/move/`,
+    `todos/move/`): 400 with the sentence and "Send “show_to_clients”:
+    true to move them anyway." unless `show_to_clients: true`; the CLI's
+    `biwak todos move --show-to-clients` (0.77.0). Older CLIs get the
+    400 for such moves and can't say so: they update (`MINIMUM` stays,
+    every other move works).
+  - Moving a top-level item to another project keeps its switch, so it
+    shows nothing internal; who would newly see something visible is
+    asked about already (`new_clients()`).
+  Visible to-dos into an internal list say what they hide
+  (`hidden_note()`, the selection's "Move…").
 
 ## One check
 
