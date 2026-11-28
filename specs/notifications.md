@@ -31,7 +31,10 @@ a list" below.
 within 10 minutes of their last one updates that event's time instead of
 creating a new one, even when others' events came in between; a merged
 edit tells nobody again who was told already, except people mentioned in
-it for the first time. An edit of a batch ("Due date…" of several
+it for the first time. Its `mentioned` follows the text after its last
+change (consistent, 2026-11-28, `mentions.update()`): somebody mentioned
+in an earlier part and removed again isn't "mentioned" (no "mentioned
+you", not in "For you" or pushes); who was told already stays told. An edit of a batch ("Due date…" of several
 to-dos, `handover.md`) and one outside it merge only when the one
 outside changed nothing but fields the batch changed (decided
 2026-11-23).
@@ -45,7 +48,12 @@ outside changed nothing but fields the batch changed (decided
   subscribers box ("You're subscribed / Subscribe") is the one setting
   per item. Levels (below) decide who gets subscribed automatically.
 - Subscribing to a container also means hearing about items created in
-  it later (subscribing to a list: new to-dos, even when not assigned).
+  it later, as "Levels" says: on "everything" (a list's watchers: every
+  new to-do, even when not assigned); on "only what concerns me" new
+  to-dos only when mentioned or assigned, new posts in a followed
+  folder always (fixed 2026-11-28, verification round 1: this bullet
+  said "new to-dos, even when not assigned" for everybody;
+  `notify.wanting()` follows "Levels").
 - **Automatic:** the author, assignees, people mentioned, people
   commenting. **Not a folder's creator** (decided 2026-11-22: creating
   a folder is housekeeping, and following one brings every new file
@@ -187,6 +195,16 @@ subscribed to a list with "everything" as their level for it
   another level unsubscribes nobody (notifications are additive), and
   unsubscribing from the list ends the watching. The list's
   "Notifications…" says so.
+- **To-dos moved in or added from text subscribe them too** (decided
+  2026-11-28, the user: "People who want to know everything about the
+  list should be subscribed and they should also receive a note about
+  new to-dos on the list"): moved from another list or project
+  (`move_todos()`, `move_todos_to()`) and added from text
+  (`add_from_text()`), the same way (`ops.subscribe_watchers()`), those
+  who see them only. Added from text, they're told by the list's one
+  `added_todos` event ("Bob added 12 to-dos.", `todos-from-text.md`).
+  Moved in, they aren't told yet: how is an open question
+  (`verification.md`).
 - **Moving a to-do into another group of its list** (dragging between
   the board's columns, "Move to…" within the list, the same
   `move_todos()`) tells the to-do's subscribers and the list's watchers,

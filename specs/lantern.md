@@ -52,7 +52,9 @@ and pages that update while they're open.
   of notifications (decided 2026-11-21: the menu groups by item): the
   button shows a small red dot without a number, the number is in its
   tooltip and screen-reader text and `/lantern/count/`
-  (`unread_count()`; `unread_counts()` gives both). The API answers
+  (`unread_count()`; `unread_counts()` gives both, counted in the
+  database since 2026-11-28: only what needs the order of events, the
+  items with completing, reopening or moves and batches, is loaded). The API answers
   `unread` (notifications) and `unread_items` next to `results`;
   `biwak lantern` prints one row per item ("(+N)" for more), `--json`
   the entries. Digests are unaffected.
@@ -121,7 +123,13 @@ and pages that update while they're open.
   mentions them for the first time since is mailed and pushed (decided
   2026-11-28: a first mention tells, `notify._tell()`).
 - **Switching mail back from "none":** whatever is unread and wasn't
-  marked unread by hand goes with the next mail or digest.
+  marked unread by hand goes with the next mail or digest. To a mail
+  per change (decided 2026-11-28, it was a mail per item): what piled
+  up is held (`held_at`, `set_notification_settings()`) and goes at
+  once as one mail in the digest's form, or the usual mail when it's
+  one mail's worth, like what waited for quiet hours
+  (`mails._send_held()`, `quiet-hours.md`); mails per change from then
+  on.
 - A merged edit moving an unsent notification forward makes it unread
   again: the change is new.
 
@@ -133,7 +141,9 @@ ticks the same thing off twice. **When in reasonable doubt, it stays
 unread.**
 
 - **Reads:** completing or reopening a to-do; editing any kind of item
-  (only when something actually changed: the to-do's fields,
+  (only when something actually changed: the to-do's fields, also
+  several at once with "Due date…" and "Assign…", each to-do it
+  changed, `assign_todos()` since 2026-11-28,
   `update_message()`, `update_upload()`, `replace_upload()`,
   `update_list()`, `update_answer()`, `update_question()`; a doc's saved
   change reads for each of its authors in `_save()`); ticking a

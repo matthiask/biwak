@@ -19,6 +19,7 @@ from django.utils.translation import gettext as _
 from biwak.accounts.languages import language_for
 from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import User
+from biwak.activity import mentions
 from biwak.activity.mails import sender
 from biwak.files import attachments
 from biwak.files.models import new_key
@@ -258,6 +259,27 @@ def _escaped(text):
     return re.sub(r"([\\`*_\[\]<>])", r"\\\1", text)
 
 
+# Links to people (mentions, ``[@Ada](person:12)``), their reference
+# definitions and autolinks in what came from outside
+_PERSON_LINK = re.compile(r"\]\((?=\s*<?person:)")
+_PERSON_AUTOLINK = re.compile(r"<(?=person:)")
+_PERSON_DEFINITION = re.compile(r"^( {0,3})\[(?=[^\]\n]*\]:\s*<?person:)", re.MULTILINE)
+
+
+def defused(text):
+    """A forwarded mail's text with its links to people (mention syntax)
+    escaped: they show as written, nobody is mentioned when staff file it
+    (consistent, 2026-11-28)"""
+    text = _PERSON_LINK.sub(r"]\\(", text)
+    text = _PERSON_AUTOLINK.sub(r"\\<", text)
+    return _PERSON_DEFINITION.sub(r"\1\\[", text)
+
+
+def defused_title(title):
+    """A title (plain text) with mention syntax as ``@`` and the label"""
+    return mentions.MENTION.sub(lambda m: f"@{m[1]}", title)
+
+
 def forwarded_line(mail):
     """ "Forwarded from Ada Example <ada@example.org>, 3 Dec 2026", and the
     recipients below, in the language of the moment"""
@@ -285,7 +307,7 @@ def _content(mail, *, project, actor):
     """The text for the item: the line about the original, the text, the
     files as attachments in ``project`` by ``actor`` (linked when the item
     is saved)"""
-    text = mail.text
+    text = defused(mail.text)
     for file in mail.files.all():
         with file.file.open("rb") as handle:
             content = handle.read()
@@ -314,7 +336,7 @@ def file_as_message(mail, *, project, title, actor, category=None):
     _check(mail, actor)
     item = ops.create_message(
         project=project,
-        title=title,
+        title=defused_title(title),
         content=_content(mail, project=project, actor=actor),
         category=category,
         creator=actor,
@@ -334,7 +356,7 @@ def file_as_todo(mail, *, todolist, title, actor, group=None):
     _check(mail, actor)
     item = ops.create_todo(
         todolist=todolist,
-        title=title,
+        title=defused_title(title),
         creator=actor,
         group=group,
         notes=_content(mail, project=todolist.project, actor=actor),

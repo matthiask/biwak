@@ -58,7 +58,8 @@ project's page), and so can a list ("Notifications..." in its "More"
 menu): the closest one wins.
 
 **Watching a list:** choose "Everything" in a list's "Notifications..."
-and you're subscribed to the list and to every new to-do in it, so you
+and you're subscribed to the list and to every new to-do in it (also
+those moved into it from elsewhere or added from a text), so you
 hear about their comments and completion too, and you're told when a
 to-do moves to another group (a column of the board): a board works for
 Kanban. Moving a to-do into another group also tells everybody
@@ -90,7 +91,7 @@ shows what you've read already in the same entry, quieter. The page "All notific
   change in the end, or nothing when it's back where it started; mails
   do the same.
 - **Acting on an item reads it:** completing or reopening a to-do,
-  changing it, ticking its checklist, commenting, reacting, or
+  changing it (also several at once with "Assign…" or "Due date…"), ticking its checklist, commenting, reacting, or
   answering a check-in. Only looking doesn't: opening an item from the
   feed, a list, search or a mail leaves it unread. Bookmarking and
   subscribing don't count either.
@@ -110,7 +111,10 @@ Under Settings, "Mails":
   below);
 - **No mails:** the lantern only, also no check-in questions and
   summaries. Switching back to mails sends what is still unread then
-  (except what you marked as unread) with the next mail or digest.
+  (except what you marked as unread): with "A mail for each change" as
+  one mail like the digest (or the usual mail when it's about one item
+  only), then a mail per change again; with the digest in the next
+  digest.
 
 What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. What happened on an item that
@@ -250,4 +254,6 @@ some wait. Open "Text" to read it. Then:
 
 Filed mails leave the list; mails you don't file are deleted after 30
 days. Attachments larger than 25 MB are left out, with a line saying
-which. Forwarding works only where replying by mail is switched on.
+which. Mentions written into the mail (the syntax `[@Ada](person:12)`)
+stay text: filing it mentions nobody. Forwarding works only where
+replying by mail is switched on.

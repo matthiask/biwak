@@ -274,8 +274,13 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
         Mention(item=item, comment=comment, user=user) for user, _by, _e in people
     ])
     newly = []
-    # Event ID: (event, IDs of those it newly mentions)
-    told = {}
+    # Event ID: (event, IDs of those it newly mentions); every event of
+    # this save, also those mentioning nobody new
+    told = {
+        e.pk: (e, set())
+        for e in [event, *(e for _by, e in credit.values())]
+        if e is not None
+    }
     # Being mentioned subscribes (specs/notifications.md, "Subscriptions")
     for user, by, by_event in people:
         if user == by:
@@ -285,7 +290,17 @@ def update(item, text, *, comment=None, actor, event=None, previous="", credit=N
         if by_event is not None:
             told.setdefault(by_event.pk, (by_event, set()))[1].add(user.pk)
     for told_event, told_ids in told.values():
-        mentioned = set(told_event.data.get("mentioned", []))
-        told_event.data["mentioned"] = sorted(mentioned | told_ids)
+        # A merged edit (``record()``): only who the text mentions after its
+        # last change; somebody mentioned in an earlier part and removed
+        # again doesn't count (told already, they stay told; consistent,
+        # 2026-11-28)
+        before = told_event.data.get("mentioned", [])
+        mentioned = sorted((set(before) & ids) | told_ids)
+        if mentioned == before:
+            continue
+        if mentioned:
+            told_event.data["mentioned"] = mentioned
+        else:
+            del told_event.data["mentioned"]
         told_event.save(update_fields=["data"])
     return newly

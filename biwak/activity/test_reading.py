@@ -100,6 +100,20 @@ class ActionsReadTest(ReadingTestCase):
                     ),
                 )
 
+    def test_assign_todos(self):
+        """ "Assign…" reads like "Due date…" (consistent, 2026-11-28), when
+        it changes something"""
+        self.check(
+            self.todo, lambda a: ops.assign_todos([self.todo], [self.dan], actor=a)
+        )
+        self.check(
+            self.todo,
+            lambda a: ops.assign_todos([self.todo], [self.bob], actor=a, replace=True),
+        )
+        self.prime(self.todo)
+        self.act(lambda: ops.assign_todos([self.todo], [self.bob], actor=self.ada))
+        self.assertGreater(self.unread(self.ada, self.todo), 0)
+
     def test_tick_in_a_todo(self):
         self.act(lambda: ops.update_todo(self.todo, actor=self.dan, notes="- [ ] One"))
         from biwak.richtext import checklists

@@ -170,9 +170,36 @@ def entry_items(user, notification):
 def unread_counts(user):
     """``(notifications, entries)``: how many unread notifications the
     person has, and about how many items (the menu groups by item, and a
-    batch of files is one entry)"""
-    unread = group_batches(wanted(list(notifications_for(user, unread=True)), user))
-    return len(unread), len({entry_key(n) for n in unread})
+    batch of files is one entry). Counted in the database (consistent,
+    2026-11-28): only what needs the order of events is loaded, the
+    notifications of items with completing, reopening or moves among them
+    (which may cancel out, ``wanted()``) and those of batches
+    (``group_batches()``); the same numbers as the menu's."""
+    from biwak.activity.mails import DONE, _deliverable
+
+    unread = notifications_for(user, unread=True).order_by()
+    batched = models.Q(event__data__has_key="batch") & models.Q(
+        event__action__in=[*TODO_BATCHES, Action.CREATED]
+    )
+    ordered = models.Q(
+        event__item__in=unread.filter(event__action__in=[*DONE, Action.MOVED]).values(
+            "event__item"
+        )
+    )
+    # ``wanted()`` without looking for neighbours: those of the items
+    # completed or reopened are all here
+    loaded = group_batches(_deliverable(list(unread.filter(ordered | batched)), user))
+    entries = {entry_key(n) for n in loaded}
+    items = [key for kind, key in entries if kind == "item"]
+    rest = unread.exclude(ordered | batched).aggregate(
+        count=models.Count("pk"),
+        items=models.Count(
+            "event__item",
+            distinct=True,
+            filter=~models.Q(event__item__in=items),
+        ),
+    )
+    return len(loaded) + rest["count"], len(entries) + rest["items"]
 
 
 def unread_count(user):

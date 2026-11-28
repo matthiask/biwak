@@ -66,8 +66,9 @@ Ein Projekt kann eine eigene Stufe haben („Mehr“, dann
 („Benachrichtigungen…“ in ihrem Menü „Mehr“): Die nächstliegende gilt.
 
 **Eine Liste beobachten:** Wähle „Alles“ unter „Benachrichtigungen…“
-einer Liste, und du abonnierst die Liste und jedes neue To-do darin, du
-hörst also auch von ihren Kommentaren und davon, dass sie erledigt
+einer Liste, und du abonnierst die Liste und jedes neue To-do darin
+(auch die, die von anderswo hineinverschoben oder aus einem Text
+hinzugefügt werden), du hörst also auch von ihren Kommentaren und davon, dass sie erledigt
 werden, und du wirst benachrichtigt, wenn ein To-do in eine andere
 Gruppe kommt (eine Spalte des Boards): So taugt ein Board für Kanban.
 Ein To-do in eine andere Gruppe zu verschieben, benachrichtigt auch
@@ -105,7 +106,8 @@ Seite „Alle Benachrichtigungen“ hat die ganze Liste mit „Ungelesen“ und
   die Änderung am Ende, oder nichts, wenn es wieder ist wie am Anfang;
   Mails tun dasselbe.
 - **Etwas mit einem Eintrag tun liest ihn:** ein To-do erledigen oder
-  wieder öffnen, es ändern, seine Checkliste abhaken, kommentieren,
+  wieder öffnen, es ändern (auch mehrere aufs Mal mit „Zuweisen…“ oder
+  „Fälligkeit…“), seine Checkliste abhaken, kommentieren,
   reagieren oder einen Check-in beantworten. Nur ansehen nicht: Einen
   Eintrag aus der Aktivität, einer Liste, der Suche oder einer Mail zu
   öffnen lässt ihn ungelesen. Lesezeichen setzen und abonnieren zählen
@@ -128,8 +130,11 @@ In den Einstellungen unter „Mails“:
   passiert ist (siehe unten);
 - **Keine Mails:** nur die Laterne, auch keine Check-in-Fragen und
   -Zusammenfassungen. Wechselst du zurück zu Mails, wird gesendet, was
-  dann noch ungelesen ist (ausser was du als ungelesen markiert hast),
-  mit der nächsten Mail oder Zusammenfassung.
+  dann noch ungelesen ist (ausser was du als ungelesen markiert hast):
+  mit „Eine Mail pro Änderung“ als eine Mail wie die Zusammenfassung
+  (oder die übliche Mail, wenn es nur um einen Eintrag geht), danach
+  wieder eine Mail pro Änderung; mit der Zusammenfassung in der
+  nächsten Zusammenfassung.
 
 Was du in der Laterne gelesen hast, bevor die Mail hinausgeht, wird
 nicht gemailt, und eine Mail, in der nichts übrig bleibt, wird nicht
@@ -289,5 +294,7 @@ sie zu lesen. Dann:
 
 Abgelegte Mails verschwinden aus der Liste; Mails, die du nicht ablegst,
 werden nach 30 Tagen gelöscht. Anhänge über 25 MB fallen weg, mit einer
-Zeile, die sagt, welche. Weiterleiten geht nur, wo Antworten per Mail
-eingeschaltet ist.
+Zeile, die sagt, welche. Erwähnungen, die in der Mail stehen (die
+Schreibweise `[@Ada](person:12)`), bleiben Text: Das Ablegen erwähnt
+niemanden. Weiterleiten geht nur, wo Antworten per Mail eingeschaltet
+ist.

@@ -303,6 +303,32 @@ class NotifyTest(TestCase):
         ops.update_todo(self.todo, actor=self.bob, title="Five")
         self.assertEqual(Event.objects.filter(action=Action.EDITED).count(), 3)
 
+    def test_a_mention_removed_within_a_merged_edit_doesnt_count(self):
+        """The event's mentions follow the text after its last merged
+        change; who was told already stays told (consistent, 2026-11-28)"""
+        dan = person("Dan")
+        project_ops.add_member(self.project, dan, actor=self.ada)
+        self.told(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=f"Ask {mentions.syntax(self.bob)}"
+            )
+        )
+        event = Event.objects.get(action=Action.EDITED)
+        self.assertEqual(event.data["mentioned"], [self.bob.pk])
+        self.told(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=f"Ask {mentions.syntax(dan)}"
+            )
+        )
+        event.refresh_from_db()
+        self.assertEqual(event.data["mentioned"], [dan.pk])
+        self.assertTrue(
+            Notification.objects.filter(user=self.bob, event=event).exists()
+        )
+        self.told(lambda: ops.update_todo(self.todo, actor=self.ada, notes="Ask"))
+        event.refresh_from_db()
+        self.assertNotIn("mentioned", event.data)
+
     def test_one_unsent_notification_per_person_and_event(self):
         """Two notify() at once (two quick edits merged into one event) can't
         tell anybody twice: the database refuses a second unsent one"""
@@ -416,6 +442,51 @@ class WatchingListsTest(TestCase):
         self.assertTrue(
             Subscription.objects.filter(user=self.bob, item=self.board).exists()
         )
+
+    def subscribers(self, item):
+        return set(
+            Subscription.objects.filter(item=item).values_list("user", flat=True)
+        )
+
+    def test_watchers_are_subscribed_to_to_dos_moved_in(self):
+        """From another list or project, like new to-dos, those who see them
+        (decided 2026-11-28)"""
+        self.watch(self.bob)
+        subscribe(self.dan, self.board)
+        moved = ops.create_todo(todolist=self.other, title="Moved", creator=self.ada)
+        ops.move_todos([moved], todolist=self.board, actor=self.ada)
+        self.assertEqual(self.subscribers(moved), {self.ada.pk, self.bob.pk})
+        # Not after unsubscribing from the to-do
+        unsubscribe(self.bob, moved)
+        ops.move_todos([moved], todolist=self.other, actor=self.ada)
+        ops.move_todos([moved], todolist=self.board, actor=self.ada)
+        self.assertEqual(self.subscribers(moved), {self.ada.pk})
+        # From another project
+        elsewhere = project(members=[self.ada, self.bob], name="Elsewhere")
+        there = ops.create_list(project=elsewhere, title="There", creator=self.ada)
+        moved = ops.create_todo(todolist=there, title="Far", creator=self.ada)
+        ops.move_todos_to([moved], todolist=self.board, actor=self.ada)
+        self.assertEqual(self.subscribers(moved), {self.ada.pk, self.bob.pk})
+        # Watchers who can't see it aren't subscribed
+        set_level_override(self.cleo, NotificationLevel.EVERYTHING, item=self.other)
+        ops.move_todos([self.todo], todolist=self.other, actor=self.ada)
+        self.assertNotIn(self.cleo.pk, self.subscribers(self.todo))
+
+    def test_watchers_are_subscribed_to_to_dos_added_from_text(self):
+        """And told once, by the list's event (decided 2026-11-28)"""
+        self.watch(self.bob)
+        set_level_override(self.cleo, NotificationLevel.EVERYTHING, item=self.other)
+        told = self.told(
+            lambda: ops.add_from_text(self.board, "- One\n- Two", actor=self.ada)
+        )
+        self.assertIn(self.bob, told)
+        self.assertEqual(Notification.objects.filter(user=self.bob).count(), 1)
+        for title in ["One", "Two"]:
+            todo = Item.objects.get(title=title)
+            self.assertEqual(self.subscribers(todo), {self.ada.pk, self.bob.pk})
+        self.told(lambda: ops.add_from_text(self.other, "- Three", actor=self.ada))
+        todo = Item.objects.get(title="Three")
+        self.assertEqual(self.subscribers(todo), {self.ada.pk})
 
     def test_watchers_are_subscribed_to_new_to_dos(self):
         self.watch(self.bob)
