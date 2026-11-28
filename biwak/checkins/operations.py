@@ -20,7 +20,7 @@ from biwak.accounts.models import User
 from biwak.accounts.quiet import is_away, mails_held
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
-from biwak.activity.notify import can_see, who_can_see
+from biwak.activity.notify import can_see, people_who_see, who_can_see
 from biwak.activity.operations import (
     is_importing,
     read_by_acting,
@@ -309,6 +309,19 @@ def _recipients(question, occurrence=None):
     if occurrence is not None:
         people = people.filter(pk__in=occurrence.asked.values("pk"))
     return list(people.select_related("organization").order_by("pk"))
+
+
+def asked_ids(question):
+    """The IDs of the people asked who are asked when the question is:
+    active and seeing it (``_recipients()``, whether the question is paused
+    or trashed or not). The others stay among the people asked, marked
+    (decided 2026-11-28, specs/checkins.md)."""
+    item = question.item
+    return set(
+        question.people.filter(
+            pk__in=people_who_see(item.project, item.is_client_visible).values("pk")
+        ).values_list("pk", flat=True)
+    )
 
 
 def _answered_ids(occurrence):

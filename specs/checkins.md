@@ -53,6 +53,13 @@ and answering, `mails.py`).
   asked before stay as pills, others aren't offered. People asked who
   were deactivated or left stay too, in the form and through the API
   (`_check_people()`'s `kept`): kept, not added (decided 2026-11-28).
+  Who isn't asked is marked (decided 2026-11-28): "People asked" on
+  the question's page says "(inactive)", or "(not asked: can't see the
+  check-in)" for who can't see it (left the project, a client on an
+  internal question); the API's `people` carry `asked`
+  (`ops.asked_ids()`: active and seeing the question, as `_recipients()`)
+  and `biwak checkins show` marks them the same (CLI 0.79.0). Back, they
+  are asked again.
 - **Clients** are asked only on questions visible to clients; adding
   clients to an internal question is refused, and if it turns internal
   they stay in the list but aren't asked or mailed. They learn only about
