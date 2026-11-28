@@ -81,7 +81,10 @@ moving people without an organization along 2026-11-23.
   they can't open anymore (`forget_lost_access()`, through
   `access_changed()`); the same for another organization or "is client"
   changed in the Django admin (`UserAdmin.save_model()`, decided
-  2026-11-28).
+  2026-11-28). For an inactive person it's judged as if they were
+  active: deactivating keeps their subscriptions (`activation.md`), so
+  only those they couldn't open once back go (found 2026-11-28: all
+  went).
 - **Between staff and client in the Django admin** (decided by the user
   2026-11-28, verification round 1): staff made a client also lose
   what a client can't see, their assignments on open to-dos

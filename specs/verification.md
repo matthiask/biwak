@@ -158,7 +158,9 @@ Fixed (each in its part's spec):
   waiting to be activated activates them; activating with the mail
   someone in no project is refused; withdrawing an invitation unassigns
   before choosing between deleting and deactivating; "Reset sign-in…"
-  counts push devices (CLI 0.78.0).
+  counts push devices (CLI 0.78.0); an organization changed while
+  somebody is inactive drops only the subscriptions they couldn't open
+  once back.
 - **Notifications:** a first mention merged into an edit marked unread
   is mailed and pushed; unsubscribing from a to-do stops its column
   moves, also through the mail's link; notifications of an item trashed

@@ -164,3 +164,34 @@ class OperationsTest(TestCase):
         with self.assertRaisesMessage(ValidationError, "no admin"):
             org_ops.mark_own(other, actor=self.admin)
         self.assertEqual(Organization.objects.get(is_own=True), self.own)
+
+
+class InactiveAccessTest(TestCase):
+    def test_an_inactive_persons_subscriptions_follow_their_access(self):
+        """Deactivating keeps subscriptions (specs/activation.md): a change
+        to an inactive person's organization drops only those in projects
+        they couldn't open anymore once active again"""
+        from biwak.activity.models import Subscription
+        from biwak.activity.operations import subscribe
+        from biwak.items import operations as ops
+        from biwak.organizations import activation
+        from biwak.test_utils import project
+
+        root = person("Root", is_admin=True)
+        bob = person("Bob")
+        member = project("Website", members=[root, bob])
+        member.is_all_access = False
+        member.save()
+        everybody = project("Intranet", members=[root])
+        kept = ops.create_list(project=member, title="Launch", creator=root)
+        lost = ops.create_list(project=everybody, title="News", creator=root)
+        subscribe(bob, kept)
+        subscribe(bob, lost)
+        activation.deactivate([bob], actor=root)
+        agency = organization("Example Agency")
+        person("Pia", organization=agency)
+        org_ops.set_organization(bob, agency, actor=root)
+        self.assertEqual(
+            list(Subscription.objects.filter(user=bob).values_list("item", flat=True)),
+            [kept.pk],
+        )
