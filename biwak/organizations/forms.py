@@ -1,5 +1,6 @@
 """Picking an organization (specs/organizations.md): a text field with the
-existing names to complete (a ``<datalist>``, no JavaScript); a name that
+existing names to complete (a ``<datalist>``, the combobox's list with
+JavaScript, finding words anywhere in the names); a name that
 doesn't exist yet creates the organization only after confirming, which
 catches most typos."""
 
@@ -33,7 +34,8 @@ def organization_field(**kwargs):
     return forms.CharField(
         max_length=200,
         required=False,
-        widget=OrganizationInput(attrs={"autocomplete": "off"}),
+        # The combobox's list from the datalist (frontend/combobox.js)
+        widget=OrganizationInput(attrs={"autocomplete": "off", "data-combobox": ""}),
         **kwargs,
     )
 

@@ -218,3 +218,63 @@ class InviteRowsTest(E2ETestCase):
         expect(orgs.nth(0)).to_have_value(client)
         expect(orgs.nth(1)).to_have_value(other)
         self.assertEqual(self.errors, [])
+
+
+class OrganizationFieldTest(E2ETestCase):
+    """The organization field (biwak/organizations/forms.py): a text field
+    whose names the combobox finds by words anywhere; a new name stays as
+    typed and is created after confirming"""
+
+    def setUp(self):
+        super().setUp()
+        organization("Zebra Clients")
+        organization("Alpine Agency")
+        self.dora = person("Dora", client=True, organization="Example Client Ltd")
+
+    def open(self):
+        page = self.page
+        self.goto(page, "/people/")
+        page.get_by_role("link", name="Change the organization of Dora Example").click()
+        dialog = page.get_by_role("dialog", name="The organization of Dora Example")
+        return dialog, dialog.get_by_role("combobox", name="Organization")
+
+    def test_finding_and_choosing(self):
+        dialog, field = self.open()
+        expect(field).to_have_value("Example Client Ltd")
+        listbox = dialog.get_by_role("listbox")
+        options = listbox.get_by_role("option")
+        # Words anywhere, not only the start
+        field.fill("clients zeb")
+        expect(options).to_have_count(1)
+        expect(options).to_have_text("Zebra Clients")
+        # Escape closes the list, not the dialog, keeping what was typed
+        field.press("Escape")
+        expect(listbox).to_be_hidden()
+        expect(dialog).to_be_visible()
+        expect(field).to_have_value("clients zeb")
+        field.fill("agency")
+        field.press("ArrowDown")
+        field.press("Enter")
+        expect(listbox).to_be_hidden()
+        expect(field).to_have_value("Alpine Agency")
+        dialog.get_by_role("button", name="Save").click()
+        expect(dialog).to_be_hidden()
+        self.dora.refresh_from_db()
+        self.assertEqual(self.dora.organization.name, "Alpine Agency")
+        self.assertEqual(self.errors, [])
+
+    def test_a_new_name_stays(self):
+        """Enter without choosing submits what was typed, even when it's the
+        start of an existing name"""
+        dialog, field = self.open()
+        field.fill("Zebra")
+        expect(dialog.get_by_role("option", name="Zebra Clients")).to_be_visible()
+        field.press("Enter")
+        expect(dialog.get_by_label("Create “Zebra”?")).to_be_visible()
+        expect(field).to_have_value("Zebra")
+        dialog.get_by_label("Create “Zebra”?").check()
+        dialog.get_by_role("button", name="Save").click()
+        expect(dialog).to_be_hidden()
+        self.dora.refresh_from_db()
+        self.assertEqual(self.dora.organization.name, "Zebra")
+        self.assertEqual(self.errors, [])
