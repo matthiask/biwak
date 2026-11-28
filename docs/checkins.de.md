@@ -20,9 +20,12 @@ Mitarbeitende öffnen **Check-ins** auf der Seite des Projekts und wählen
 - **Gefragte Personen**: wer die Frage bekommt. Tippe einen Namen oder
   den eines Teams, um seine Mitglieder auf einmal hinzuzufügen;
   Kund:innen werden nur angeboten, solange „Für Kund:innen sichtbar“
-  angehakt ist. Deaktivierte Personen bleiben in der Liste, bis du sie
-  entfernst, werden aber nicht gefragt und können nicht hinzugefügt
-  werden.
+  angehakt ist. Deaktivierte Personen und Personen, die die Frage nicht
+  mehr sehen (sie haben das Projekt verlassen, oder Kund:innen, sobald
+  sie intern ist), bleiben in der Liste, bis du sie entfernst, werden
+  aber nicht gefragt und können nicht hinzugefügt werden. Die Seite der
+  Frage markiert sie mit „(inaktiv)“ oder „(nicht gefragt: sieht den
+  Check-in nicht)“; sind sie zurück, werden sie wieder gefragt.
 
 „Pausieren“ hält das Fragen an, und „Fortsetzen“ beginnt es wieder;
 Daten, die während der Pause verpasst wurden, werden nicht nachgeholt.

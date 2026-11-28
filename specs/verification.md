@@ -178,7 +178,10 @@ Fixed (each in its part's spec):
   in or added from text, told of the latter by the list's one event
   (`notifications.md`).
 - **Check-ins:** a held summary is checked again when it goes; a stored
-  rule that isn't valid any more skips its question only.
+  rule that isn't valid any more skips its question only; "People
+  asked" marks who isn't asked, inactive or not seeing the question
+  (page, API's `asked`, CLI 0.80.0); "away" is judged by the
+  occurrence's date, not the run's.
 - **Visibility:** a client's open list page is told when a to-do leaves
   it for an internal list; moving internal to-dos into a list clients
   see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0);
@@ -218,9 +221,6 @@ decided, marked "consistent"):
   - People watching a list ("Everything") are told about to-dos moved
     in like new to-dos (decided; they're subscribed already): how is
     open, see "Risks and questions".
-- **Check-ins:** "People asked" marks who isn't asked (inactive, can't
-  see it; decided); "away" is judged by the occurrence's date
-  (consistent).
 - **Import:** links to a list's group lead to the list in Biwak;
   archived to-dos without a completion are completed by nobody, at
   Basecamp's time; the same Basecamp attachment in two texts gets an

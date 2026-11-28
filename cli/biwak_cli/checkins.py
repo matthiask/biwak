@@ -58,6 +58,20 @@ def show_answers(occurrence):
         click.echo(f"\nHasn't answered yet: {names(occurrence['missing'])}")
 
 
+def people_asked(people):
+    """Their names, those who aren't asked marked: "(inactive)", or why
+    (decided 2026-11-28)"""
+    return ", ".join(
+        names([p])
+        + (
+            " (not asked: can't see the check-in)"
+            if p["is_active"] and not p.get("asked", True)
+            else ""
+        )
+        for p in people
+    )
+
+
 @checkins.command("show")
 @click.argument("question_id", metavar="QUESTION", type=int)
 @click.option(
@@ -74,7 +88,7 @@ def checkin_show(question_id, limit, as_json):
     echo_linked(f"#{data['id']} ", link(data["title"], data.get("url")), marker)
     for label, value in [
         ("Asked", f"{data['schedule_description']}, {data['time_of_day'][:5]}"),
-        ("People", names(data["people"])),
+        ("People", people_asked(data["people"])),
         ("Mails about answers", data["mail"]),
         ("Paused", "yes" if data["paused"] else ""),
         ("URL", data["url"]),

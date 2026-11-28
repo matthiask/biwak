@@ -53,6 +53,13 @@ and answering, `mails.py`).
   asked before stay as pills, others aren't offered. People asked who
   were deactivated or left stay too, in the form and through the API
   (`_check_people()`'s `kept`): kept, not added (decided 2026-11-28).
+  Who isn't asked is marked (decided 2026-11-28): "People asked" on
+  the question's page says "(inactive)", or "(not asked: can't see the
+  check-in)" for who can't see it (left the project, a client on an
+  internal question); the API's `people` carry `asked`
+  (`ops.asked_ids()`: active and seeing the question, as `_recipients()`)
+  and `biwak checkins show` marks them the same (CLI 0.80.0). Back, they
+  are asked again.
 - **Clients** are asked only on questions visible to clients; adding
   clients to an internal question is refused, and if it turns internal
   they stay in the list but aren't asked or mailed. They learn only about
@@ -117,8 +124,9 @@ Traps the tests cover (`schedule.py`):
 - **People** added are asked from the next occurrence; removing keeps
   their answers.
 - **People away aren't asked** (decided 2026-11-22,
-  `quiet-hours.md`): away on the day the question is asked (the
-  installation's time zone), they get no question mail and aren't
+  `quiet-hours.md`): away on the occurrence's date (the installation's
+  time zone; after downtime or a gap before midnight the day before the
+  run, decided 2026-11-28), they get no question mail and aren't
   among the occurrence's people asked, so they aren't missing; the next
   occurrence asks them again. Their summaries wait while their mails
   wait (`HeldSummary`), checked again when they go (`quiet-hours.md`).

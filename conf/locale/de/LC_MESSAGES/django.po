@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:27+0100\n"
+"POT-Creation-Date: 2026-11-28 11:41+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -7067,6 +7067,14 @@ msgstr "Noch nicht gefragt."
 msgid "Show older"
 msgstr "Ältere anzeigen"
 
+#: biwak/templates/checkins/question.html biwak/templatetags/biwak.py
+msgid "(inactive)"
+msgstr "(inaktiv)"
+
+#: biwak/templates/checkins/question.html
+msgid "(not asked: can't see the check-in)"
+msgstr "(nicht gefragt: sieht den Check-in nicht)"
+
 #: biwak/templates/checkins/question.html
 msgid "Mails about answers"
 msgstr "Mails zu Antworten"
@@ -8612,10 +8620,6 @@ msgstr "Noch keine Teams. Ein Team wählt beim Zuweisen, beim Hinzufügen von Ab
 #: biwak/templates/teams/team_detail.html
 msgid "Picking the team when assigning, adding subscribers or mentioning picks its members who can be there. Changing the team later doesn't change earlier picks. Clients never see teams."
 msgstr "Wer beim Zuweisen, beim Hinzufügen von Abonnent:innen oder beim Erwähnen das Team wählt, wählt dessen Mitglieder, die dort sein können. Spätere Änderungen am Team ändern frühere Auswahlen nicht. Kund:innen sehen nie Teams."
-
-#: biwak/templatetags/biwak.py
-msgid "(inactive)"
-msgstr "(inaktiv)"
 
 #: biwak/templatetags/biwak.py
 msgid "Clients can see this"

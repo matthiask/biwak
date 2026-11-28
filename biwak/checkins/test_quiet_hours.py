@@ -25,6 +25,19 @@ class AwayAskingTest(CheckinTestCase):
         self.run_at("2027-03-29 09:00")
         self.assertEqual(self.recipients(), [self.ada.email, self.bob.email])
 
+    def test_away_on_the_occurrences_date_not_the_runs(self):
+        """Asked after midnight for the day before (a late run): away is
+        judged by the occurrence's date (specs/checkins.md)"""
+        self.item.question.time_of_day = dt.time(23, 30)
+        self.item.question.save()
+        self.bob.away_until = dt.date(2027, 3, 22)
+        self.bob.save()
+        self.run_at("2027-03-23 00:10")
+        occurrence = Occurrence.objects.get()
+        self.assertEqual(occurrence.date, dt.date(2027, 3, 22))
+        self.assertEqual(list(occurrence.asked.all()), [self.ada])
+        self.assertEqual(self.recipients(), [self.ada.email])
+
     def test_quiet_hours_dont_keep_questions_back(self):
         self.bob.quiet_hours = True
         self.bob.working_from = dt.time(10)

@@ -158,7 +158,13 @@
       <ul class="list-unstyled small">
         {% for person in people %}
           <li>
-            {% avatar person %} <a href="{% url 'question_person' item.pk person.pk %}">{{ person.display_name }}</a>
+            {% avatar person %}
+            <a href="{% url 'question_person' item.pk person.pk %}">{{ person.display_name }}</a>
+            {% if not person.is_active %}
+              <span class="text-body-secondary">{% translate "(inactive)" %}</span>
+            {% elif person.pk not in asked %}
+              <span class="text-body-secondary">{% translate "(not asked: can't see the check-in)" %}</span>
+            {% endif %}
           </li>
         {% empty %}
           <li class="text-body-secondary">{% translate "Nobody yet." %}</li>

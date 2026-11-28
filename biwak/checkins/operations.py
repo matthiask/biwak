@@ -20,7 +20,7 @@ from biwak.accounts.models import User
 from biwak.accounts.quiet import is_away, mails_held
 from biwak.activity import mentions
 from biwak.activity.models import Action, Subscription
-from biwak.activity.notify import can_see, who_can_see
+from biwak.activity.notify import can_see, people_who_see, who_can_see
 from biwak.activity.operations import (
     is_importing,
     read_by_acting,
@@ -311,6 +311,19 @@ def _recipients(question, occurrence=None):
     return list(people.select_related("organization").order_by("pk"))
 
 
+def asked_ids(question):
+    """The IDs of the people asked who are asked when the question is:
+    active and seeing it (``_recipients()``, whether the question is paused
+    or trashed or not). The others stay among the people asked, marked
+    (decided 2026-11-28, specs/checkins.md)."""
+    item = question.item
+    return set(
+        question.people.filter(
+            pk__in=people_who_see(item.project, item.is_client_visible).values("pk")
+        ).values_list("pk", flat=True)
+    )
+
+
 def _answered_ids(occurrence):
     """People who answered (an answer in the trash doesn't count)"""
     answered = Answer.objects.filter(occurrence=occurrence).not_trashed()
@@ -369,9 +382,10 @@ def _ask(question, date, now):
     )
     if not was_created:
         return None
-    # People away aren't asked: no mail, not missing (specs/quiet-hours.md)
-    today = timezone.localdate(now)
-    people = [person for person in _recipients(question) if not is_away(person, today)]
+    # People away aren't asked: no mail, not missing (specs/quiet-hours.md);
+    # away on the occurrence's date, which after downtime or a gap before
+    # midnight is a day before the run's
+    people = [person for person in _recipients(question) if not is_away(person, date)]
     occurrence.asked.set(people)
     mails.after_commit(mails.question_mail, occurrence, people)
     return occurrence

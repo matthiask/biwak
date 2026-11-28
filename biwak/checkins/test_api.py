@@ -225,6 +225,34 @@ class QuestionsAPITest(APITestCase):
         )  # fmt: skip
         self.assertEqual(response.status_code, 400)
 
+    def test_people_asked_say_whether_theyre_asked(self):
+        """Deactivated people and those who can't see the question stay
+        among the people asked but aren't asked (decided 2026-11-28)"""
+        activation.deactivate([self.bob], actor=person("Root", is_admin=True))
+        item_ops.set_visibility(
+            Item.objects.get(pk=self.shared.pk), visible=False, actor=self.ada
+        )
+        data = self.get(self.ada, f"projects/{self.project.pk}/checkins/").json()
+        asked = {
+            (question["title"], p["short_name"]): p["asked"]
+            for question in data
+            for p in question["people"]
+        }
+        self.assertEqual(
+            asked,
+            {
+                ("How are you?", "Ada"): True,
+                ("How are you?", "Bob"): False,
+                ("Shared question", "Ada"): True,
+                ("Shared question", "Cleo"): False,
+            },
+        )
+        data = self.get(self.ada, f"checkins/{self.shared.pk}/").json()
+        self.assertEqual(
+            {p["short_name"]: p["asked"] for p in data["people"]},
+            {"Ada": True, "Cleo": False},
+        )
+
     def test_rules_are_stored_canonical(self):
         """However it's written (decided 2026-11-21)"""
         data = self.patch(

@@ -18,8 +18,11 @@ check-in":
   answers ([Clients](clients.md)).
 - **People asked**: who gets the question. Type a name, or a team's to
   add its members at once; clients are offered only while "Visible to
-  clients" is ticked. Deactivated people stay in the list until you
-  take them out, but aren't asked and can't be added.
+  clients" is ticked. Deactivated people and people who can't see the
+  question any more (they left the project, or clients once it's
+  internal) stay in the list until you take them out, but aren't asked
+  and can't be added. The question's page marks them "(inactive)" or
+  "(not asked: can't see the check-in)"; back, they're asked again.
 
 "Pause" stops the asking and "Resume" starts it again; dates missed
 while paused aren't asked afterwards. Questions that were paused (for

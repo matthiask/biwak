@@ -352,6 +352,8 @@ def question(request, pk):
                 if any(a.author_id == user.pk for a, _c, _f in answers[o.pk])
             },
             "people": people,
+            # Who isn't asked is marked (decided 2026-11-28)
+            "asked": ops.asked_ids(question),
             "mode": mail_mode(user, item),
             "modes": Mode.choices,
             "is_subscribed": is_subscribed(user, item),

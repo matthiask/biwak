@@ -140,6 +140,38 @@ class PagesTest(ViewsTestCase):
         self.assertNotContains(response, "Clients can see this")
         self.assertNotContains(response, "reminder")
 
+    def test_people_asked_who_arent_asked_say_why(self):
+        """Deactivated people and those who can't see the question stay
+        among the people asked but aren't asked (decided 2026-11-28)"""
+
+        def marks(item):
+            """``{name: mark}`` of the people asked"""
+            html = self.get(self.ada, item.get_absolute_url()).content.decode()
+            html = html.split("People asked", 1)[1].split("</ul>", 1)[0]
+            return dict(
+                re.findall(
+                    r">([^<]+)</a>\s*(?:<span class=\"text-body-secondary\">([^<]+)<)?",
+                    html,
+                )
+            )
+
+        activation.deactivate([self.bob], actor=person("Root", is_admin=True))
+        self.assertEqual(
+            marks(self.item), {"Ada Example": "", "Bob Example": "(inactive)"}
+        )
+        item_ops.set_visibility(
+            Item.objects.get(pk=self.shared.pk), visible=False, actor=self.ada
+        )
+        self.assertEqual(
+            marks(self.shared),
+            {
+                "Ada Example": "",
+                "Cleo Example, Example Client Ltd": (
+                    "(not asked: can't see the check-in)"
+                ),
+            },
+        )
+
     def test_the_page_lists_those_who_didnt_answer(self):
         ops.answer(self.item, user=self.ada, content="Fine")
         ops.answer(self.item, user=self.bob, content="Fine too")

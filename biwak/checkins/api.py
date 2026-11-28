@@ -10,12 +10,13 @@ from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
-from ninja import Router, Schema, Status
+from ninja import Field, Router, Schema, Status
 from ninja.errors import HttpError
 
 from biwak import schedules
 from biwak.accounts.models import User
 from biwak.activity.mentions import resolve as resolve_mentions
+from biwak.activity.notify import people_who_see
 from biwak.api_conventions import (
     ItemOut,
     PersonOut,
@@ -72,12 +73,20 @@ def _rule(value, anchor):
 # Questions --------------------------------------------------------------------
 
 
+class AskedOut(PersonOut):
+    asked: bool = Field(
+        description="False for people kept among the people asked who aren't"
+        " asked: deactivated, or not seeing the question (left the project, a"
+        " client on an internal question; decided 2026-11-28)."
+    )
+
+
 class QuestionOut(ItemOut):
     rule: str
     schedule_description: str
     starts_on: dt.date
     time_of_day: dt.time
-    people: list[PersonOut]
+    people: list[AskedOut]
     paused: bool
     next_at: dt.datetime | None
     latest_occurrence_id: int | None
@@ -110,7 +119,20 @@ def _question_context(request, items):
             for user in item.question.people.all()
         }
         known |= {user.pk for user in project.people_known_to(request.user, people)}
-    return {"latest": latest, "modes": modes, "known": known}
+    # Who is asked (``ops.asked_ids()``): active and seeing the question
+    seeing = {
+        (project, visible): set(
+            people_who_see(project, visible).values_list("pk", flat=True)
+        )
+        for project, visible in {(i.project, i.is_client_visible) for i in items}
+    }
+    asked = {
+        (item.pk, user.pk)
+        for item in items
+        for user in item.question.people.all()
+        if user.pk in seeing[item.project, item.is_client_visible]
+    }
+    return {"latest": latest, "modes": modes, "known": known, "asked": asked}
 
 
 def question_out(request, item, context=None):
@@ -123,7 +145,7 @@ def question_out(request, item, context=None):
         "time_of_day": question.time_of_day,
         # Clients only learn about the project's members
         "people": [
-            person_out(user)
+            person_out(user) | {"asked": (item.pk, user.pk) in context["asked"]}
             for user in question.people.all()
             if user.pk in context["known"]
         ],

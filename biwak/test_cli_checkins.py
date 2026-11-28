@@ -10,7 +10,9 @@ from biwak.checkins import operations as ops
 from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import at
 from biwak.files.models import Attachment
+from biwak.items import operations as item_ops
 from biwak.items.models import Item
+from biwak.organizations import activation
 from biwak.projects.models import Membership
 from biwak.test_utils import person
 
@@ -84,6 +86,24 @@ class CheckinCLITest(test_cli.CLITest):
         self.assertEqual(answer.answer.occurrence, self.occurrence)
         self.assertTrue(answer.answer.content.startswith("Back then\n\n![photo.png]("))
         self.assertEqual(Attachment.objects.get().item_id, answer.pk)
+
+    def test_show_marks_who_isnt_asked(self):
+        """Kept among the people asked, not asked (decided 2026-11-28)"""
+        cleo = person("Cleo", client=True)
+        Membership.objects.create(project=self.project, user=cleo)
+        self.item.question.people.add(cleo)
+        activation.deactivate([self.bob], actor=person("Root", is_admin=True))
+        self.assertIn(
+            "People: Ada, Bob (inactive), Cleo\n",
+            self.biwak("checkins", "show", self.item.pk).output,
+        )
+        item_ops.set_visibility(
+            Item.objects.get(pk=self.item.pk), visible=False, actor=self.ada
+        )
+        self.assertIn(
+            "People: Ada, Bob (inactive), Cleo (not asked: can't see the check-in)\n",
+            self.biwak("checkins", "show", self.item.pk).output,
+        )
 
     def test_due(self):
         output = self.biwak("checkins", "due").output
