@@ -66,7 +66,9 @@ and pages that update while they're open.
   2026-11-22; `chain()`, the mails' rule too): its folder, "Ada uploaded 5 files to
   Minutes.", the files linked; counted once; following it, "Mark as
   read" and "Mark as unread" act on all its files. No bookmark button:
-  bookmarks are per item.
+  bookmarks are per item. The to-dos of one "Assign…", "Due date…" or
+  "Move…" into a list are one entry the same way (`handover.md`,
+  `notifications.md`).
 - **Completing and reopening back and forth** (decided 2026-11-21): of
   the unread notifications, those of a person's consecutive completing
   and reopening of an item don't show when they cancel out; otherwise

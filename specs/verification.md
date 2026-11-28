@@ -174,7 +174,9 @@ Fixed (each in its part's spec):
   mails" to a mail per change sends what piled up as one digest-form
   mail (`lantern.md`); a list's watchers are subscribed to to-dos moved
   in or added from text, told of the latter by the list's one event
-  (`notifications.md`).
+  (`notifications.md`), and of to-dos moved in by their moves, one
+  entry and mail per "Move…" ("Ada moved 5 to-dos to Launch.",
+  `notifications.md`).
 - **Check-ins:** a held summary is checked again when it goes; a stored
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
@@ -204,10 +206,6 @@ Fixed (each in its part's spec):
 decided by the user on 2026-11-28 (or following a rule already
 decided, marked "consistent"):
 
-- **Notifications:**
-  - People watching a list ("Everything") are told about to-dos moved
-    in like new to-dos (decided; they're subscribed already): how is
-    open, see "Risks and questions".
 - **Visibility:**
   - "Visible to N clients" counts active and invited clients (decided).
   - Moving an item to another project ends its public links (decided).
@@ -253,14 +251,6 @@ that isn't valid any more (the bug above stops asking for everybody).
 
 **Risks and questions:**
 
-- Telling a list's watchers about to-dos moved in (decided that they
-  are, not how): the to-dos' `moved` events (silent now) could tell the
-  target list's watchers, merged per "Move…" into one lantern entry and
-  mail like "Assign…" ("Ada moved 5 to-dos to Launch."; would one
-  drag between columns of several to-dos merge the same way?), or one
-  event on the list like `added_todos` ("Ada moved 5 to-dos into
-  Launch.", which the feed would show next to the to-dos' own moves).
-  Who: the watchers only, or every list subscriber?
 - `added_todos` (from text) tells every subscriber of the list, also on
   "only what concerns me", unlike new to-dos one by one ("Levels"): keep,
   or watchers only?

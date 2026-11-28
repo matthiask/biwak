@@ -213,7 +213,9 @@ across projects, told once about dates, moving telling nobody.
   `feed.add_projects()`), else "moved 23 to-dos to Website" or "… to
   another project". Into or out of archived projects and templates is
   refused, as for lists. The events of more than one to-do share a
-  `batch` (nobody is told about moves, so nothing groups them yet).
+  `batch`: the target list's watchers are told once, "Ada moved 23
+  to-dos to Launch." (decided 2026-11-28, `notifications.md`, "Watching
+  a list").
 - **"Due date…"** (`DatesForm`): "Due dates" with "Set a date", "Move by"
   and "Remove" (copying's choices and labels, `KEEP` labelled "Set a
   date"), a "Due date" field and copying's "Days" field and help;
@@ -267,7 +269,8 @@ across projects, told once about dates, moving telling nobody.
 1. **Moving tells nobody**, within a project too (a single to-do's
    "Move to…" and dragging are the same code, `move_todos()`); the feed
    and the history show it as before. Except into another group of
-   the same list since 2026-11-26 (`notifications.md`, "Watching a
+   the same list since 2026-11-26 and into another list, to its
+   watchers, since 2026-11-28 (`notifications.md`, "Watching a
    list"). One rule for every move
    (`Action.MOVED` in `notify.SILENT`): files moved into folders and
    items moved to other projects tell nobody either.

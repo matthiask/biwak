@@ -3,7 +3,8 @@
 **Status:** built (2026-11-22); the daily digest's to-dos, "For you"
 and one line per item built 2026-11-23; the weekly to-dos built
 2026-11-23 and removed 2026-11-26 (`stale-todos.md`); watching a list (new to-dos, moves between its groups)
-built 2026-11-26.
+built 2026-11-26; to-dos moved into a list tell its watchers, built
+2026-11-28.
 
 `biwak/activity/` (`operations.record()`, `mentions.py`,
 `notify.py`, `mails.py`, `./manage.py send_mails`, the settings pages,
@@ -24,8 +25,9 @@ and notifications. **Moving tells nobody** (decided 2026-11-22,
 `handover.md`): to-dos to another list or group, files into folders,
 anything into another project; the feed and the history say it
 (`notify.SILENT`). **Except into another group of its list** (a
-board's column, decided 2026-11-26, `notify.column_move()`): "Watching
-a list" below.
+board's column, decided 2026-11-26, `notify.column_move()`) **and into
+another list, to its watchers** (decided 2026-11-28,
+`notify.moved_in()`): "Watching a list" below.
 
 **Edits merge:** an `edited` event by the same person on the same item
 within 10 minutes of their last one updates that event's time instead of
@@ -203,8 +205,18 @@ subscribed to a list with "everything" as their level for it
   (`add_from_text()`), the same way (`ops.subscribe_watchers()`), those
   who see them only. Added from text, they're told by the list's one
   `added_todos` event ("Bob added 12 to-dos.", `todos-from-text.md`).
-  Moved in, they aren't told yet: how is an open question
-  (`verification.md`).
+- **To-dos moved in tell them** (decided 2026-11-28 with the user):
+  the to-dos' `moved` events into the list (`notify.moved_in()`, from
+  another list or project) tell the list's watchers who see them, unless
+  they unsubscribed from the to-do, never the mover; nobody else (the
+  to-do's other subscribers neither: moves stay silent otherwise). One
+  to-do: "Ada moved it to Launch."; the to-dos of one "Move…" (one
+  `batch`, also across projects with `move_todos_to()`) are one lantern
+  entry and one mail, merged like "Assign…" (`lantern.batch_key()` per
+  mover and list, `chain()`): "Ada moved 5 to-dos to Launch.", the list
+  as the title, each to-do linked (`lantern.moved_line()`; the subject
+  "[Website] Ada moved 5 to-dos to Launch"). Dragging several between
+  the columns of one list is no such batch and tells nobody new.
 - **Moving a to-do into another group of its list** (dragging between
   the board's columns, "Move to…" within the list, the same
   `move_todos()`) tells the to-do's subscribers and the list's watchers,
@@ -282,7 +294,8 @@ unseen, and counts again on coming back).
 
 1. Candidates: the item's subscribers; for `created` also its
    container's, for a move into another group the list's watchers;
-   plus people newly mentioned or assigned by the event. A
+   plus people newly mentioned or assigned by the event. For a move into
+   another list only that list's watchers (decided 2026-11-28). A
    `shared` event has only the people it names.
 2. Without the actor, inactive people and people who can't see the item
    **now** (`visible_to()`; `who_can_see(item)` for everybody at once).
@@ -322,11 +335,13 @@ large).
   waits: while the newest file's event says `more` follow, up to
   `BATCH_WAIT` (an hour) after it. **The to-dos of one "Assign…" are one
   mail** the same way, per assigner across projects ("Ada assigned you
-  23 to-dos", `handover.md`).
+  23 to-dos", `handover.md`), and so are those of one "Move…" into a
+  list, per mover and list ("Ada moved 23 to-dos to Launch", decided
+  2026-11-28).
 - **Digest:** at 07:00 in `TIME_ZONE`, the unsent notifications of the
   day before, grouped by project and item, a batch as one entry; nothing
-  to say, no mail. The to-dos of one "Assign…" or "Due date…" across
-  projects are one entry too (decided 2026-11-28, like the lantern and
+  to say, no mail. The to-dos of one "Assign…", "Due date…" or "Move…"
+  across projects are one entry too (decided 2026-11-28, like the lantern and
   the mail), in "For you" or, when not for the reader, under their
   project, or under "Biwak" (the mail's subject) for several; the mail
   after quiet hours or being away the same. Subject `[Biwak] What happened on 19. November 2026`

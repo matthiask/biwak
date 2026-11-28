@@ -7,8 +7,9 @@ reagieren, ohne Biwak zu öffnen.
 ## Wovon du hörst
 
 **Abonniert heisst, du hörst von allem beim Eintrag:** jeder Kommentar,
-jede Änderung, jedes Erledigen; nicht vom Verschieben, das zeigen nur
-die Aktivität und der Verlauf. Um von einem Eintrag nichts mehr zu
+jede Änderung, jedes Erledigen; vom Verschieben nur innerhalb einer
+Liste, die du beobachtest, oder in sie hinein (siehe „Eine Liste
+beobachten“ unten), sonst zeigen es nur die Aktivität und der Verlauf. Um von einem Eintrag nichts mehr zu
 hören, abonniere ihn nicht mehr („Nicht mehr abonnieren“).
 
 Du abonnierst einen Eintrag, wenn du:
@@ -32,8 +33,10 @@ bei einem To-do, dem du zugewiesen bist: dort „Zuweisung an mich
 aufheben“. Eine Mail zu einem Eintrag hat einen Link, um ihn nicht mehr
 zu abonnieren; eine Mail zu mehreren hochgeladenen Dateien, zu mehreren
 To-dos, die dir auf einmal zugewiesen wurden („Ada hat dir 23 To-dos
-zugewiesen“) oder deren Daten auf einmal geändert wurden („Ada hat die
-Daten von 23 To-dos geändert“), und die tägliche Zusammenfassung verlinken auf deine
+zugewiesen“), deren Daten auf einmal geändert wurden („Ada hat die
+Daten von 23 To-dos geändert“) oder die auf einmal in eine Liste
+verschoben wurden, die du beobachtest („Ada hat 23 To-dos nach Launch
+verschoben“), und die tägliche Zusammenfassung verlinken auf deine
 Benachrichtigungseinstellungen.
 
 Über das, was du selbst getan hast, wirst du nie benachrichtigt, und nur
@@ -72,9 +75,11 @@ hinzugefügt werden), du hörst also auch von ihren Kommentaren und davon, dass 
 werden, und du wirst benachrichtigt, wenn ein To-do in eine andere
 Gruppe kommt (eine Spalte des Boards): So taugt ein Board für Kanban.
 Ein To-do in eine andere Gruppe zu verschieben, benachrichtigt auch
-alle, die es abonniert haben; innerhalb seiner Gruppe, in eine andere
-Liste oder in ein anderes Projekt verschoben, benachrichtigt es
-niemanden. Die Liste nicht mehr zu abonnieren, beendet das Beobachten;
+alle, die es abonniert haben. To-dos aus einer anderen Liste oder
+einem anderen Projekt in die Liste zu verschieben, benachrichtigt die,
+die sie beobachten („Ada hat 5 To-dos nach Launch verschoben.“, einmal
+für alle zusammen verschobenen To-dos), und sonst niemanden; innerhalb
+seiner Gruppe verschoben, benachrichtigt ein To-do niemanden. Die Liste nicht mehr zu abonnieren, beendet das Beobachten;
 ein To-do nicht mehr zu abonnieren (auch mit dem Link in seinem Mail),
 beendet, dass du davon hörst, auch von seinem Verschieben.
 Andere Einträge haben keine Stufe: abonnieren oder nicht mehr

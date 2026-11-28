@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:27+0100\n"
+"POT-Creation-Date: 2026-11-28 11:46+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1314,6 +1314,20 @@ msgid "%(actor)s changed the dates of a to-do."
 msgid_plural "%(actor)s changed the dates of %(count)s to-dos."
 msgstr[0] "%(actor)s hat die Daten eines To-dos geändert."
 msgstr[1] "%(actor)s hat die Daten von %(count)s To-dos geändert."
+
+#: biwak/activity/lantern.py
+#, python-format
+msgid "%(actor)s moved a to-do."
+msgid_plural "%(actor)s moved %(count)s to-dos."
+msgstr[0] "%(actor)s hat ein To-do verschoben."
+msgstr[1] "%(actor)s hat %(count)s To-dos verschoben."
+
+#: biwak/activity/lantern.py
+#, python-format
+msgid "%(actor)s moved a to-do to %(where)s."
+msgid_plural "%(actor)s moved %(count)s to-dos to %(where)s."
+msgstr[0] "%(actor)s hat ein To-do nach %(where)s verschoben."
+msgstr[1] "%(actor)s hat %(count)s To-dos nach %(where)s verschoben."
 
 #: biwak/activity/mails.py biwak/files/models.py biwak/templatetags/biwak.py
 msgid "attachment"
