@@ -19,11 +19,14 @@ from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.core import mail
 from django.core.cache import cache
+from django.http import HttpResponse
 from django.test import Client, RequestFactory, TestCase, override_settings
 from django.utils import timezone
 
 from biwak.accounts import passkeys, sso
-from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.accounts.models import APIToken, CalendarToken, PushSubscription, User
+from biwak.accounts.views import DEVICE_COOKIE
+from biwak.activity.test_push import subscribe_device
 from biwak.organizations import operations as org_ops
 from biwak.test_utils import SSO_PROVIDERS, organization, person, sign_in_with
 
@@ -215,6 +218,24 @@ class SessionsTest(RequiredTestCase):
         self.assertIn("/accounts/login/", response["Location"])
         self.assertIn("Acme Ltd signs in with Google.", self.messages(response)[0])
         self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_the_push_device_stays(self):
+        """Ending the session isn't signing out: only an explicit sign-out
+        removes the browser's device (specs/web-push.md)"""
+        self.require()
+        device = subscribe_device(self.cleo)
+        # The browser's device (``views.push_subscription()``)
+        cookie = HttpResponse()
+        cookie.set_signed_cookie(DEVICE_COOKIE, device.pk, salt=DEVICE_COOKIE)
+        self.client.cookies.update(cookie.cookies)
+        sign_in_with(self.client, self.cleo, "google", at=time.time() - 24 * 3600 - 1)
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.messages(response),
+            ["Acme Ltd signs in with Google. Sign in again, please."],
+        )
+        self.assertTrue(PushSubscription.objects.filter(pk=device.pk).exists())
 
     def test_remember_me_doesnt_extend_it(self):
         """The session's age as the browser keeps it doesn't matter"""

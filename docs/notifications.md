@@ -155,7 +155,10 @@ only with "No mails".
   A device that's offline doesn't get it later: the test is dropped
   after a minute.
 - Signing out on a device ends its notifications ("Push notifications on
-  this device are off."); turn them on again after signing in.
+  this device are off."); turn them on again after signing in. Being
+  signed out because the session ended (also the daily sign-in through
+  your organization's provider) keeps them. Being deactivated or a reset
+  of your sign-in removes all your devices.
 - To stop them on a device where you aren't signed in: "Turn off on this
   device" on a notification (not on iPhones or in Safari), "Remove" in
   the list on another device, or blocking notifications for Biwak in the

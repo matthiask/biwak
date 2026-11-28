@@ -177,8 +177,8 @@ against a real account 2026-11-22) and whoever was imported from it
   their IDs (`lock_with_admins()`), so two requests can't each deactivate
   an admin the other counted on. Already inactive people are skipped
   quietly.
-- **Ends access at once:** sessions (`UserSession.end()`), API tokens
-  and calendar links are deleted; open websockets close through
+- **Ends access at once:** sessions (`UserSession.end()`), API tokens,
+  calendar links and push devices (decided 2026-11-28) are deleted; open websockets close through
   `sso.session_alive()` after `live.check_access(user=…)` told them to
   check. Again after the commit (`end_access_now_and_after_commit()`, as
   `sso.enforce_required_now_and_after_commit()`), so what other requests
@@ -192,7 +192,9 @@ against a real account 2026-11-22) and whoever was imported from it
   the deactivating person can open; it never blocks.
 - No mail to the person. Reactivating is "Activate" again.
 - **The Django admin** follows the same rules: unticking "is active" deactivates through `deactivate()`
-  (sessions, tokens, calendar links end), not oneself, and neither
+  (sessions, tokens, calendar links end), ticking it again activates
+  through `activate()` (`left_at` and `left_in_basecamp` cleared, no
+  mail; decided 2026-11-28), not oneself, and neither
   "is active" nor "is admin" can be taken from the last active admin
   (the form says so; `UserAdmin.save_model()` locks the admins first).
 

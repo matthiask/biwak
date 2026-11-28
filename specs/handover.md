@@ -76,7 +76,10 @@ list's page (list and board).
   in the query like the tiles' `items`), back to the page it came from:
   the people picker, offering only people who can be assigned in every
   selected to-do's project (`ops.assignable_to_all()`, members first
-  when they're all in one project), and "Instead of the current
+  when they're all in one project) and those assigned to any of them
+  already (`ops.assignable_to_all_or_assigned()`: a deactivated
+  co-assignee can be kept with "Instead of", decided 2026-11-28; added
+  where they aren't assigned, they're refused), and "Instead of the current
   assignees" (off by default: the people are added). Taking people out
   stays per to-do. Everybody who sees a to-do may change its assignees
   (`access.md`: to-dos' fields are shared work), so clients get
@@ -102,7 +105,7 @@ list's page (list and board).
   those taken out by "Instead of" aren't told.
 - **API:** `POST /api/v1/todos/assign/` with `ids`, `people`, `replace`
   (all or nothing), answering the to-dos (`TodoOut`); people not
-  assignable to every to-do are a 400 without names (a client mustn't
+  assignable to every to-do (and not assigned there already) are a 400 without names (a client mustn't
   learn who an ID is). **CLI:** `biwak todos assign TODO… --to PERSON…
   [--replace]` prints each to-do with its assignees.
 

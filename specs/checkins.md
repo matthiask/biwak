@@ -50,7 +50,9 @@ and answering, `mails.py`).
   only while it's ticked (`data-clients-follow`, `frontend/told.js`,
   like "Subscribers" when posting; unticking takes them away). Editing offers clients
   only while the question is visible; on an internal one the clients
-  asked before stay as pills, others aren't offered.
+  asked before stay as pills, others aren't offered. People asked who
+  were deactivated or left stay too, in the form and through the API
+  (`_check_people()`'s `kept`): kept, not added (decided 2026-11-28).
 - **Clients** are asked only on questions visible to clients; adding
   clients to an internal question is refused, and if it turns internal
   they stay in the list but aren't asked or mailed. They learn only about

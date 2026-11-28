@@ -33,6 +33,9 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   anymore, without dropping them automatically (confirmed 2026-11-21:
   a client on a to-do made internal, `ops.assignable_or_assigned()`),
   so saving never drops anybody silently; taking them out unassigns them.
+  The API's `PATCH todos/{id}/` (and `biwak todos update --assign`) keeps
+  them the same way: those assigned already may be sent back, not added
+  elsewhere (decided 2026-11-28).
 - **Who assigned** (decided 2026-11-21): `Todo.assignees` goes through
   `Assignment` (todo, user, `assigned_by` nullable, `assigned_at`; the
   old table name `items_todo_assignees`, audited). `assign()` records its

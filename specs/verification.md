@@ -124,7 +124,13 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: nothing yet.
+Fixed: the API keeps deactivated assignees (one to-do and "Assign…"
+with `--replace`) and check-ins' people asked who were deactivated
+(the form too); the Django admin drops subscriptions when access is lost
+and activates through `activate()`; deactivating and "Reset sign-in…"
+remove push devices; single sign-on's 24-hour end keeps the push device
+(nothing audited is written then, so the connection's previous name
+doesn't matter there anymore).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -180,15 +186,6 @@ part's spec with the fix):
   - Copying a list, a project from a template, or a template's check-in
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
-  - The API can't keep a deactivated assignee when changing assignees
-    (`assignable_people()`; the page uses `assignable_or_assigned()`);
-    the same for check-ins' people (`_check_people()`).
-  - The Django admin: moving someone out of the own organization or
-    making staff a client keeps their subscriptions (`_access_changed()`
-    not called); reactivating keeps `left_at`, so an active person is
-    listed under "People who left".
-  - Deactivating and "Reset sign-in…" remove the person's push devices
-    (decided).
 - **Notifications:**
   - A first mention merged into an edit whose notification was marked
     unread is mailed and pushed (decided; today neither).
@@ -230,9 +227,6 @@ part's spec with the fix):
     today whoever triggered it, also a client who only opened the page).
   - "Keep open" from the stale mail is logged as anonymous or whoever is
     signed in, not the recipient; links signed for a person run as them.
-  - Single sign-on's 24-hour sign-out deletes the push device (expiring
-    sessions keep it, `web-push.md`), logged under the connection's
-    previous name (it runs before `user_middleware`).
   - Names that aren't ASCII are garbled in `user_name`
     (`application_name`).
 
@@ -281,7 +275,7 @@ that isn't valid any more (the bug above stops asking for everybody).
 - Visibility: `completed_by` isn't filtered for clients; "visible to N
   clients" counts inactive clients; `check_visibility` checks items
   only; the live editor's 5-second re-check window.
-- Check-ins: the API can't keep a deactivated person asked; imported
+- Check-ins: imported
   occurrences have nobody asked; "away" is judged by the run's day;
   "People asked" lists people who left; people coming back are asked
   again silently; later imports and Basecamp's schedule or pausing.
@@ -289,8 +283,7 @@ that isn't valid any more (the bug above stops asking for everybody).
   saving pending typing; attachments by someone who lost access stay
   unlinked; read-only isn't immediate for open editors; public links
   survive a move into a limited project.
-- API and CLI: search pages by `-updated_at`; the handover skill's
-  `--replace` with a co-assignee who left; a client may filter
+- API and CLI: search pages by `-updated_at`; a client may filter
   `todos/?assignee=` by people they may not know; the API accepts
   `visible_to_clients` in projects without clients.
 - Who did what: the name is per connection (a reconnect in a long run,

@@ -180,7 +180,10 @@ oder nur Push-Benachrichtigungen mit „Keine Mails“.
   verfällt nach einer Minute.
 - Abmelden auf einem Gerät beendet seine Benachrichtigungen
   („Push-Benachrichtigungen auf diesem Gerät sind aus.“); schalte sie
-  nach dem Anmelden wieder ein.
+  nach dem Anmelden wieder ein. Wenn die Sitzung abläuft (auch bei der
+  täglichen Anmeldung über den Anbieter deiner Organisation), bleiben sie.
+  Deaktiviert zu werden oder das Zurücksetzen deiner Anmeldung entfernt
+  alle deine Geräte.
 - Um sie auf einem Gerät zu beenden, auf dem du nicht angemeldet bist:
   „Auf diesem Gerät ausschalten“ an einer Benachrichtigung (nicht auf
   iPhones oder in Safari), „Entfernen“ in der Liste auf einem anderen

@@ -13,6 +13,7 @@ from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
+from biwak.organizations import activation
 from biwak.projects.models import Membership
 from biwak.teams import operations as team_ops
 from biwak.test_utils import person, project, rule_post, tags
@@ -411,6 +412,20 @@ class FormsTest(ViewsTestCase):
         (team,) = json.loads(select["data-teams"])
         (left_out,) = [m for m in team["members"] if m["id"] == self.cleo.pk]
         self.assertEqual(left_out["reason"], "can't see internal items")
+
+    def test_editing_keeps_people_asked_who_were_deactivated(self):
+        # Kept, not added (decided 2026-11-28), like a to-do's assignees
+        activation.deactivate([self.bob], actor=person("Root", is_admin=True))
+        url = self.url("question_edit")
+        response = self.get(self.ada, url)
+        self.assertContains(response, f'value="{self.bob.pk}" selected')
+        response = self.post(self.ada, url, self.data(title="How are you?"))
+        self.assertRedirects(response, self.item.get_absolute_url())
+        self.assertEqual(set(self.item.question.people.all()), {self.ada, self.bob})
+        url = reverse("question_new", args=[self.project.pk])
+        response = self.post(self.ada, url, self.data(title="New"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(title="New").exists())
 
     def test_a_client_cant_be_asked_on_an_internal_question(self):
         url = reverse("question_new", args=[self.project.pk])

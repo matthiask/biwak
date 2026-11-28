@@ -57,7 +57,9 @@ an app (`pwa.md`), Biwak tells people nothing there unless they read mail.
 - **Signing out ends pushes on that device** (decided 2026-11-22): an
   explicit sign-out removes the browser's device and says so on the
   next page ("Push notifications on this device are off."); a session
-  that expires doesn't.
+  that expires doesn't. Deactivating and "Reset sign-in…" remove all of
+  the person's devices (decided 2026-11-28, `activation.md`,
+  `two-factor.md`).
 - **"Turn off on this device" on the push** (decided 2026-11-22: a
   browser signed out elsewhere, "Sign out everywhere else", keeps its
   pushes, and its settings are out of reach without signing in): a
@@ -197,7 +199,10 @@ In this order, each step with its tests:
   page's `data-sign-out` names the URL) after unsubscribing the browser.
   Without JavaScript the cookie alone does it; the browser's own
   subscription then stays, unused. Only Django's `logout()` sends the
-  signal, so expired sessions keep the device.
+  signal, so expired sessions keep the device; single sign-on's 24-hour
+  end (`sso.session_middleware()`) calls `logout()` but marks the
+  request (`session_ended`), so it keeps the device too (decided
+  2026-11-28).
 - **The settings' section** (`#devices`, only with the keys):
   `frontend/push.js` looks without registering anything; it shows the
   button, marks this device in the list ("This one", its "Remove" also

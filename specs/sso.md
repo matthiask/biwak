@@ -82,9 +82,10 @@ one), so codes and passkeys keep working for staff.
     switching back, say during an IdP outage, can't revive the passkeys
     of people who left the company meanwhile; codes are the fallback
     then, and they need the company mailbox;
-  - sessions end 24 hours after the last sign-in through the provider,
-    so the IdP is asked again daily, usually one click while its own
-    session lasts: there's no sync with the IdP, leaving the company
+  - sessions end 24 hours after the last sign-in through the provider
+    (an ending session, not a sign-out: the push device stays,
+    `web-push.md`), so the IdP is asked again daily, usually one click
+    while its own session lasts: there's no sync with the IdP, leaving the company
     wouldn't end a session otherwise. Sessions without such a sign-in
     end on the next request after switching (also the admin's own, who
     had to sign in through it first);

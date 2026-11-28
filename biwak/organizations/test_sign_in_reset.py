@@ -80,6 +80,22 @@ class OperationTest(Base):
         # Others keep theirs
         self.assertTrue(self.has_app(self.bob))
 
+    def test_removes_push_devices(self):
+        # Decided 2026-11-28: "someone else may have had access"
+        from biwak.accounts.models import PushSubscription
+
+        for user in [self.cleo, self.bob]:
+            PushSubscription.objects.create(
+                user=user,
+                endpoint=f"https://push.example.org/{user.pk}",
+                p256dh="k",
+                auth="a",
+            )
+        activation.reset_sign_in(self.cleo, actor=self.ada)
+        self.assertEqual(
+            set(PushSubscription.objects.values_list("user", flat=True)), {self.bob.pk}
+        )
+
     def test_staff_may_not_reset_staff_or_externals(self):
         for user in [self.bob, self.pia, self.root]:
             with self.subTest(user=user), self.assertRaises(PermissionError):

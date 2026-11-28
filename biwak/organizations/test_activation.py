@@ -10,7 +10,7 @@ from django.test import Client, TestCase
 from django.utils import timezone
 
 from biwak.accounts import sso
-from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.accounts.models import APIToken, CalendarToken, PushSubscription, User
 from biwak.organizations import activation
 from biwak.outbox.models import OutgoingMail
 from biwak.palette.test_actions import palette_data
@@ -153,6 +153,24 @@ class DeactivateTest(Base):
         self.assertFalse(sso.session_alive(self.key, self.cleo))
         self.assertTrue(self.site.is_member(self.cleo))
         self.assertEqual(self.client.get("/").status_code, 302)
+
+    def test_removes_push_devices(self):
+        # Decided 2026-11-28: nothing is pushed to the devices of somebody
+        # who left
+        PushSubscription.objects.create(
+            user=self.cleo,
+            endpoint="https://push.example.org/cleo",
+            p256dh="k",
+            auth="a",
+        )
+        PushSubscription.objects.create(
+            user=self.ada, endpoint="https://push.example.org/ada", p256dh="k", auth="a"
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            activation.deactivate([self.cleo], actor=self.ada)
+        self.assertEqual(
+            set(PushSubscription.objects.values_list("user", flat=True)), {self.ada.pk}
+        )
 
     def test_ends_access_again_after_the_commit(self):
         """What another request made meanwhile (it didn't see the change
@@ -622,3 +640,36 @@ class DjangoAdminTest(TestCase):
         self.assertEqual(self.post(otto, is_admin="").status_code, 302)
         otto.refresh_from_db()
         self.assertFalse(otto.is_admin)
+
+    def test_reticking_is_active_activates(self):
+        # Like "Activate": an active person isn't among "People who left"
+        activation.deactivate([self.cleo], actor=self.root)
+        self.cleo.refresh_from_db()
+        self.assertIsNotNone(self.cleo.left_at)
+        self.assertEqual(self.post(self.cleo, is_active="on").status_code, 302)
+        self.cleo.refresh_from_db()
+        self.assertTrue(self.cleo.is_active)
+        self.assertIsNone(self.cleo.left_at)
+        self.assertFalse(self.cleo.left_in_basecamp)
+
+    def test_losing_access_drops_subscriptions(self):
+        # Like ``set_organization()``: leaving the own organization or
+        # becoming a client drops subscriptions in projects they can't open
+        from biwak.activity.models import Subscription
+        from biwak.activity.operations import subscribe
+        from biwak.items import operations as item_ops
+        from biwak.organizations.models import Organization
+
+        ada = person("Ada")
+        website = project("Website", members=[ada])
+        todolist = item_ops.create_list(project=website, title="Launch", creator=ada)
+        agency = Organization.objects.create(name="Example External Agency")
+        for name, changes in [
+            ("Bob", {"organization": agency.pk}),
+            ("Gil", {"is_client": "on"}),
+        ]:
+            with self.subTest(changes=changes):
+                bob = person(name)
+                subscribe(bob, todolist)
+                self.assertEqual(self.post(bob, **changes).status_code, 302)
+                self.assertFalse(Subscription.objects.filter(user=bob).exists())

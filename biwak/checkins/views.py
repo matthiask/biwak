@@ -77,13 +77,15 @@ class QuestionForm(RuleFormMixin, Form):
         self.fields["rule"].widget.anchor = self.initial.get("starts_on")
         # Who sees a visible question: clients only on visible ones, checked
         # by ``clean()`` and ``operations.set_people()``; clients offer
-        # members and those already asked (specs/access.md)
+        # members (specs/access.md). Those already asked stay, also when
+        # they were deactivated or left (decided 2026-11-28)
         people = people_who_see(project, visible=True)
         asked = item.question.people.all() if item else User.objects.none()
         if not knows_people_of(actor, project):
-            people = people.filter(
-                Q(memberships__project=project) | Q(pk__in=asked.values("pk"))
-            ).distinct()
+            people = people.filter(memberships__project=project)
+        people = User.objects.filter(
+            Q(pk__in=people.values("pk")) | Q(pk__in=asked.values("pk"))
+        )
         field = self.fields["people"]
         if item is None and not project.offers_client_switch():
             # No clients, no switch (decided 2026-11-23, specs/access.md)

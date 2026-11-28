@@ -84,8 +84,9 @@ somebody leaves and their to-dos go to someone else:
   opens the to-do as always. <kbd>Esc</kbd> or "Deselect" clears the
   selection.
 - **Assign…** in the bar at the bottom opens a form: choose the people
-  (only those who can be assigned to every selected to-do are offered)
-  and whether they come "Instead of the current assignees"; without it
+  (only those who can be assigned to every selected to-do are offered,
+  and those assigned already, so "Instead of" can keep a deactivated
+  co-assignee) and whether they come "Instead of the current assignees"; without it
   they're added. Each new assignee gets one notification for all of
   them ("Ada assigned you 23 to-dos"). People taken out aren't told.
   If one of the to-dos was trashed or you can't see it anymore, nothing
@@ -155,7 +156,8 @@ you're on, and typing goes back to the field.
   to-dos; the history shows it, nobody gets a notification. Completed
   to-dos keep them. Deactivated people stay assigned until someone hands
   their to-dos over; their mark is greyed and "(inactive)" follows their
-  name. They aren't offered for new assignments.
+  name. They aren't offered for new assignments, but stay when you
+  change the others.
 - **Due on:** a date. Overdue to-dos are marked.
 - **Starts on:** for work that can't start yet, a start date (the field
   before the due date); it needs a due date, can't be after it, and
