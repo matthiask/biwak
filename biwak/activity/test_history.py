@@ -135,6 +135,14 @@ class HistoryTest(TestCase):
         self.assertIsNone(change.user)
         self.assertEqual(change.user_name, "Fairy tasks")
 
+    def test_nobody_named_is_the_wizard(self):
+        # A migration or a command by hand before they named themselves
+        # (specs/auditing.md, as in Workbench)
+        set_user_name("")
+        ops.update_todo(self.item(), actor=self.ada, title="Changed")
+        (change,) = history.history(self.item(), self.ada)
+        self.assertEqual(change.user_name, "🧙")
+
     def test_list_switch_and_creation(self):
         set_user_name(self.ada)
         ops.set_visibility(self.internal, visible=True, actor=self.ada)

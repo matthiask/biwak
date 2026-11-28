@@ -43,8 +43,10 @@ def resend(request):
         event = None
     if not isinstance(event, dict):
         return HttpResponse("Invalid payload", status=400)
+    # What the webhook changes is Resend's, until a mail's sender is known
+    # (``receive()`` runs as them; specs/auditing.md)
+    set_user_name("Resend")
     if event.get("type") in events.EVENTS:
-        set_user_name("Resend")
         events.record(event)
         return HttpResponse(status=204)
     if event.get("type") != "email.received":

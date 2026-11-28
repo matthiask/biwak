@@ -18,7 +18,9 @@ forever.
 - **Tables:** projects and memberships; items with their detail tables
   (lists, groups, to-dos and assignments, messages, folders, docs,
   uploads and file versions), comments, attachments; message
-  categories; users, API tokens, passkeys and two-factor, push devices;
+  categories; users, API tokens, passkeys and two-factor, push devices,
+  sign-in addresses and linked Google and Microsoft accounts (without
+  their profile data and tokens, decided 2026-11-28);
   reactions, bookmarks and links; check-in questions and answers;
   organizations, teams, notification levels. New tables people change
   get `audit_tables()` in a migration (AGENTS.md).
@@ -27,7 +29,13 @@ forever.
   PostgreSQL keeps only ASCII in `application_name`, "Jürg" is "Jurg";
   the history finds the person by the ID), `user-0-anonymous` without a
   sign-in; jobs name themselves: "Send mails", "Fairy tasks", "Resend"
-  (incoming mail and delivery events), "Basecamp import". Mail replies
+  (the webhook, until an incoming mail's sender is known), "Basecamp
+  import"; other commands and migrations are "manage.py <command>"
+  (`PGAPPNAME`, set in `manage.py`). Nothing named shows as 🧙 in the
+  history, as in Workbench (decided 2026-11-28). Production reaches
+  PostgreSQL through PgBouncer in transaction mode, which keeps
+  `application_name` per client (checked with 1.26.1 on 2026-11-28: two
+  clients on one server connection each see their own name). Mail replies
   and forwarded mails run as the person. Saving what was typed live
   names who typed it, whoever caused the save (a pause, a viewer
   opening the page, `fairy_tasks`): one person as usual, several by

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:06+0100\n"
+"POT-Creation-Date: 2026-11-28 11:23+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1262,10 +1262,6 @@ msgstr "Wieder geöffnet"
 #: biwak/activity/history.py
 msgid "Resumed"
 msgstr "Fortgesetzt"
-
-#: biwak/activity/history.py
-msgid "unknown"
-msgstr "unbekannt"
 
 #: biwak/activity/history.py biwak/templates/items/_todo_view.html
 msgid "Created"
@@ -8593,6 +8589,9 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
+
+#~ msgid "unknown"
+#~ msgstr "unbekannt"
 
 #~ msgid "weekly mail of my to-dos"
 #~ msgstr "wöchentliche Mail meiner To-dos"
