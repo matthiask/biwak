@@ -38,7 +38,7 @@ confirm: `decisions-to-confirm.md`.
 | `dashboard.md` | built | Home: what needs me, recent updates, my projects |
 | `help.md` | built | the help pages from `docs/` |
 | `celebrations.md` | built | small celebrations and animations |
-| `verification.md` | round 1 done (2026-11-28) | verification rounds: agents looking for what the tests miss, the open findings round by round |
+| `verification.md` | rounds 1 and 2 done (2026-11-28), questions open | verification rounds: agents looking for what the tests miss, the open findings round by round |
 | `handover.md` | built | when somebody leaves: assignments stay, assigning, moving and dating several to-dos, all projects for admins |
 | `timeline.md` | built | what happened between the comments of to-dos, messages, docs and files |
 | `pwa.md` | built | installable as an app |

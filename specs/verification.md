@@ -5,8 +5,9 @@ features over time, and keeping the open findings here until they're
 fixed or decided (adapted from Workbench's `specs/verification.md`,
 decided 2026-11-28 by the user).
 
-**Status:** spec written (2026-11-28); round 1 run and fixed on
-2026-11-28, its remaining risks below.
+**Status:** spec written (2026-11-28); rounds 1 and 2 run on
+2026-11-28. Round 2's open findings and questions are below: the user
+hasn't answered the questions yet.
 
 ## Why
 
@@ -267,3 +268,181 @@ a stored rule that isn't valid any more.
   trashed in Basecamp aren't followed (Biwak can't trash them, or the
   listing refuses the type); what was moved into an "(internal)" list or
   folder isn't trashed with its original.
+
+### Round 2 (2026-11-28)
+
+All nine areas again, an agent each, four at once, in the same worktrees
+and databases as round 1; the briefs named no hypotheses and pointed at
+round 1's fixes as new code. Every bug below was shown by a throwaway
+test which was run again before it was fixed (two exceptions, read from
+the code: the mail reply below the quote, the tick's version). Fixed
+(each in its part's spec, CLI 0.81.0):
+
+- **Import:** comments `--since` skips that are in Biwak already don't
+  keep their recording unread (the next run reopened a to-do completed
+  in Biwak); a run stopped among a check-in's answers asks their authors
+  the next time; no schedule again for a to-do completed and reopened in
+  Biwak; Basecamp's people become members once, noted per person on the
+  project's mapping (`ImportedObject.done`), and the importing person's
+  bookmarks too: what was removed in Biwak stays removed, an interrupted
+  run goes on, people new in Basecamp are added by nobody (the user,
+  2026-11-28: "only at the first import" would have lost members to an
+  interrupted first import).
+- **To-dos:** the last to-do of a counted series keeps its 0 in the form
+  and the API (saving the form made the series endless); the stale
+  banner and "Keep open" go once the to-do is touched or `STALE_TODOS`
+  is off; the dragging endpoints and the API's `lists/{id}/todos/move/`
+  refuse completed to-dos.
+- **Visibility:** the moves' questions count clients waiting to be
+  activated (`shown_by_moving_into()`, `new_clients()`: every client in
+  production waited, so they asked about "0 clients" or not at all), the
+  project form's hint too; the API's feed gives "Tell them now"'s note
+  to its writer and those told only, and no title of a list in a project
+  the reader can't open; `lists-across-projects.md` said public links
+  keep working after a move.
+- **Notifications:** switching from the digest to a mail per change and
+  back doesn't send a digest at once; a bookmarked item of a batch
+  counts in the lantern as the menu shows it.
+- **People:** no admin clients (the Django admin took both); a team
+  doesn't keep a withdrawn invitation's account; the API doesn't invite
+  into archived projects.
+- **Docs and files:** a doc's live state isn't rewritten behind the open
+  editors (a space or a line just typed was lost with the next words
+  whenever somebody else opened the doc); "Save as a version" is kept
+  (`DocVersion.kept`); no public links in archived projects; a
+  template's new doc asks nobody whom to tell.
+- **Check-ins:** a question whose stored rule isn't valid any more can
+  be edited (a 500).
+- **API and CLI:** a refused request changes nothing (every error
+  answered rolls back; a 409 had lifted a doc's read-only option); NUL
+  characters and `"archived": null` are 400s; `invitations/` names only
+  projects the reader can open; the CLI repeats an upload after logging
+  in again from the file's start (it stored an empty file).
+- **Who did what:** edits merge into the 10 minutes before, never into
+  a later edit (an import's edit at Basecamp's time took a person's edit
+  of today back with it); every save merging somebody else's typing is
+  logged as who typed; the history hides the groups of lists the viewer
+  can't see ("another group").
+
+**To fix** (verified, no decision needed, not done yet):
+
+- **People:** the to-do's edit form, "Assign…" and a check-in's "People
+  asked" name people already picked to clients and externals who may not
+  know them (a removed member still assigned to a completed to-do):
+  `assignable_or_assigned()`, `assignable_to_all_or_assigned()`,
+  `checkins/views.py`'s "Those already asked stay"; they have to be kept
+  without being shown, as the subscribers' modal does. The API's
+  `todos/assign/` accepts such a person's ID too. The feed says
+  "assigned it to ·" after a withdrawn invitation's account is deleted
+  (`assigned` and `unassigned` events store IDs only).
+- **Docs:** a whole-text save is refused with "… saved a newer version"
+  when only the saver changed anything since (the co-authors carried
+  over to the replaced version, round 1's fix); a tick on a doc's
+  reading page answers with the version of the merged text, others'
+  unsaved typing included, so the next tick can hit the wrong box.
+- **CLI:** a check-in's "Next" is UTC beside its local time of day
+  (`[:16]` of the API's timestamps, CLI-wide); `biwak messages --project
+  P --limit N` reads one page only (and `--json` prints the page object:
+  changing that is a decision).
+- **Who did what:** a column's title of the project a to-do came from
+  shows in its events to everybody in the new project, clients too
+  (`data["group"]`, `_event.html`); "Save as a version" by somebody who
+  typed nothing gives them an `edited` event when others' typing is
+  merged.
+
+**Questions** (asked 2026-11-28, open; the first proposal is what we
+would do):
+
+- **Import:**
+  1. Items the import can't write on (a to-do or folder moved to another
+     project in Biwak, a doc made read-only) stop this and every later
+     run (`_move_todo()`, the creates with `parent=` in another project,
+     `update_doc()` raising `DocReadOnly`): skip, list under "Problems",
+     go on?
+  2. Trashed and restored in Basecamp stays in Biwak's trash, is purged
+     after 30 days and never imported again: restore, unless trashed in
+     Biwak too?
+  3. A change in Basecamp deletes subscriptions made in Biwak and
+     subscribes again who unsubscribed: only add, respecting
+     unsubscriptions?
+  4. Undoing an edit made in Biwak (title, notes, dates, assignees, the
+     list) is dated before the edit: "now", like completions (decided
+     2026-11-27 for those)?
+  5. New Basecamp to-dos in a list internal in Basecamp and shown in
+     Biwak are visible at once: keep, or an "(internal)" twin?
+  6. New Basecamp to-dos in a list in Biwak's trash arrive active:
+     import them trashed? A to-do moved in Biwak to an internal list (to
+     hide it) goes back with any change in Basecamp (by "Basecamp wins").
+- **To-dos:** moving the due date of a to-do repeating every N weeks or
+  months shifts the series for good (the anchor is the current due date;
+  three of production's seven distinct rules are quarterly): a stored
+  anchor? "All to-dos" of an archived project or a template says
+  "Nothing to do." (`due.todos()`): show them, or drop the links? Ticked
+  boxes are copied ticked into the next repeating to-do: untick?
+- **Visibility:** a to-do visible in one project, moved internal into
+  another, renamed and shown there shows the new clients its events from
+  the first project: hide the past when an item arrives internal? A
+  reply by mail to a notification from when the item was internal is
+  posted visibly now: keep, or refuse? "New list" in the selection's
+  "Move…" into a project without clients makes a visible list. Restoring
+  from the trash into a list shown meanwhile asks nothing. Admins' "All
+  public links" lists titles of limited projects (decided 2026-11-22,
+  still wanted?).
+- **Notifications:** a to-do moved into a watched list and back out
+  still tells its watchers, and they stay subscribed (also to to-dos
+  moving on: drop the automatic subscription when a to-do leaves the
+  list?); a reply by mail written below or between the quote is dropped
+  silently (`strip._cut()`): keep the unquoted lines after the header?
+  Assigned and unassigned within 10 minutes still mails "assigned you";
+  a push due just outside the working time is dropped, not sent at its
+  start; a thread that never rests for 10 minutes is never mailed (no
+  cap); a later delivery doesn't clear the undeliverable mark; a watcher
+  who unsubscribed from a repeating to-do is subscribed to the next one.
+- **People:** somebody waiting to be activated who'll never come can't
+  be deactivated; "Withdraw" is offered for imported people activated
+  with the mail; resending an invitation to somebody in no project sends
+  a bare "invited you to Biwak"; own staff made externals stay assigned
+  in templates (and are added to every project made from them); a former
+  staff member made a client still changes the visible lists and docs
+  they created.
+- **Docs:** two people taking turns get a version per turn; to-dos in an
+  archived list keep and get public links; `tell_unanswered()` tells
+  about a doc whose project was archived within the hour.
+- **Check-ins:** "Unsubscribe from this" in the question mail only ends
+  the summaries and says otherwise: explain on the page, as for assigned
+  to-dos? Summaries held while away go out one mail per occurrence; a
+  question in the trash at 07:00 and restored afterwards never sends
+  that summary; a client's link on an answer's author who isn't a member
+  is a 404; people asked who come back aren't subscribed again; the form
+  requires somebody asked, the API doesn't.
+- **API and CLI:** refuse empty uploads like the page? A default text
+  for 403s without one; the CLI repeating the API's words ("Send
+  “show_to_clients”: true"); what the web does without an endpoint or a
+  command (ticking, a doc's "Tell people", marking unread, renaming a
+  person, the files' bulk move and trash; archiving projects and editing
+  check-ins in the CLI); `todos show` says "somebody" for a completion
+  by nobody.
+- **Who did what:** the history shows "Basecamp import" creating
+  imported items and "Completed" twice; API tokens' `key_hash` and push
+  endpoints stay in the audit log's `row_data`; the next repeating
+  to-do's `created` event names who completed the last one, its creator
+  is the first one's.
+
+**Risks** (not shown by a test): a switch and a create or move at the
+same moment can leave the stored visibility wrong until
+`check_visibility` (no lock on the root); `move_item()` saves the whole
+row; the outbox retries to an account deleted since, and after a 429
+skips the check for deactivated people; what somebody who lost access
+typed can come back with another editor's reconnect; an open editor
+stays in its old project's channel group after the doc moves; a
+transient storage error is stored as "no preview" for good; unlinked
+attachments are deleted after a day while their form or offline editor
+is still open; the answer cache's pages expire separately; a person back
+with a new Basecamp ID is "left" between two processes; sign-in flows
+are logged as anonymous; `user_name_kept()` can mask a database error;
+column moves merge across a move to another list; `starts_on` of a
+check-in has no lower bound (a mistyped year makes each asking slow);
+an external's `PATCH` of "People asked" drops those they weren't shown;
+moving something out of a visible folder to the top level hides it;
+`STALE_TODOS` turned on again marks what was warned before obsolete at
+once; the calendar feed's `DTSTAMP` doesn't move with the dates.
