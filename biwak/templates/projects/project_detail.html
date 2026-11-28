@@ -142,26 +142,30 @@
             data-sortable-item="{{ list.pk }}"
             {% if not project.archived_at %}data-drop-text="{% url 'list_from_text' list.pk %}"{% endif %}
           >
+            {% comment %}
+              A long title wraps under itself, not under the handle and the icon;
+              each count stays in one piece, "overdue" moving to a line of its own
+              on phones
+            {% endcomment %}
             <a
-              class="d-flex flex-grow-1 justify-content-between align-items-center text-reset text-decoration-none"
+              class="d-flex flex-grow-1 justify-content-between align-items-center gap-2 text-reset text-decoration-none"
               href="{{ list.get_absolute_url }}"
             >
-              <span>
+              <span class="d-flex align-items-baseline gap-1">
                 {% if can_manage %}<span
                     class="wb-handle"
                     data-sortable-handle
                     title="{% translate 'Drag to move' %}"
                   >{% icon "grip-vertical" %}</span>{% endif %}
-                {% icon "list-check" %} {{ list }}
+                {% icon "list-check" %}
+                <span>{{ list }}</span>
               </span>
-              <span class="d-flex align-items-center gap-2">
+              <span class="d-flex flex-wrap justify-content-end align-items-center gap-1 text-end">
                 <span
-                  class="small text-body-secondary"
-                >{% blocktranslate with count=list.open_count %}{{ count }} open{% endblocktranslate %}{% if list.overdue_count %}
-                    ·
-                    <span
-                      class="text-danger"
-                    >{% blocktranslate with count=list.overdue_count %}{{ count }} overdue{% endblocktranslate %}</span>{% endif %}</span>
+                  class="small text-body-secondary text-nowrap"
+                >{% blocktranslate with count=list.open_count %}{{ count }} open{% endblocktranslate %}</span>
+                {% if list.overdue_count %}<span class="small text-danger text-nowrap">·
+                    {% blocktranslate with count=list.overdue_count %}{{ count }} overdue{% endblocktranslate %}</span>{% endif %}
                 {% client_badge list %}
               </span>
             </a>
