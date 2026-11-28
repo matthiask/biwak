@@ -622,3 +622,36 @@ class DjangoAdminTest(TestCase):
         self.assertEqual(self.post(otto, is_admin="").status_code, 302)
         otto.refresh_from_db()
         self.assertFalse(otto.is_admin)
+
+    def test_reticking_is_active_activates(self):
+        # Like "Activate": an active person isn't among "People who left"
+        activation.deactivate([self.cleo], actor=self.root)
+        self.cleo.refresh_from_db()
+        self.assertIsNotNone(self.cleo.left_at)
+        self.assertEqual(self.post(self.cleo, is_active="on").status_code, 302)
+        self.cleo.refresh_from_db()
+        self.assertTrue(self.cleo.is_active)
+        self.assertIsNone(self.cleo.left_at)
+        self.assertFalse(self.cleo.left_in_basecamp)
+
+    def test_losing_access_drops_subscriptions(self):
+        # Like ``set_organization()``: leaving the own organization or
+        # becoming a client drops subscriptions in projects they can't open
+        from biwak.activity.models import Subscription
+        from biwak.activity.operations import subscribe
+        from biwak.items import operations as item_ops
+        from biwak.organizations.models import Organization
+
+        ada = person("Ada")
+        website = project("Website", members=[ada])
+        todolist = item_ops.create_list(project=website, title="Launch", creator=ada)
+        agency = Organization.objects.create(name="Example External Agency")
+        for name, changes in [
+            ("Bob", {"organization": agency.pk}),
+            ("Gil", {"is_client": "on"}),
+        ]:
+            with self.subTest(changes=changes):
+                bob = person(name)
+                subscribe(bob, todolist)
+                self.assertEqual(self.post(bob, **changes).status_code, 302)
+                self.assertFalse(Subscription.objects.filter(user=bob).exists())

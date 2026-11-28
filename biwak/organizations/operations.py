@@ -33,7 +33,7 @@ from biwak.organizations.models import (
 )
 
 
-def _access_changed(people):
+def access_changed(people):
     """These people (IDs) may have stopped seeing all-access projects: their
     subscriptions in projects they can't open anymore go (like
     ``remove_member()``), and their open editors and pages check their
@@ -466,7 +466,7 @@ def merge(source, target, *, actor, confirmed=False):
         target.save(update_fields=["domains"])
     _relink_imported(source, target)
     source.delete()
-    _access_changed(moved)
+    access_changed(moved)
     if target.requires_sso:
         from biwak.accounts import sso
 
@@ -511,7 +511,7 @@ def set_organization(user, org, *, actor):
         _no_admin_externals([user], own_after=org is not None and org.is_own)
     user.organization = org
     user.save(update_fields=["organization"])
-    _access_changed([user.pk])
+    access_changed([user.pk])
     return user
 
 
@@ -535,7 +535,7 @@ def mark_own(org, *, actor):
     Organization.objects.filter(is_own=True).update(is_own=False)
     org.is_own = True
     org.save(update_fields=["is_own"])
-    _access_changed(unmarked)
+    access_changed(unmarked)
     return org
 
 

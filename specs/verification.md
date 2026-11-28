@@ -126,7 +126,8 @@ and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 throwaway test that was run again and failed before it was listed.
 Fixed: the API keeps deactivated assignees (one to-do and "Assign…"
 with `--replace`) and check-ins' people asked who were deactivated
-(the form too).
+(the form too); the Django admin drops subscriptions when access is lost
+and activates through `activate()`.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -182,10 +183,6 @@ part's spec with the fix):
   - Copying a list, a project from a template, or a template's check-in
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
-  - The Django admin: moving someone out of the own organization or
-    making staff a client keeps their subscriptions (`_access_changed()`
-    not called); reactivating keeps `left_at`, so an active person is
-    listed under "People who left".
   - Deactivating and "Reset sign-in…" remove the person's push devices
     (decided).
 - **Notifications:**

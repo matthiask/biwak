@@ -78,7 +78,10 @@ moving people without an organization along 2026-11-23.
   (`_no_admin_externals()`, on the pages, the API and the Django admin).
 - **Leaving the own organization** (moved, merged, another one marked,
   unmarked in the admin) drops the person's subscriptions in projects
-  they can't open anymore (`forget_lost_access()`).
+  they can't open anymore (`forget_lost_access()`, through
+  `access_changed()`); the same for another organization or "is client"
+  changed in the Django admin (`UserAdmin.save_model()`, decided
+  2026-11-28).
 - **The display** "Ada, Example Ltd", with the organization's current
   name, for clients and externals, not own staff; also in the `@` list.
 - **Files:** "clients of the same organization replace, rename and move

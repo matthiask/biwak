@@ -100,23 +100,38 @@ class UserAdmin(admin.ReadWriteModelAdmin):
     def save_model(self, request, obj, form, change):
         """Unticking ``is_active`` deactivates through the operation
         (sessions, API tokens and calendar links end, also after the
-        commit); taking ``is_admin`` away locks the active admins first, so
-        the last one stays (``activation.lock_with_admins()``)"""
+        commit), ticking it activates (``left_at`` goes); taking
+        ``is_admin`` away locks the active admins first, so the last one
+        stays (``activation.lock_with_admins()``). Another organization or
+        becoming a client drops subscriptions in projects they can't open
+        anymore, like moving them on the pages
+        (``organizations.operations.access_changed()``)."""
         from biwak.organizations import activation
+        from biwak.organizations.operations import access_changed
 
         if not change:
             super().save_model(request, obj, form, change)
             return
         before = activation.lock_with_admins([obj.pk])[0]
         deactivating = before.is_active and not obj.is_active
+        activating = not before.is_active and obj.is_active
         if before.is_active and before.is_admin and not obj.is_admin:
             activation.check_admins_left({obj.pk})
-        if deactivating:
-            obj.is_active = True
+        if deactivating or activating:
+            # The operations change it
+            obj.is_active = before.is_active
         super().save_model(request, obj, form, change)
         if deactivating:
             activation.deactivate([obj], actor=request.user)
-            obj.is_active = False
+        if activating:
+            activation.activate([obj], actor=request.user)
+        if deactivating or activating:
+            obj.refresh_from_db(fields=["is_active", "left_at", "left_in_basecamp"])
+        if (before.organization_id, before.is_client) != (
+            obj.organization_id,
+            obj.is_client,
+        ):
+            access_changed([obj.pk])
 
     @admin.action(description=_("Mail to the selected people works again"))
     def clear_undeliverable(self, request, queryset):
