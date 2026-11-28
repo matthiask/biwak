@@ -29,6 +29,12 @@ class ImportedObject(models.Model):
     # Trashed in Basecamp and so trashed in Biwak, once: restoring it in
     # Biwak sticks
     trashed_at = models.DateTimeField(null=True, blank=True)
+    # A project's: what was done once and isn't done again, so that what
+    # was undone in Biwak stays undone and a run stopped in between goes
+    # on: ``members`` (Basecamp's people made members, ``members_complete``
+    # once all of the first import were) and ``bookmarks``
+    # ("PERSON:RECORDING" of the importing person's)
+    done = models.JSONField(default=dict, blank=True)
 
     target = GenericForeignKey("content_type", "object_id")
 
