@@ -103,6 +103,27 @@ ARCHIVED_SKIPPED = {
     "Upload": "file",
 }
 
+# What is trashed in Biwak when trashed in Basecamp (decided 2026-11-28):
+# the types the recordings' listing takes (not "Question", "Inbox::Forward";
+# groups are "Todolist" there, but mapped as ``GROUP``), less comments, which
+# Biwak can't trash
+TRASHED = {
+    "Todolist": "list",
+    "Todo": "to-do",
+    "Kanban::Card": "card",
+    "Message": "message",
+    "Vault": "folder",
+    "Document": "doc",
+    "Upload": "file",
+    "Question::Answer": "check-in answer",
+}
+
+# Mappings whose object is made again when it was deleted in Biwak: not
+# recordings (people, companies) and files in texts, which a text changed
+# in Basecamp needs. Everything else deleted in Biwak isn't imported again
+# (decided 2026-11-28).
+REMADE = {PERSON, COMPANY, ATTACHMENT}
+
 # Basecamp's weekdays, 0 is Sunday
 WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
 
@@ -166,6 +187,8 @@ class Report:
         self.problems = []
         self.archived = []  # archived recordings which aren't imported
         self.archived_projects = []  # archived in Basecamp after the import
+        # Trashed in Basecamp since an earlier run: trashed (dry: to trash)
+        self.trashed = []
         # Internal items inside containers visible to clients, which go
         # into internal containers of their own
         self.internal = []
@@ -194,6 +217,8 @@ class Report:
                 )
                 if counts["unchanged"]:
                     line += f", {counts['unchanged']} unchanged"
+                if counts["deleted"]:
+                    line += f", {counts['deleted']} deleted in Biwak"
                 lines.append(line)
         if self.files["downloaded"] or self.files["cached"]:
             line = (
@@ -236,6 +261,12 @@ class Report:
                 if self.dry_run
                 else "Schedules added to to-dos imported before:",
                 self.schedules,
+            ),
+            (
+                "Trashed in Basecamp, to trash here:"
+                if self.dry_run
+                else "Trashed in Basecamp, trashed here:",
+                self.trashed,
             ),
             ("Archived in Basecamp, skipped:", self.archived),
             (
@@ -363,6 +394,9 @@ class Importer(Resolver):
         # and of those created in this one
         self._skipped = set()
         self._created = set()
+        # (Basecamp type, ID) of those deleted in Biwak: nothing in them is
+        # imported either
+        self._gone = set()
         self.report = Report(dry_run=dry_run)
         self.report.files = client.file_counts
         self.report.answers = client.answer_counts
@@ -466,12 +500,19 @@ class Importer(Resolver):
             ).first()
         if mapped is None:
             return None, None
+        if mapped.deleted_at is not None:
+            return mapped, None
         model = ContentType.objects.get_for_id(mapped.content_type_id).model_class()
         target = model._base_manager.filter(pk=mapped.object_id).first()
-        if target is None:
+        if target is None and bc_type in REMADE:
             mapped.delete()
             self._mappings[key] = None
             return None, None
+        if target is None:
+            # Deleted in Biwak: never imported again (decided 2026-11-28)
+            mapped.deleted_at = timezone.now()
+            if not self.dry:
+                mapped.save(update_fields=["deleted_at"])
         return mapped, target
 
     def _remember(self, bc_type, bc_id, obj):
@@ -506,6 +547,10 @@ class Importer(Resolver):
         fetches its comments and subscribers with ``_follow()``, which
         stores its state once they're done; otherwise it is stored here."""
         mapped, found = self._mapping(bc_type, rec["id"])
+        if mapped is not None and found is None:
+            self._count(bc_type, "deleted")
+            self._gone.add((bc_type, rec["id"]))
+            return None
         if found is not None and self._unchanged(mapped, rec):
             self._count(bc_type, "unchanged")
             self._skipped.add((bc_type, rec["id"]))
@@ -557,7 +602,7 @@ class Importer(Resolver):
         unless ``--since`` skipped older comments (found 2026-11-28: they
         came only with ``--full``). ``replies``: where an email forward's
         replies are, its comments"""
-        if (bc_type, rec["id"]) in self._skipped:
+        if (bc_type, rec["id"]) in self._skipped | self._gone:
             return
         complete = True
         if replies:
@@ -967,6 +1012,12 @@ class Importer(Resolver):
             return self.report
         with importing(), self._recomputing():
             project = self._project(rec)
+            if (PROJECT, rec["id"]) in self._gone:
+                self.problem(
+                    f"Skipped {rec['name']} ({project_id}): deleted in Biwak, not"
+                    " imported again"
+                )
+                return self.report
             self.say(f"  {len(people)} people")
             for person in people:
                 self._people_by_sgid[person.get("attachable_sgid")] = person["id"]
@@ -1003,6 +1054,7 @@ class Importer(Resolver):
 
     def _finish(self, bucket_id, project):
         """What follows a project's or template's tools"""
+        self._trashed_recordings(bucket_id)
         self._archived_recordings(bucket_id)
         if not self.dry:
             self._bookmarks(project)
@@ -1027,6 +1079,8 @@ class Importer(Resolver):
             self.say(f"Template [{number}/{len(templates)}] {rec['name']}")
             with importing(), self._recomputing():
                 template = self._template(rec)
+                if (TEMPLATE, rec["id"]) in self._gone:
+                    continue
                 self._dock(rec, template)
                 self._finish(rec["id"], template)
             self.say(f"  done: {self._items} items, {self._so_far()}")
@@ -1049,6 +1103,8 @@ class Importer(Resolver):
             self.say(f"The to-do list library ({len(library['todolists'])} lists)")
             with importing(), self._recomputing():
                 template = self._template(rec)
+                if (TEMPLATE, rec["id"]) in self._gone:
+                    return self.report
                 for list_rec in sorted(
                     library["todolists"], key=lambda r: r.get("position", 0)
                 ):
@@ -1083,6 +1139,40 @@ class Importer(Resolver):
         if template is not None and self._touch(TEMPLATE, rec):
             self._archived(template, rec)
         return template
+
+    def _trashed_recordings(self, bucket_id):
+        """What was trashed in Basecamp since it was imported is trashed in
+        Biwak (decided 2026-11-28), as Basecamp's change, once: restoring it
+        in Biwak sticks. Basecamp's listings leave trashed recordings out;
+        the recordings' listing has them with ``status=trashed``."""
+        for bc_type, label in TRASHED.items():
+            try:
+                found = list(
+                    self.client.paginate(
+                        "/projects/recordings.json",
+                        type=bc_type,
+                        bucket=bucket_id,
+                        status="trashed",
+                    )
+                )
+            except api.NotFound:
+                continue
+            self._preload(bc_type, found)
+            for rec in found:
+                mapped, item = self._mapping(bc_type, rec["id"])
+                if item is None or mapped.trashed_at is not None:
+                    continue
+                trash = item.status != Status.TRASHED
+                if trash:
+                    self.report.trashed.append(f"{label}: {item.title}")
+                if self.dry:
+                    continue
+                with transaction.atomic():
+                    if trash:
+                        with self._from_basecamp(rec):
+                            ops.trash(item, actor=None)
+                    mapped.trashed_at = timezone.now()
+                    mapped.save(update_fields=["trashed_at"])
 
     def _archived_recordings(self, project_id):
         """Archived messages, docs, files and questions aren't imported
@@ -1257,6 +1347,11 @@ class Importer(Resolver):
             return parent, parent_visible
         self._moved(label, rec, internal.container, "folder")
         return internal(), False
+
+    def _parent_gone(self, parent, nested):
+        """Whether the folder something goes into was deleted in Biwak (a
+        dry run has none for what it would create)"""
+        return nested and parent is None and not self.dry
 
     def _internal_list(self, todo_rec, group, creator):
         """The internal list "<list> (internal)" of the list (or card
@@ -1471,6 +1566,8 @@ class Importer(Resolver):
             self._top_visibility(item, visible, rec)
             self._status(item, rec)
             self._stamp(item, rec)
+        if ("Todolist", rec["id"]) in self._gone:
+            return
         self._list_content(rec, item, visible, project)
         self._follow("Todolist", rec, item, comments=False)
 
@@ -1527,6 +1624,9 @@ class Importer(Resolver):
         creator = self._user(rec.get("creator"))
         if not self._inherits(rec, parent_visible, "to-do"):
             item, group = self._internal_list(rec, group, creator)
+        if item is None and not self.dry:
+            # Its list was deleted in Biwak
+            return
         title = rec["title"]
 
         def notes():
@@ -1736,6 +1836,8 @@ class Importer(Resolver):
         if item is not None and self._touch("Kanban::Board", rec):
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
+        if ("Kanban::Board", rec["id"]) in self._gone:
+            return
         self._container, self._container_is_board = rec, True
         self._container_project = project
         self._preload(COLUMN, rec.get("lists", []))
@@ -1936,6 +2038,8 @@ class Importer(Resolver):
         parent, visible = self._place(
             rec, "folder", parent, parent_visible, nested, internal
         )
+        if self._parent_gone(parent, nested):
+            return
         creator = self._user(rec.get("creator"))
         if not nested and visible:
             internal = self._internal_folder(rec, project, creator)
@@ -1956,6 +2060,8 @@ class Importer(Resolver):
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
         self._follow("Vault", rec, item, comments=False)
+        if ("Vault", rec["id"]) in self._gone:
+            return
         self._vault(
             rec["id"],
             project,
@@ -1971,6 +2077,8 @@ class Importer(Resolver):
         parent, visible = self._place(
             rec, "doc", parent, parent_visible, nested, internal
         )
+        if self._parent_gone(parent, nested):
+            return
         creator = self._user(rec.get("creator"))
 
         def content():
@@ -2020,6 +2128,8 @@ class Importer(Resolver):
         parent, visible = self._place(
             rec, "file", parent, parent_visible, nested, internal
         )
+        if self._parent_gone(parent, nested):
+            return
         creator = self._user(rec.get("creator"))
 
         def description():
@@ -2114,6 +2224,8 @@ class Importer(Resolver):
                 )
 
         item = self._upsert("Question", rec, create=create, update=update, follow=True)
+        if ("Question", rec["id"]) in self._gone:
+            return
         answers = list(self.client.paginate(f"/questions/{rec['id']}/answers.json"))
         self._preload("Question::Answer", answers)
         if item is not None:

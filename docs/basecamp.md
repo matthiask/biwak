@@ -90,7 +90,8 @@ and public links all work much as you know them.
   Basecamp company; without one, the organization of their address's
   domain. Imported again, a project takes over what changed in
   Basecamp since, also what was moved; what you changed in Biwak on something unchanged
-  in Basecamp stays.
+  in Basecamp stays. What was put in Basecamp's trash goes into the
+  trash here; what was deleted here isn't imported again.
 
 ## What Biwak doesn't do
 

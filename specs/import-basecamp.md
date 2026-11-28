@@ -494,3 +494,25 @@ cleanup deleted them a day later). **Links to
 - **Not imported:** trashed recordings (anything in Basecamp's trash:
   to-dos, messages, docs, files, comments; confirmed 2026-11-21), pins of
   messages (not in the API), older versions of files, docs' history.
+- **Trashed and deleted** (decided 2026-11-28 by the user, found in
+  verification round 1: both were ignored or came back): what is trashed
+  in Basecamp after it was imported is trashed in Biwak, as Basecamp's
+  change (at its `updated_at`, by nobody), once: the mapping remembers it
+  (`trashed_at`), so restoring it in Biwak sticks. Basecamp's listings
+  leave trashed recordings out; `/projects/recordings.json?type=T&bucket=B&status=trashed`
+  lists them (the Basecamp CLI's `recordings --status trashed`), a request
+  per type and project on every run: lists, to-dos, cards, messages,
+  folders, docs, files and check-in answers (`importer.TRASHED`). Not
+  comments (Biwak can't trash one), groups and columns (Basecamp lists
+  groups as `Todolist`, Biwak has no trash for groups), check-in questions
+  and email forwards (the listing refuses their types). The report lists
+  them ("Trashed in Basecamp, trashed here:", a dry run "to trash here").
+  What was deleted in Biwak (from the trash after 30 days, or in the
+  admin) **isn't imported again**: its mapping stays, marked deleted
+  (`deleted_at`), nothing in it is imported either (new to-dos of a
+  deleted list, docs of a deleted folder, answers of a deleted question,
+  comments), and the report counts it ("1 deleted in Biwak"); a deleted
+  project or template is skipped, reported as a problem. People,
+  companies and files in texts are made again (`importer.REMADE`): the
+  people and organizations are needed, and so is a file a text changed
+  in Basecamp refers to.

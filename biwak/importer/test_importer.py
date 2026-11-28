@@ -836,12 +836,6 @@ class SecondRunTest(ImportCase):
         self.assertEqual(Membership.objects.count(), 3)
         self.assertEqual(Comment.objects.count(), 5)
 
-    def test_a_deleted_object_is_imported_again(self):
-        self.run_import()
-        self.item("Peel potatoes").delete()
-        self.run_import()
-        self.assertEqual(Item.objects.filter(title="Peel potatoes").count(), 1)
-
 
 class UndoingBiwakTest(ImportCase):
     """A second run sets Basecamp's state over what was changed in Biwak
@@ -1120,6 +1114,107 @@ class ArchivedProjectTest(ImportCase):
         self.assertIsNone(self.project.archived_at)
         self.run_import(full=True)
         self.assertIsNone(self.project.archived_at)
+
+
+class TrashedTest(ImportCase):
+    """Trashed in Basecamp means trashed in Biwak; deleted in Biwak isn't
+    imported again (decided 2026-11-28). Basecamp's listings leave trashed
+    recordings out; the recordings' listing with ``status=trashed`` has
+    them."""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def trash_in_basecamp(self, listing, index, bc_type):
+        rec = self.client_.data[listing].pop(index)
+        rec |= {"status": "trashed", "updated_at": self.LATER}
+        key = (
+            f"/projects/recordings.json?bucket={support.PROJECT}"
+            f"&status=trashed&type={bc_type}"
+        )
+        self.client_.data.setdefault(key, []).append(rec)
+        return rec
+
+    def test_trashed_here_by_nobody_at_basecamps_time(self):
+        self.run_import()
+        self.trash_in_basecamp("/todolists/301/todos.json", 1, "Todo")
+        self.trash_in_basecamp("/vaults/410/documents.json", 0, "Document")
+        report = self.run_import()
+        for title in ("Raise the rate for Cleo", "Public doc"):
+            with self.subTest(title):
+                item = self.item(title)
+                self.assertEqual(item.status, Status.TRASHED)
+                event = Event.objects.get(item=item, action=Action.TRASHED)
+                self.assertEqual(
+                    (event.actor, event.created_at, event.data["imported"]),
+                    (None, at("2026-03-01T08:00:00+00:00"), "basecamp"),
+                )
+        self.assertIn(
+            "Trashed in Basecamp, trashed here:\n"
+            "  to-do: Raise the rate for Cleo\n"
+            "  doc: Public doc",
+            report.as_text(),
+        )
+
+    def test_a_list_takes_its_todos_along(self):
+        self.run_import()
+        self.trash_in_basecamp("/todosets/300/todolists.json", 1, "Todolist")
+        self.client_.data["/todolists/301/todos.json"] = []
+        self.run_import()
+        self.assertEqual(self.item("Kitchen plan").status, Status.TRASHED)
+        self.assertEqual(self.item("Buy giraffe food").status, Status.TRASHED)
+
+    def test_once_restoring_in_biwak_sticks(self):
+        self.run_import()
+        self.trash_in_basecamp("/todolists/301/todos.json", 1, "Todo")
+        self.run_import()
+        item = self.item("Raise the rate for Cleo")
+        ops.restore(item, actor=self.ada)
+        self.run_import(full=True)
+        item.refresh_from_db()
+        self.assertEqual(item.status, Status.ACTIVE)
+
+    def test_a_dry_run_only_lists_them(self):
+        self.run_import()
+        self.trash_in_basecamp("/todolists/301/todos.json", 1, "Todo")
+        report = self.run_import(dry_run=True)
+        self.assertEqual(self.item("Raise the rate for Cleo").status, Status.ACTIVE)
+        self.assertIn(
+            "Trashed in Basecamp, to trash here:\n  to-do: Raise the rate for Cleo",
+            report.as_text(),
+        )
+
+    def test_deleted_in_biwak_isnt_imported_again(self):
+        self.run_import()
+        self.item("Peel potatoes").delete()
+        self.item("Kitchen plan").delete()
+        self.item("Public").delete()
+        self.item("Any worries?", Kind.QUESTION).delete()
+        self.item("We have a camp").delete()
+        # Changed and with new children in Basecamp meanwhile
+        data = self.client_.data
+        todos = data["/todolists/301/todos.json"]
+        todos.append(todos[1] | {"id": 3099, "title": "Wash the pots"})
+        data["/vaults/410/documents.json"].append(
+            data["/vaults/410/documents.json"][0] | {"id": 4199, "title": "New doc"}
+        )
+        data["/message_boards/200/messages.json"][1] |= {
+            "updated_at": self.LATER,
+            "comments_count": 2,
+        }
+        data["/recordings/2001/comments.json"].append(
+            data["/recordings/2001/comments.json"][0] | {"id": 8102}
+        )
+        answers = data["/questions/5002/answers.json"]
+        answers.append(answers[0] | {"id": 5299, "group_on": "2026-03-05"})
+        before = Item.objects.count()
+        report = self.run_import(full=True)
+        self.assertEqual(Item.objects.count(), before)
+        for title in ("Peel potatoes", "Wash the pots", "New doc", "Public doc"):
+            self.assertFalse(Item.objects.filter(title=title).exists(), title)
+        self.assertIn("lists: 0 new, 2 updated, 1 deleted in Biwak", report.as_text())
+        # Still after a project's mappings were read again
+        self.run_import()
+        self.assertEqual(Item.objects.count(), before)
 
 
 class MovesTest(ImportCase):

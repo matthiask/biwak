@@ -124,22 +124,19 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: the import's later runs leave recordings unchanged in Basecamp
-alone (Biwak's changes stay); a dry run writes nothing for projects
-imported before; moves in Basecamp are followed; a
-project archived in Basecamp is archived only at its first import; renames and archiving of projects
-and templates name nobody, at Basecamp's time; new files in texts
-changed in Basecamp are linked; `--since` doesn't store a recording as
-read completely when it skipped older comments; changed check-in
-questions and answers are updated.
+Fixed: the import's later runs (`import-basecamp.md`) leave recordings
+unchanged in Basecamp alone (Biwak's changes stay); a dry run writes
+nothing for projects imported before; moves in Basecamp are followed; a
+project archived in Basecamp is archived only at its first import;
+renames and archiving of projects and templates name nobody, at
+Basecamp's time; new files in texts changed in Basecamp are linked;
+`--since` doesn't store a recording as read completely when it skipped
+older comments; changed check-in questions and answers are updated;
+trashed in Basecamp is trashed here, deleted here isn't imported again.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
 
-- **Import, later runs** (`import-basecamp.md`):
-  - Trashed in Basecamp means trashed in Biwak; something deleted in
-    Biwak isn't imported again (decided; today both are ignored or come
-    back).
 - **To-dos:**
   - Stale to-dos are marked obsolete a day after the date the mail and
     the banner promise when the run starts a little earlier or across
