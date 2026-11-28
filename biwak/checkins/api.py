@@ -186,7 +186,9 @@ class QuestionIn(Schema):
 
 
 def _people(ids):
-    people = list(User.objects.active().filter(pk__in=ids))
+    """The people by ID; who may be asked is ``ops._check_people()``'s
+    (those asked already stay, also when deactivated)"""
+    people = list(User.objects.filter(pk__in=ids))
     if len(people) != len(set(ids)):
         # The same answer as for people who can't be asked: IDs don't tell
         # who exists

@@ -125,7 +125,8 @@ and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
 Fixed: the API keeps deactivated assignees (one to-do and "Assign…"
-with `--replace`).
+with `--replace`) and check-ins' people asked who were deactivated
+(the form too).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -181,8 +182,6 @@ part's spec with the fix):
   - Copying a list, a project from a template, or a template's check-in
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
-  - The API can't keep a deactivated person asked when changing a
-    check-in's people (`_check_people()`).
   - The Django admin: moving someone out of the own organization or
     making staff a client keeps their subscriptions (`_access_changed()`
     not called); reactivating keeps `left_at`, so an active person is
@@ -281,7 +280,7 @@ that isn't valid any more (the bug above stops asking for everybody).
 - Visibility: `completed_by` isn't filtered for clients; "visible to N
   clients" counts inactive clients; `check_visibility` checks items
   only; the live editor's 5-second re-check window.
-- Check-ins: the API can't keep a deactivated person asked; imported
+- Check-ins: imported
   occurrences have nobody asked; "away" is judged by the run's day;
   "People asked" lists people who left; people coming back are asked
   again silently; later imports and Basecamp's schedule or pausing.

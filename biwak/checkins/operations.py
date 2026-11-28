@@ -70,18 +70,17 @@ def _check_people(item, people, *, actor, kept=()):
     """Only people who can see the question are asked, and by clients
     (``actor``) only members, whom they may know (specs/access.md; externals
     know the project's people, decided 2026-11-21). ``kept``: people
-    already in the list, who stay when the question turns internal
-    (clients aren't asked then, but aren't removed) and when somebody who
-    knows only members edits the list. The error names nobody: the IDs come
-    from the API."""
+    already in the list, who stay: when the question turns internal
+    (clients aren't asked then, but aren't removed), when somebody who
+    knows only members edits the list, and when they were deactivated or
+    left (decided 2026-11-28: kept, not added; they aren't asked while
+    they can't answer). The error names nobody: the IDs come from the
+    API."""
     knows = knows_people_of(actor, item.project) or is_importing()
     candidates = who_can_see(item).filter(pk__in=[u.pk for u in people])
     if not knows:
         candidates = candidates.filter(memberships__project=item.project)
-    allowed = set(candidates)
-    allowed |= {u for u in kept if u.is_client}
-    if not knows:
-        allowed |= {u for u in kept if not u.is_client}
+    allowed = set(candidates) | set(kept)
     for user in people:
         if user not in allowed:
             raise ValueError(

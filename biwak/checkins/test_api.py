@@ -11,6 +11,7 @@ from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import CheckinTestCase
 from biwak.items import operations as item_ops
 from biwak.items.models import Item
+from biwak.organizations import activation
 from biwak.reactions import operations as reactions_ops
 from biwak.test_utils import person, project
 
@@ -199,6 +200,30 @@ class QuestionsAPITest(APITestCase):
         self.assertEqual(data["rule"], "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO")
         self.assertEqual(data["time_of_day"], "10:00:00")
         self.assertEqual([p["short_name"] for p in data["people"]], ["Bob"])
+
+    def test_update_keeps_people_asked_who_were_deactivated(self):
+        # Kept, not added (decided 2026-11-28), like the edit form
+        activation.deactivate([self.bob], actor=person("Root", is_admin=True))
+        response = self.patch(
+            self.ada,
+            f"checkins/{self.item.pk}/",
+            {"people": [self.ada.pk, self.bob.pk]},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(set(self.item.question.people.all()), {self.ada, self.bob})
+        response = self.patch(
+            self.ada,
+            f"checkins/{self.shared.pk}/",
+            {"people": [self.ada.pk, self.bob.pk]},
+        )
+        self.assertEqual(response.status_code, 400)
+        response = self.post(
+            self.ada,
+            f"projects/{self.project.pk}/checkins/",
+            {"title": "x", "schedule": "weekly", "time_of_day": "09:00",
+             "people": [self.bob.pk]},
+        )  # fmt: skip
+        self.assertEqual(response.status_code, 400)
 
     def test_rules_are_stored_canonical(self):
         """However it's written (decided 2026-11-21)"""
