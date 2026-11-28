@@ -203,6 +203,15 @@ socket per tab: the editor's); its lantern count is fetched on load.
   changed field, an open `<details>` or an open peek waits with "Changed
   meanwhile: shown once you save or close this." and takes over once
   left; several changes within 300 ms are fetched once.
+- **Only real changes are marked** (decided 2026-11-28, GitHub issue
+  #2): a region counts as changed when the server renders it
+  differently from before (`frontend/live-rendered.js` keeps what it
+  rendered, before any script adds its toolbar, mentions or editor to
+  the forms); one the page changed itself (a form submitted, a field
+  changed, an htmx request) is compared with what it shows. **Back in
+  the history** (a page restored from the back/forward cache) the page
+  fetches itself and takes over what changed meanwhile without marking
+  anything, as a reload would show it.
 - **Reconnecting** fetches the page once. Without JavaScript or
   websockets everything works as before. No polling.
 - **Limits:** `?item=` longer than 18 digits closes with 4404; at most 50
