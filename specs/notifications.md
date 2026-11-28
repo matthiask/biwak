@@ -45,7 +45,12 @@ outside changed nothing but fields the batch changed (decided
   subscribers box ("You're subscribed / Subscribe") is the one setting
   per item. Levels (below) decide who gets subscribed automatically.
 - Subscribing to a container also means hearing about items created in
-  it later (subscribing to a list: new to-dos, even when not assigned).
+  it later, as "Levels" says: on "everything" (a list's watchers: every
+  new to-do, even when not assigned); on "only what concerns me" new
+  to-dos only when mentioned or assigned, new posts in a followed
+  folder always (fixed 2026-11-28, verification round 1: this bullet
+  said "new to-dos, even when not assigned" for everybody;
+  `notify.wanting()` follows "Levels").
 - **Automatic:** the author, assignees, people mentioned, people
   commenting. **Not a folder's creator** (decided 2026-11-22: creating
   a folder is housekeeping, and following one brings every new file

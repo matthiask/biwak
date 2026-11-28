@@ -153,7 +153,8 @@ Fixed (each in its part's spec):
   or hidden when their mail is due are kept unmailed; one "Assign…"
   across projects is one entry in the digest; the outbox gives up
   retries to deactivated people and undeliverable addresses; the
-  admins' notice names the outbox's retention (90 days).
+  admins' notice names the outbox's retention (90 days); the
+  "Subscriptions" bullet follows "Levels" (`notifications.md`).
 - **Check-ins:** a held summary is checked again when it goes; a stored
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
@@ -192,7 +193,6 @@ decided, marked "consistent"):
   - People watching a list ("Everything") are subscribed to to-dos moved
     in or added from text, and told about them like new to-dos (decided).
   - "Assign…" reads by acting like "Due date…" (consistent).
-  - `notifications.md`'s "Subscriptions" bullet follows "Levels".
   - Switching from "No mails" (or after held mails) sends what piled up
     as one digest-form mail, mails per change from then on (decided).
   - `unread_counts()` counts in the database; mention syntax in
