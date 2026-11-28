@@ -2,6 +2,7 @@
 existing one, confirming a new one, the domain preselecting it"""
 
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.accounts.models import APIToken, User
 from biwak.organizations.models import Organization
@@ -58,7 +59,9 @@ class InviteTest(TestCase):
             create_organization="on",
             is_client="",  # staff: admins only (and the field isn't there)
         )
-        deactivated = person("Eve", client=True, is_active=False)
+        deactivated = person(
+            "Eve", client=True, is_active=False, left_at=timezone.localdate()
+        )
         response = self.post(
             email=deactivated.email,
             organization="Another Ltd",
