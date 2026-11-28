@@ -261,7 +261,8 @@ da, wie es sich wiederholt.
 
 Ein wiederkehrendes To-do zu erledigen erstellt das nächste am Ende
 derselben Liste und Gruppe, mit demselben Titel, denselben Notizen,
-Zugewiesenen und Abonnent:innen, fällig am nächsten Datum der Regel nach
+Zugewiesenen (auch deaktivierten) und Abonnent:innen und allen, die die
+Liste beobachten, fällig am nächsten Datum der Regel nach
 heute (oder nach der Fälligkeit, wenn du es früher erledigst). Ein
 Beginn behält seinen Abstand: Beginnt es vier Tage vor der Fälligkeit,
 tut es das nächste auch. Es gibt nie einen Stapel offener Kopien.

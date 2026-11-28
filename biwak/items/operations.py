@@ -1052,6 +1052,13 @@ def _create_next(item, todo, *, actor):
     for subscription in item.subscriptions.select_related("user"):
         if subscription.user.is_active:
             subscribe(subscription.user, following, added_by=subscription.added_by)
+    if not is_importing():
+        # Watching the list, as for a new to-do (create_todo(), decided
+        # 2026-11-28)
+        seeing = set(who_can_see(following).values_list("pk", flat=True))
+        for user in watchers(todolist):
+            if user.pk in seeing:
+                subscribe(user, following, explicit=False)
     record(actor=actor, action=Action.CREATED, project=item.project, item=following)
     # Assignees removed from the project since aren't brought back
     allowed = _assignable(following)
@@ -1064,6 +1071,25 @@ def _create_next(item, todo, *, actor):
             actor=actor,
             assigned_by={a.user_id: a.assigned_by for a in assignments},
         )
+    # Deactivated people stay assigned where they'd still see it, without
+    # being subscribed or told, as when copying (decided 2026-11-28,
+    # specs/handover.md)
+    staying_ids = set(
+        User.objects.filter(
+            staying(following.project, following.is_client_visible)
+        ).values_list("pk", flat=True)
+    )
+    now = timezone.now()
+    Assignment.objects.bulk_create([
+        Assignment(
+            todo_id=following.pk,
+            user_id=a.user_id,
+            assigned_by=a.assigned_by,
+            assigned_at=now,
+        )
+        for a in assignments
+        if not a.user.is_active and a.user_id in staying_ids
+    ])
     return following
 
 

@@ -179,7 +179,8 @@ subscribed to a list with "everything" as their level for it
 (`notify.watchers()`), a person watches it:
 
 - **Every new to-do subscribes them** (`create_todo()`, automatic:
-  `explicit=False`), those who see it only; so they hear its comments,
+  `explicit=False`; the next one of a repeating to-do too, decided
+  2026-11-28), those who see it only; so they hear its comments,
   completing and moves too. Not while importing (the importer brings the
   source's subscriptions). Choosing "everything" for a list subscribes
   to it (`set_level_override()`), one setting instead of two; choosing

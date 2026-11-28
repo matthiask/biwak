@@ -127,7 +127,9 @@ throwaway test that was run again and failed before it was listed.
 Fixed: stale to-dos marked obsolete on the promised day; copies keep
 a group's "Keep untouched to-dos for a year"; copies keep deactivated
 assignees and people asked instead of failing; archived lists and
-lists in archived projects take no new or moved to-dos.
+lists in archived projects take no new or moved to-dos; the next to-do
+of a repeating one keeps deactivated assignees and subscribes the
+list's watchers.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -165,10 +167,6 @@ part's spec with the fix):
     comments were skipped; they come only with `--full`.
   - Check-in questions and answers changed in Basecamp aren't updated
     (`_upsert` without `update=`).
-- **To-dos:**
-  - The next to-do of a repeating one keeps deactivated assignees
-    (decided; today `_assignable()` drops them) and subscribes the
-    list's watchers (today it copies the old to-do's subscribers).
 - **People:**
   - The API can't keep a deactivated assignee when changing assignees
     (`assignable_people()`; the page uses `assignable_or_assigned()`);

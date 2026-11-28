@@ -7,10 +7,12 @@ from django.test import TestCase
 from django.utils.html import strip_tags
 
 from biwak import schedules
-from biwak.accounts.models import APIToken
+from biwak.accounts.models import APIToken, NotificationLevel
 from biwak.activity.models import Action, Event, Subscription
+from biwak.activity.operations import set_level_override
 from biwak.items import operations as ops
 from biwak.items.models import Item, Todo
+from biwak.organizations import activation
 from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project, rule_post
 
@@ -247,13 +249,34 @@ class OperationsTest(RecurrenceTestCase):
         self.assertEqual(Item.objects.filter(todo__previous=item).count(), 1)
 
     def test_assignees_who_cant_follow_are_left_out(self):
-        item = self.todo("FREQ=DAILY", assignees=[self.ada, self.cleo, self.bob])
-        self.bob.is_active = False
-        self.bob.save()
+        item = self.todo("FREQ=DAILY", assignees=[self.ada, self.cleo])
         # Hidden from clients since: Cleo can't see the next to-do
         ops.set_visibility(self.list, visible=False, actor=self.ada)
         ops.complete(item, actor=self.ada)
         self.assertEqual(list(self.following(item).todo.assignees.all()), [self.ada])
+
+    def test_deactivated_assignees_stay(self):
+        """Assigned, not subscribed (decided 2026-11-28, specs/handover.md)"""
+        item = self.todo("FREQ=DAILY", assignees=[self.ada, self.bob])
+        activation.deactivate([self.bob], actor=person("Root", is_admin=True))
+        ops.complete(item, actor=self.ada)
+        new = self.following(item)
+        self.assertEqual(set(new.todo.assignees.all()), {self.ada, self.bob})
+        assignment = new.todo.assignment_set.get(user=self.bob)
+        self.assertEqual(assignment.assigned_by, self.ada)
+        self.assertFalse(Subscription.objects.filter(item=new, user=self.bob).exists())
+
+    def test_the_lists_watchers_are_subscribed(self):
+        """Like a new to-do (decided 2026-11-28, specs/notifications.md,
+        "Watching a list"): those who see it"""
+        item = self.todo("FREQ=DAILY", todolist=self.internal)
+        dan = person("Dan")
+        for user in [dan, self.cleo]:
+            set_level_override(user, NotificationLevel.EVERYTHING, item=self.internal)
+        ops.complete(item, actor=self.ada)
+        new = self.following(item)
+        self.assertTrue(Subscription.objects.filter(item=new, user=dan).exists())
+        self.assertFalse(Subscription.objects.filter(item=new, user=self.cleo).exists())
 
     def test_assignees_removed_from_the_project_arent_brought_back(self):
         """Assigning makes members; the next to-do doesn't make somebody

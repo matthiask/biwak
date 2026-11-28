@@ -15,7 +15,8 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   added (`add_member()`, decided 2026-11-21). One rule in
   `ops.assignable_people()` for the forms (members first), the API and
   the next to-do of a recurring one (which leaves out people removed from
-  the project, inactive or no longer seeing it). Completing completes for
+  the project or no longer seeing it; deactivated ones who'd still see
+  it stay assigned, not subscribed, decided 2026-11-28, `handover.md`). Completing completes for
   everybody and records who did it; assigning subscribes the assignee
   (notifying them is `notifications.md`).
 - **Removed people are dropped** (decided 2026-11-21: "the removal will
@@ -196,7 +197,8 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   last has 0), `previous`.
 - **Completing** a recurring to-do creates the next one in the same list
   and group, at the end, with the same title, notes, assignees and
-  subscribers. **The rule moves** to it with its end date and count
+  subscribers; the list's watchers are subscribed as to any new to-do
+  (decided 2026-11-28, verification round 1, `notifications.md`). **The rule moves** to it with its end date and count
   (decided 2026-11-23 by the user, as Basecamp does): the completed one
   keeps none, so changing an old to-do's due date never touches the
   schedule; a rule used up (no next one) stays where it is. Migration
@@ -214,7 +216,8 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
 - Comments and attachments stay with the completed to-do; the new one
   links to it ("Previous: completed on 3 March by Ada").
 - **Ending:** an end date, a count, or removing the rule (which removes
-  both ends). No next one in an archived list.
+  both ends). No next one in an archived list or an archived project
+  (`archiving.md`).
 - **API:** `recurrence` (preset or RRULE; `null` or `""` removes it),
   `recurrence_description`, `recurrence_ends_on`, `recurrence_count`,
   `previous_id` on `TodoOut`. `previous_id` is hidden when the to-do is

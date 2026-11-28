@@ -216,8 +216,8 @@ interval, weekdays, or the nth weekday of the month. Optionally set
 repeating to-do shows a repeat icon; pointing at it says how it repeats.
 
 Completing a repeating to-do creates the next one at the end of the
-same list and group, with the same title, notes, assignees and
-subscribers, due on the rule's next date after today (or after the due
+same list and group, with the same title, notes, assignees (deactivated
+ones too) and subscribers, and whoever watches the list, due on the rule's next date after today (or after the due
 date, when you complete it early). A start date keeps its distance:
 starting four days before the due date, the next one does too. There is never a stack of open
 copies. Comments and attachments stay with the completed to-do, and the
