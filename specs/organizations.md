@@ -82,6 +82,16 @@ moving people without an organization along 2026-11-23.
   `access_changed()`); the same for another organization or "is client"
   changed in the Django admin (`UserAdmin.save_model()`, decided
   2026-11-28).
+- **Between staff and client in the Django admin** (decided by the user
+  2026-11-28, verification round 1): staff made a client also lose
+  what a client can't see, their assignments on open to-dos
+  (`unassign()`, like being removed from a project) and subscriptions,
+  and leave their teams (`org_ops.made_client()`). A client becomes
+  staff only in the own organization, an external one or none (an
+  individual, an external then); in a client organization the form
+  refuses ("would make this client organization an external one"),
+  since that's how an organization becomes external, which is decided
+  by moving people (`can_touch()`).
 - **The display** "Ada, Example Ltd", with the organization's current
   name, for clients and externals, not own staff; also in the `@` list.
 - **Files:** "clients of the same organization replace, rename and move

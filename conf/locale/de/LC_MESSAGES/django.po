@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:06+0100\n"
+"POT-Creation-Date: 2026-11-28 11:24+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -25,6 +25,11 @@ msgstr "Mail unzustellbar"
 #: biwak/accounts/admin.py biwak/activity/history.py
 msgid "yes"
 msgstr "ja"
+
+#: biwak/accounts/admin.py
+#, python-format
+msgid "Staff in %(organization)s would make this client organization an external one: choose your own organization or an external one too."
+msgstr "Mitarbeitende in %(organization)s würden diese Organisation von Kund:innen zu einer externen machen: Wähle auch die eigene Organisation oder eine externe."
 
 #: biwak/accounts/admin.py biwak/organizations/activation.py
 msgid "You can't deactivate yourself."

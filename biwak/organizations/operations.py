@@ -47,6 +47,35 @@ def access_changed(people):
         live.check_access(user=user.pk)
 
 
+def made_client(user, *, actor):
+    """Staff made a client (the Django admin, decided 2026-11-28): open
+    to-dos they can't see as a client any more lose them as assignee
+    (``unassign()``, like ``remove_member()``), their subscriptions there
+    go and they leave their teams (staff's, specs/teams.md). What a client
+    sees (``Item.objects.visible_to()``) by its columns, so it's the same
+    for an inactive person."""
+    from biwak.activity.models import Subscription
+    from biwak.items import operations as item_ops
+    from biwak.items.models import Item, Kind
+    from biwak.teams.models import TeamMember
+
+    seen = Item.objects.filter(
+        is_client_visible=True,
+        project__memberships__user=user,
+        project__is_template=False,
+    ).values("pk")
+    Subscription.objects.filter(user=user).exclude(item__in=seen).delete()
+    todos = (
+        Item.objects
+        .filter(kind=Kind.TODO, todo__assignees=user, todo__completed_at__isnull=True)
+        .exclude(pk__in=seen)
+        .order_by("pk")
+    )
+    for item in todos.select_related("todo", "project"):
+        item_ops.unassign(item, [user], actor=actor)
+    TeamMember.objects.filter(user=user).delete()
+
+
 def can_manage(user):
     """Own staff; externals and clients don't learn which
     organizations and people there are"""

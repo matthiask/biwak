@@ -14,7 +14,7 @@ from biwak.accounts.models import APIToken, CalendarToken, PushSubscription, Use
 from biwak.organizations import activation
 from biwak.outbox.models import OutgoingMail
 from biwak.palette.test_actions import palette_data
-from biwak.test_utils import assert_modal, external, person, project
+from biwak.test_utils import assert_modal, external, organization, person, project
 
 
 class Base(TestCase):
@@ -673,3 +673,56 @@ class DjangoAdminTest(TestCase):
                 subscribe(bob, todolist)
                 self.assertEqual(self.post(bob, **changes).status_code, 302)
                 self.assertFalse(Subscription.objects.filter(user=bob).exists())
+
+    def test_staff_made_client_lose_what_they_cant_see(self):
+        """Decided 2026-11-28: assignments and subscriptions on what a client
+        can't see go, and their teams; what's visible to clients stays"""
+        from biwak.activity.models import Subscription
+        from biwak.activity.operations import subscribe
+        from biwak.items import operations as item_ops
+        from biwak.teams.operations import create_team
+
+        ada = person("Ada")
+        gil = person("Gil")
+        website = project("Website", members=[ada, gil])
+        internal = item_ops.create_list(project=website, title="Plan", creator=ada)
+        shared = item_ops.create_list(
+            project=website, title="Launch", creator=ada, visible=True
+        )
+        secret = item_ops.create_todo(todolist=internal, title="Budget", creator=ada)
+        visible = item_ops.create_todo(todolist=shared, title="Copy", creator=ada)
+        for todo in [secret, visible]:
+            item_ops.assign(todo, [gil], actor=ada)
+            subscribe(gil, todo)
+        create_team(name="Designers", members=[gil, ada], actor=ada)
+        client_org = organization("Example Client Ltd")
+        response = self.post(gil, is_client="on", organization=client_org.pk)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(list(secret.todo.assignees.all()), [])
+        self.assertEqual(list(visible.todo.assignees.all()), [gil])
+        self.assertEqual(
+            set(Subscription.objects.filter(user=gil).values_list("item", flat=True)),
+            {visible.pk},
+        )
+        self.assertFalse(gil.team_memberships.exists())
+        self.assertTrue(ada.team_memberships.exists())
+
+    def test_client_made_staff_only_in_the_own_or_an_external_organization(self):
+        """Decided 2026-11-28: staff in a client organization would make it
+        an external one by the way"""
+        self.cleo.organization = organization("Example Client Ltd")
+        self.cleo.save()
+        response = self.post(self.cleo, is_client="")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "client organization")
+        self.cleo.refresh_from_db()
+        self.assertTrue(self.cleo.is_client)
+        agency = external("Pia").organization
+        for org in [agency, organization("Example Team", is_own=True)]:
+            with self.subTest(org=org):
+                self.cleo.is_client = True
+                self.cleo.save()
+                response = self.post(self.cleo, is_client="", organization=org.pk)
+                self.assertEqual(response.status_code, 302)
+                self.cleo.refresh_from_db()
+                self.assertFalse(self.cleo.is_client)
