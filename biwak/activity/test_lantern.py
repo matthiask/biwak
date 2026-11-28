@@ -1040,7 +1040,8 @@ class CountByItemsTest(LanternTestCase):
 
         with (
             mock.patch.object(Notification, "from_db", classmethod(counting)),
-            self.assertNumQueries(5),
+            # One of them for the bookmarks among the batches' items
+            self.assertNumQueries(6),
         ):
             self.assertEqual(lantern.unread_counts(self.bob), expected)
         # The completing and reopening, the to-do completed (and its

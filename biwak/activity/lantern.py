@@ -200,8 +200,15 @@ def unread_counts(user):
     loaded = group_batches(_deliverable(list(unread.filter(ordered | batched)), user))
     # A bookmarked item is an entry of its own, also one of a batch (found
     # 2026-11-28, verification round 2), as ``menu()`` shows it
-    batches = any(getattr(n, "batch_entry", None) for n in loaded)
-    marked = bookmarked_items(user) if batches else set()
+    from biwak.bookmarks.models import Bookmark
+
+    in_batches = [n.event.item_id for n in loaded if getattr(n, "batch_entry", None)]
+    marked = in_batches and set(
+        # Visible, since deliverable: one query, only with batches
+        Bookmark.objects.filter(user=user, item__in=in_batches).values_list(
+            "item", flat=True
+        )
+    )
     entries = {
         ("item", n.event.item_id) if n.event.item_id in marked else entry_key(n)
         for n in loaded
