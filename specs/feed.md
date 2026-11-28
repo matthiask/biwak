@@ -155,7 +155,9 @@ item; every item's page links to it in its "More" menu, for staff
   time, also on items clients see now.
 - The effective visibility is shown, not the switch: a to-do moved into
   a visible list shows "Visible to clients: no, yes". Lists the viewer
-  can't see read "another list".
+  can't see read "another list", their groups "another group"
+  (verification round 2, 2026-11-28: a to-do moved in from a project the
+  viewer can't open showed that project's column titles).
 - Only the item's own rows: comments have their place on the page,
   files' versions are `files.md`'s, the timeline (`timeline.md`)
   shows the events between comments. Events say what happened, the

@@ -41,7 +41,11 @@ forever.
   names who typed it, whoever caused the save (a pause, a viewer
   opening the page, `fairy_tasks`): one person as usual, several by
   their short names ("Bob, Ada", decided 2026-11-28); the job's own name
-  comes back afterwards (`user_name_kept()`). Live doc editing otherwise
+  comes back afterwards (`user_name_kept()`). The same for every other
+  save merging somebody else's typing ("Save as a version", restoring a
+  version, a save through the API, a tick: `files.operations._save()`;
+  verification round 2, 2026-11-28: those were logged as who caused
+  them). Live doc editing otherwise
   runs as the person, and so do the
   links signed for one person in mails ("Keep open", unsubscribing),
   whoever is signed in in that browser (decided 2026-11-28).

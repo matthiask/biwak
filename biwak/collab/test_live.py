@@ -490,6 +490,25 @@ class AuditNameTest(TestCase):
         operations.save_live(self.item.pk)
         self.assertEqual(self.names(), {"Bob, Ada"})
 
+    def test_other_saves_name_who_typed_too(self):
+        """ "Save as a version", a save through the API: what they merge is
+        named like ``save_live()``'s (found 2026-11-28, verification round
+        2: it was logged as who caused the save), and the request's name
+        comes back"""
+        self.type(self.bob, "Agenda by Bob")
+        set_user_name(self.ada)
+        operations.save_version(self.item, actor=self.ada)
+        self.assertEqual(self.names(), {f"user-{self.bob.pk}-Bob"})
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT current_setting('application_name')")
+            self.assertEqual(cursor.fetchone()[0], f"user-{self.ada.pk}-Ada")
+        # With something of her own: both
+        LoggedAction.objects.all().delete()
+        self.type(self.bob, "Agenda by Bob, more")
+        operations.update_doc(self.item, actor=self.ada, content="Agenda by Ada")
+        self.assertEqual(len(self.names()), 1)
+        self.assertEqual(set(self.names().pop().split(", ")), {"Bob", "Ada"})
+
     def test_the_job_keeps_its_name(self):
         set_user_name("Fairy tasks")
         self.type(self.bob, "Agenda by Bob")

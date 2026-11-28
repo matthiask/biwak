@@ -12,7 +12,7 @@ import dataclasses
 import datetime as dt
 import difflib
 
-from django.db.models import Choices, Q
+from django.db.models import Choices, Exists, OuterRef, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext
@@ -162,9 +162,18 @@ def _show(rows, viewer, item):
         i.pk: i.title
         for i in Item.objects.visible_to(viewer).filter(pk__in=_ids(rows, "parent_id"))
     }
-    groups = dict(
-        Group.objects.filter(pk__in=_ids(rows, "group_id")).values_list("pk", "title")
-    )
+    # The groups of lists the viewer sees; of the others (a to-do moved
+    # in from a project they can't open) only that they exist (found
+    # 2026-11-28, verification round 2: their titles were shown)
+    groups = {
+        pk: title if seen else gettext("another group")
+        for pk, title, seen in Group.objects
+        .filter(pk__in=_ids(rows, "group_id"))
+        .annotate(
+            seen=Exists(Item.objects.visible_to(viewer).filter(pk=OuterRef("todolist")))
+        )
+        .values_list("pk", "title", "seen")
+    }
     projects = dict(
         Project.objects
         .accessible_to(viewer)

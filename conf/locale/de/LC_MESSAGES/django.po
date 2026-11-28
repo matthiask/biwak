@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 12:29+0100\n"
+"POT-Creation-Date: 2026-11-28 12:42+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1239,6 +1239,10 @@ msgstr "Gefragt"
 #: biwak/activity/history.py
 msgid "No longer asked"
 msgstr "Nicht mehr gefragt"
+
+#: biwak/activity/history.py
+msgid "another group"
+msgstr "eine andere Gruppe"
 
 #: biwak/activity/history.py
 msgid "no"
@@ -3228,7 +3232,7 @@ msgstr "Sende „confirm“: true, um sie trotzdem zu verschieben."
 msgid "Completed to-dos can't be kept open."
 msgstr "Erledigte To-dos können nicht offen gelassen werden."
 
-#: biwak/items/api.py
+#: biwak/items/api.py biwak/items/views.py
 msgid "Completed to-dos can't be moved."
 msgstr "Erledigte To-dos können nicht verschoben werden."
 
@@ -3755,6 +3759,13 @@ msgstr "Dokumente"
 #: biwak/items/models.py
 msgid "co-authors"
 msgstr "Mitautor:innen"
+
+#: biwak/items/models.py
+#, fuzzy
+#| msgctxt "action"
+#| msgid "kept open"
+msgid "kept"
+msgstr "offen gelassen"
 
 #: biwak/items/models.py
 msgid "doc version"
