@@ -56,7 +56,10 @@ feedback rounds (`ui-feedback.md`).
 - **Cards** (2026-11-21: pages looked unstructured): an item's page
   shows its content in one card (the to-do's facts and notes, the doc's
   and the message's text, a check-in answer, `todos.md`, `files.md`); collections are cards or tiles in a
-  grid (the projects page, folders), not a list in a card. A to-do
+  grid (the projects page, folders), not a list in a card. The to-dos
+  page puts each list in a card under its project's heading, and each
+  section by due date (decided 2026-11-28, the user: "The overall list
+  with many projects gets hard to parse visually"). A to-do
   list's groups are cards, in the list as on the board (decided
   2026-11-23, the user: "the to do list view doesn't use any cards at
   all"; `todos.md`).
