@@ -1,0 +1,13 @@
+{% load i18n %}
+<h2 class="h5">
+  {% if group.organization %}
+    {% if can_manage %}
+      <a href="{{ group.organization.get_absolute_url }}">{{ group.organization }}</a>
+    {% else %}
+      {{ group.organization }}
+    {% endif %}
+    {% if group.label %}<span class="badge wb-tone-neutral">{{ group.label }}</span>{% endif %}
+  {% else %}
+    {{ group.label }}
+  {% endif %}
+</h2>

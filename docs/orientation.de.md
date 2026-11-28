@@ -296,7 +296,8 @@ aktiven Admin kannst du nicht deaktivieren. `biwak people activate` und
 keine.
 
 Die Seite Personen zeigt die aktiven Personen („Aktiv“); Mitarbeitende
-finden die anderen unter „Inaktiv“ und „Ehemalige“.
+finden die anderen unter „Inaktiv“ und „Ehemalige“. Jede Liste ist nach
+Organisation gruppiert.
 
 **Ehemalige** (deaktiviert oder beim Import nicht mehr in Basecamp)
 erscheinen nicht unter „Aktiv“; der Filter „Ehemalige“ zeigt

@@ -147,6 +147,14 @@ def groups_for(viewer):
         .select_related("invited_by")
         .order_by(Lower("full_name"), "email")
     )
+    return grouped(people, viewer)
+
+
+def grouped(people, viewer):
+    """``people`` by organization in the page's order (specs/organizations.md):
+    the own organization, the others by name, then people without one; the
+    order within a group is ``people``'s. Every filter of the People page
+    groups this way (decided 2026-11-28, GitHub issue #3)."""
     _note_externals(viewer, people)
     own, others, without = None, {}, Group(None, "none", _("Without an organization"))
     for user in people:
@@ -220,10 +228,10 @@ def project_groups(project, rows, *, can_add, viewer):
 
 def invitations_for(viewer):
     """The "Invited" filter: everybody invited who hasn't signed in yet,
-    the oldest invitation first (own staff, who manage members)"""
+    by organization, the oldest invitation first (own staff, who manage
+    members)"""
     people = list(User.objects.invited().select_related("organization", "invited_by"))
-    _note_externals(viewer, people)
-    return [decorate(user, viewer) for user in people]
+    return grouped(people, viewer)
 
 
 def _note_externals(viewer, people):
@@ -235,8 +243,8 @@ def _note_externals(viewer, people):
 
 def inactive_for(viewer, *, left=False):
     """The "Inactive" filter: people who can't sign in and haven't left
-    (imported, waiting to be activated), by name; with ``left`` the
-    "People who left" filter instead (specs/activation.md)"""
+    (imported, waiting to be activated), by organization and name; with
+    ``left`` the "People who left" filter instead (specs/activation.md)"""
     people = list(
         known_people(viewer)
         .filter(left_at__isnull=not left)
@@ -244,8 +252,7 @@ def inactive_for(viewer, *, left=False):
         .select_related("organization")
         .order_by(Lower("full_name"), "email")
     )
-    _note_externals(viewer, people)
-    return [decorate(user, viewer) for user in people]
+    return grouped(people, viewer)
 
 
 def people(request):

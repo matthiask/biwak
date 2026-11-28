@@ -156,6 +156,11 @@ manage none (`access.md`).
   and people who left are under the "Inactive" and "People who left"
   filters for own staff (`activation.md`), for others only through
   their pages and names. Like the API's people list and `biwak people`.
+  **Every filter groups by organization** (decided 2026-11-28 by the
+  user, GitHub issue #3: "Group all"), "Inactive", "People who left" and
+  "Invited" the same as "Active" (`grouped()`), with the plain names
+  under the headings; "Invited" keeps the oldest invitation first within
+  each group.
   Invitations and the "Invited" filter: `activation.md`.
 - Teams, at the end for staff: `teams.md`.
 

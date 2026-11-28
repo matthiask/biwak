@@ -48,99 +48,109 @@
     </div>
   {% endif %}
   {% if invited is not None %}
-    <div class="list-group mb-4" data-invitations>
-      {% for user in invited %}
-        <div class="list-group-item" data-kb-row>
-          <div class="d-flex align-items-center gap-2">
-            {% avatar user "md" %}
-            <div>
-              <a href="{% url 'person' user.pk %}" data-kb-open>{{ user.display_name }}</a>
-              {% if user.is_client %}
-                <span class="badge wb-client-badge">{{ user.role }}</span>
-              {% else %}
-                <span class="badge wb-tone-neutral">{{ user.role }}</span>
-              {% endif %}
-              <div class="small text-body-secondary">{{ user.email }}</div>
-              {% include "organizations/_invitation.html" with person=user next=request.get_full_path %}
-            </div>
+    <div data-invitations>
+      {% for group in invited %}
+        <section class="mb-4" data-people-group="{{ group.kind }}">
+          {% include "organizations/_group_heading.html" %}
+          <div class="list-group">
+            {% for user in group.people %}
+              <div class="list-group-item" data-kb-row>
+                <div class="d-flex align-items-center gap-2">
+                  {% avatar user "md" %}
+                  <div>
+                    <a href="{% url 'person' user.pk %}" data-kb-open>{{ user }}</a>
+                    {% if user.is_client %}
+                      <span class="badge wb-client-badge">{{ user.role }}</span>
+                    {% else %}
+                      <span class="badge wb-tone-neutral">{{ user.role }}</span>
+                    {% endif %}
+                    <div class="small text-body-secondary">{{ user.email }}</div>
+                    {% include "organizations/_invitation.html" with person=user next=request.get_full_path %}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
           </div>
-        </div>
+        </section>
       {% empty %}
-        <div class="list-group-item text-body-secondary">{% translate "Nobody is waiting to sign in." %}</div>
+        <p class="text-body-secondary">{% translate "Nobody is waiting to sign in." %}</p>
       {% endfor %}
     </div>
   {% endif %}
   {% if inactive is not None %}
-    <div class="list-group mb-4" data-inactive>
-      {% for user in inactive %}
-        <div
-          class="list-group-item d-flex justify-content-between align-items-center gap-2 text-body-secondary"
-          data-kb-row
-        >
-          <div class="d-flex align-items-center gap-2">
-            {% avatar user "md" %}
-            <div>
-              <a href="{% url 'person' user.pk %}" data-kb-open>{{ user.display_name }}</a>
-              {% if user.is_client %}
-                <span class="badge wb-client-badge">{{ user.role }}</span>
-              {% else %}
-                <span class="badge wb-tone-neutral">{{ user.role }}</span>
-              {% endif %}
-              <div class="small text-body-secondary">{{ user.email }}</div>
-            </div>
+    <div data-inactive>
+      {% for group in inactive %}
+        <section class="mb-4" data-people-group="{{ group.kind }}">
+          {% include "organizations/_group_heading.html" %}
+          <div class="list-group">
+            {% for user in group.people %}
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center gap-2 text-body-secondary"
+                data-kb-row
+              >
+                <div class="d-flex align-items-center gap-2">
+                  {% avatar user "md" %}
+                  <div>
+                    <a href="{% url 'person' user.pk %}" data-kb-open>{{ user }}</a>
+                    {% if user.is_client %}
+                      <span class="badge wb-client-badge">{{ user.role }}</span>
+                    {% else %}
+                      <span class="badge wb-tone-neutral">{{ user.role }}</span>
+                    {% endif %}
+                    <div class="small text-body-secondary">{{ user.email }}</div>
+                  </div>
+                </div>
+                {% if user.can_activate %}
+                  <a
+                    class="btn btn-sm btn-quiet"
+                    href="{% url 'person_activate' user.pk %}?next={{ request.get_full_path|urlencode }}"
+                    data-modal
+                  >{% translate "Activate…" %}</a>
+                {% endif %}
+              </div>
+            {% endfor %}
           </div>
-          {% if user.can_activate %}
-            <a
-              class="btn btn-sm btn-quiet"
-              href="{% url 'person_activate' user.pk %}?next={{ request.get_full_path|urlencode }}"
-              data-modal
-            >{% translate "Activate…" %}</a>
-          {% endif %}
-        </div>
+        </section>
       {% empty %}
-        <div class="list-group-item text-body-secondary">{% translate "Nobody is inactive." %}</div>
+        <p class="text-body-secondary">{% translate "Nobody is inactive." %}</p>
       {% endfor %}
     </div>
   {% endif %}
   {% if left is not None %}
-    <div class="list-group mb-4" data-left>
-      {% for user in left %}
-        <div class="list-group-item text-body-secondary" data-kb-row>
-          <div class="d-flex align-items-center gap-2">
-            {% avatar user "md" %}
-            <div>
-              <a href="{% url 'person' user.pk %}" data-kb-open>{{ user.display_name }}</a>
-              {% if user.is_client %}
-                <span class="badge wb-client-badge">{{ user.role }}</span>
-              {% else %}
-                <span class="badge wb-tone-neutral">{{ user.role }}</span>
-              {% endif %}
-              <span
-                class="badge wb-tone-neutral"
-              >{% blocktranslate with date=user.left_at|date %}left on {{ date }}{% endblocktranslate %}</span>
-              <div class="small text-body-secondary">{{ user.email }}</div>
-            </div>
+    <div data-left>
+      {% for group in left %}
+        <section class="mb-4" data-people-group="{{ group.kind }}">
+          {% include "organizations/_group_heading.html" %}
+          <div class="list-group">
+            {% for user in group.people %}
+              <div class="list-group-item text-body-secondary" data-kb-row>
+                <div class="d-flex align-items-center gap-2">
+                  {% avatar user "md" %}
+                  <div>
+                    <a href="{% url 'person' user.pk %}" data-kb-open>{{ user }}</a>
+                    {% if user.is_client %}
+                      <span class="badge wb-client-badge">{{ user.role }}</span>
+                    {% else %}
+                      <span class="badge wb-tone-neutral">{{ user.role }}</span>
+                    {% endif %}
+                    <span
+                      class="badge wb-tone-neutral"
+                    >{% blocktranslate with date=user.left_at|date %}left on {{ date }}{% endblocktranslate %}</span>
+                    <div class="small text-body-secondary">{{ user.email }}</div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
           </div>
-        </div>
+        </section>
       {% empty %}
-        <div class="list-group-item text-body-secondary">{% translate "Nobody has left." %}</div>
+        <p class="text-body-secondary">{% translate "Nobody has left." %}</p>
       {% endfor %}
     </div>
   {% endif %}
   {% for group in groups %}
     <section class="mb-4" data-people-group="{{ group.kind }}">
-      <h2 class="h5">
-        {% if group.organization %}
-          {% if can_manage %}
-            <a href="{{ group.organization.get_absolute_url }}">{{ group.organization }}</a>
-          {% else %}
-            {{ group.organization }}
-          {% endif %}
-          {% if group.label %}<span class="badge wb-tone-neutral">{{ group.label }}</span>{% endif %}
-        {% else %}
-          {{ group.label }}
-        {% endif %}
-      </h2>
+      {% include "organizations/_group_heading.html" %}
       <div class="list-group">
         {% for user in group.people %}
           <div
