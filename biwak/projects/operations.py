@@ -2,6 +2,7 @@
 specs/access.md). Adding someone subscribes them to nothing that exists
 already (specs/notifications.md)."""
 
+import copy
 from collections import Counter
 from dataclasses import dataclass
 from typing import NamedTuple
@@ -132,10 +133,15 @@ def remove_member(project, user, *, actor):
 def forget_lost_access(user, *, project=None):
     """Without access, the person's subscriptions go (in ``project``, or in
     every project): removed from a limited project, or no longer the
-    own staff (specs/access.md)"""
+    own staff (specs/access.md). An inactive person keeps what they'd
+    open once active again: deactivating keeps subscriptions
+    (specs/activation.md), and nobody inactive opens anything."""
     subscriptions = Subscription.objects.filter(user=user)
     if project is not None:
         subscriptions = subscriptions.filter(item__project=project)
+    if not user.is_active:
+        user = copy.copy(user)
+        user.is_active = True
     subscriptions.exclude(
         item__project__in=Project.objects.accessible_to(user)
     ).delete()
