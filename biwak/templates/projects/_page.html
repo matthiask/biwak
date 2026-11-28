@@ -38,7 +38,7 @@
           hx-swap="outerHTML"
           hx-push-url="true"
           class="btn btn-sm btn-quiet"
-        >{% translate "Archive" %}</a>
+        >{% translate "Archive" context "the archived ones" %}</a>
         {% if can_use_templates %}
           <a href="{% url 'templates' %}" class="btn btn-sm btn-quiet">{% translate "Templates" %}</a>
         {% endif %}

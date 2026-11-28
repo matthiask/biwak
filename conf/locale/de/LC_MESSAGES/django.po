@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 09:33+0100\n"
+"POT-Creation-Date: 2026-11-28 09:54+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -4799,7 +4799,6 @@ msgid "Unarchive"
 msgstr "Archivierung aufheben"
 
 #: biwak/palette/actions.py biwak/templates/items/_archive_button.html
-#: biwak/templates/projects/_page.html biwak/templates/projects/templates.html
 msgid "Archive"
 msgstr "Archivieren"
 
@@ -8086,6 +8085,11 @@ msgstr "Anwenden"
 #: biwak/templates/projects/_page.html
 msgid "Active projects"
 msgstr "Aktive Projekte"
+
+#: biwak/templates/projects/_page.html biwak/templates/projects/templates.html
+msgctxt "the archived ones"
+msgid "Archive"
+msgstr "Archiv"
 
 #: biwak/templates/projects/_page.html biwak/templates/projects/templates.html
 msgid "Templates"

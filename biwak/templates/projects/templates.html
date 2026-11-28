@@ -20,7 +20,10 @@
         <a href="{% url 'templates' %}" class="btn btn-sm btn-quiet">{% translate "Active templates" %}</a>
       {% else %}
         <a href="{% url 'projects' %}" class="btn btn-sm btn-quiet">{% translate "Projects" %}</a>
-        <a href="{% url 'templates' %}?archived=1" class="btn btn-sm btn-quiet">{% translate "Archive" %}</a>
+        <a
+          href="{% url 'templates' %}?archived=1"
+          class="btn btn-sm btn-quiet"
+        >{% translate "Archive" context "the archived ones" %}</a>
         <a href="{% url 'template_create' %}" data-modal class="btn btn-sm btn-primary">{% icon "plus-lg" %}<span
           >{% translate "New template" %}</span></a>
       {% endif %}
