@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Case, IntegerField, Value, When
 from django.db.models.functions import Lower
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _, ngettext
@@ -27,7 +27,7 @@ from biwak.items.across import (
     target_projects,
 )
 from biwak.items.models import Item, Kind
-from biwak.items.views import item_for
+from biwak.items.views import item_for, shown_items_note
 from biwak.modals import form_response
 from biwak.permissions import staff_only
 from biwak.projects.models import FilesOrdering
@@ -359,12 +359,17 @@ def item_move(request, pk):
                 return response
     elif request.method == "POST":
         target = folder_param(request, item.project)
-        try:
-            ops.move_item(item, parent=target, actor=request.user)
-        except ValueError:
-            form.add_error(None, _("A folder can't be moved into itself."))
+        # Into a folder clients see: asks first, like the switch
+        clients_note = shown_items_note([item], target)
+        if clients_note and not (form.is_valid() and form.asked(str(target.pk))):
+            notes = ("", clients_note)
         else:
-            return redirect(next_url(request) or item)
+            try:
+                ops.move_item(item, parent=target, actor=request.user)
+            except ValueError:
+                form.add_error(None, _("A folder can't be moved into itself."))
+            else:
+                return redirect(next_url(request) or item)
     return asking(
         request,
         form,
@@ -418,14 +423,34 @@ def files_move(request, pk):
         choices=folder_choices(request.user, project, exclude=items),
         current=current.pk if current else None,
     )
+    clients_note = ""
     if request.method == "POST":
         target = folder_param(request, project)
-        try:
-            operations.move_items(items, parent=target, actor=request.user)
-        except ValueError:
-            form.add_error(None, _("A folder can't be moved into itself."))
-        else:
-            return redirect(library_url(project, current))
+        # Into a folder clients see: asks first, like the switch; a drop
+        # (``dragged``) moves nothing and gets the sentence with
+        # ``X-Asks``, and opens this form with the folder (not an error
+        # status: the browser's console would log it)
+        clients_note = shown_items_note(items, target)
+        if clients_note and request.POST.get("dragged"):
+            return HttpResponse(
+                clients_note,
+                content_type="text/plain; charset=utf-8",
+                headers={"X-Asks": "1"},
+            )
+        if not clients_note or (form.is_valid() and form.asked(str(target.pk))):
+            clients_note = ""
+            try:
+                operations.move_items(items, parent=target, actor=request.user)
+            except ValueError:
+                form.add_error(None, _("A folder can't be moved into itself."))
+            else:
+                return redirect(library_url(project, current))
+    elif request.GET.get("folder"):
+        # Where a drop asked to: the question right away
+        target = folder_param(request, project)
+        form.initial["folder"] = str(target.pk)
+        if clients_note := shown_items_note(items, target):
+            form.initial["confirmed"] = str(target.pk)
     return form_response(
         request,
         form,
@@ -434,6 +459,9 @@ def files_move(request, pk):
         project=project,
         cancel_url=library_url(project, current),
         submit_label=_("Move"),
+        template="items/across_form.html",
+        destructive=bool(clients_note),
+        extra={"clients_note": clients_note},
     )
 
 

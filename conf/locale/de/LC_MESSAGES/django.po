@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:06+0100\n"
+"POT-Creation-Date: 2026-11-28 11:32+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -1116,7 +1116,7 @@ msgid_plural "%(count)d answers"
 msgstr[0] "%(count)d Antwort"
 msgstr[1] "%(count)d Antworten"
 
-#: biwak/activity/feed.py
+#: biwak/activity/feed.py biwak/items/views.py
 #, python-format
 msgid "%(count)d item"
 msgid_plural "%(count)d items"
@@ -2399,6 +2399,10 @@ msgstr "Nur Ordner, Dokumente und Dateien können verschoben werden."
 #: biwak/files/api.py
 msgid "You can only move what you created."
 msgstr "Du kannst nur verschieben, was du erstellt hast."
+
+#: biwak/files/api.py
+msgid "Send “show_to_clients”: true to move it anyway."
+msgstr "Sende „show_to_clients“: true, um es trotzdem zu verschieben."
 
 #: biwak/files/api.py biwak/files/library.py
 msgid "A folder can't be moved into itself."
@@ -3959,6 +3963,11 @@ msgstr "Macht den Eintrag, %(items)s und %(comments)s für %(clients)s sichtbar.
 #, python-format
 msgid "Makes %(todos)s and %(comments)s visible to %(clients)s."
 msgstr "Macht %(todos)s und %(comments)s für %(clients)s sichtbar."
+
+#: biwak/items/views.py
+#, python-format
+msgid "Makes %(items)s and %(comments)s visible to %(clients)s."
+msgstr "Macht %(items)s und %(comments)s für %(clients)s sichtbar."
 
 #: biwak/items/views.py
 msgid "Show to clients"

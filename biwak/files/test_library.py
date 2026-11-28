@@ -647,7 +647,11 @@ class MoveTest(Fixture, TestCase):
         self.client.force_login(user)
         return self.client.post(
             reverse("item_move", args=[item.pk]),
-            {"folder": folder.pk if folder else ""},
+            # Into a folder clients see: answered as asked
+            {
+                "folder": folder.pk if folder else "",
+                "confirmed": folder.pk if folder else "",
+            },
         )
 
     def test_a_folder_that_is_no_number_answers_404(self):
@@ -782,6 +786,8 @@ class MoveSeveralTest(Fixture, TestCase):
             {
                 "folder": self.public.pk,
                 "items": [self.root_secret.pk, self.private.pk],
+                # The question answered (biwak/items/test_showing_moves.py)
+                "confirmed": self.public.pk,
             },
         )
         self.assertRedirects(response, reverse("project_files", args=[self.project.pk]))
@@ -810,6 +816,13 @@ class MoveSeveralTest(Fixture, TestCase):
         self.assertContains(response, f'value="{self.public.pk}"')
         response = self.client.post(
             url, {"folder": self.public.pk}, headers={"HX-Modal": "true"}
+        )
+        # Clients will see them: asks first
+        self.assertContains(response, "visible to 1 client")
+        response = self.client.post(
+            url,
+            {"folder": self.public.pk, "confirmed": self.public.pk},
+            headers={"HX-Modal": "true"},
         )
         assert_modal_redirect(
             self, response, reverse("project_files", args=[self.project.pk])

@@ -92,10 +92,22 @@ def folder_new(project, title, parent, visible, color, as_json):
 @folders.command("move")
 @click.argument("item", type=int)
 @click.argument("folder", type=int, required=False)
+@click.option(
+    "--show-to-clients",
+    is_flag=True,
+    help="Into a folder clients see: move an internal ITEM although clients"
+    " will see it, what's in it and the comments.",
+)
 @json_option
-def folder_move(item, folder, as_json):
-    """Move a folder, doc or file ITEM into FOLDER, or to the root"""
-    data = request("POST", f"items/{item}/move/", json={"parent_id": folder})
+def folder_move(item, folder, show_to_clients, as_json):
+    """Move a folder, doc or file ITEM into FOLDER, or to the root. An
+    internal one into a folder clients see: the error says what clients
+    will see, --show-to-clients moves anyway."""
+    data = request(
+        "POST",
+        f"items/{item}/move/",
+        json={"parent_id": folder, "show_to_clients": show_to_clients},
+    )
     if as_json:
         return echo_json(data)
     click.echo(f"Moved #{item}.{' [clients]' if data['visible_to_clients'] else ''}")

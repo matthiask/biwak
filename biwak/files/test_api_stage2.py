@@ -661,7 +661,10 @@ class FolderAPITest(APIFixture, TestCase):
     def test_move(self):
         mid = self.secret_file.pk
         response = self.call(
-            self.ada, "post", f"items/{mid}/move/", {"parent_id": self.public.pk}
+            self.ada,
+            "post",
+            f"items/{mid}/move/",
+            {"parent_id": self.public.pk, "show_to_clients": True},
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["visible_to_clients"])
@@ -683,7 +686,7 @@ class FolderAPITest(APIFixture, TestCase):
             self.ada,
             "post",
             f"items/{self.private.pk}/move/",
-            {"parent_id": self.public.pk},
+            {"parent_id": self.public.pk, "show_to_clients": True},
         )
         self.assertEqual(
             self.call(self.cleo, "get", f"files/{inner.pk}/").status_code, 200

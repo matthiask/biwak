@@ -12,7 +12,7 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext as _
-from ninja import File, Form, Router, Schema, Status, UploadedFile
+from ninja import Field, File, Form, Router, Schema, Status, UploadedFile
 from ninja.errors import HttpError
 
 from biwak.accounts.models import Color, User
@@ -41,6 +41,7 @@ from biwak.items import operations as ops
 from biwak.items.across import move_notes
 from biwak.items.api import item_for
 from biwak.items.models import Kind, MessageCategory
+from biwak.items.views import shown_items_note
 from biwak.permissions import api_staff_only
 from biwak.projects.api import project_for
 from biwak.reactions.models import Reaction
@@ -573,6 +574,12 @@ class MoveIn(Schema):
     project_id: int | None = None
     # Moving there drops people or shows it to clients: say so
     confirm: bool = False
+    # An internal one into a folder clients see (specs/access.md)
+    show_to_clients: bool = Field(
+        default=False,
+        description="Into a folder clients see: show the internal item, what's"
+        " in it and the comments to clients (else 400, saying what it shows).",
+    )
 
 
 @router.post("items/{item_id}/move/", response=ItemOut)
@@ -583,7 +590,8 @@ def item_move(request, item_id: int, data: MoveIn):
     top-level list, message, folder, doc or file moves to its top level,
     with everything in it; assignees and subscribers who aren't members
     there are dropped and clients there may see it: without ``confirm``
-    that's a 400 saying so."""
+    that's a 400 saying so. An internal item into a folder clients see is
+    a 400 saying what it shows without ``show_to_clients``."""
     item = item_for(request, item_id)
     if data.project_id is not None and data.project_id != item.project_id:
         return _move_to_project(request, item, data)
@@ -592,6 +600,11 @@ def item_move(request, item_id: int, data: MoveIn):
     if not ops.can_change(request.user, item):
         raise HttpError(403, _("You can only move what you created."))
     folder = parent_folder(request, item.project, data.parent_id)
+    if not data.show_to_clients and (note := shown_items_note([item], folder)):
+        raise HttpError(
+            400,
+            " ".join([note, _("Send “show_to_clients”: true to move it anyway.")]),
+        )
     try:
         ops.move_item(item, parent=folder, actor=request.user)
     except ValueError as exc:

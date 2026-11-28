@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from biwak.accounts.models import APIToken
-from biwak.items import operations as ops
+from biwak.items import operations as ops, visibility
 from biwak.items.models import Item
 from biwak.test_cli import CLITest
 from biwak.test_utils import assert_modal, assert_modal_redirect, person, project
@@ -200,3 +200,155 @@ class ShowingMovesCLITest(CLITest):
         )
         self.assertEqual(result.exit_code, 0, result.output)
         self.assertTrue(Item.objects.get(pk=budget.pk).is_client_visible)
+
+
+class ShowingFileMovesTest(TestCase):
+    """Internal docs, files and folders into a folder clients see ask
+    first the same way (decided 2026-11-28): "Move to…", the selection's
+    "Move to…", dragging in the library, the API and the CLI"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.cleo = person("Cleo", client=True)
+        self.project = project(members=[self.ada, self.cleo])
+        self.shared = ops.create_folder(
+            project=self.project, title="Shared", creator=self.ada, visible=True
+        )
+        self.plans = ops.create_folder(
+            project=self.project, title="Plans", creator=self.ada
+        )
+        self.budget = ops.create_doc(
+            project=self.project, title="Budget", creator=self.ada, parent=self.plans
+        )
+        ops.add_comment(self.budget, author=self.ada, content="Raise the rate")
+        self.rates = ops.create_doc(
+            project=self.project, title="Rates", creator=self.ada
+        )
+        self.client.force_login(self.ada)
+
+    def assertIn_(self, items, folder):
+        for item in items:
+            item.refresh_from_db()
+            self.assertEqual(item.parent_id, folder.pk if folder else None)
+            self.assertEqual(
+                item.is_client_visible, bool(folder and folder.is_client_visible)
+            )
+
+    def test_move_to_asks(self):
+        url = f"/items/{self.plans.pk}/move/"
+        data = {"folder": str(self.shared.pk)}
+        response = self.client.post(url, data, headers={"HX-Modal": "true"})
+        assert_modal(self, response, title="Move to…")
+        self.assertContains(
+            response,
+            "Makes it, 1 item below it and 1 comment visible to 1 client.",
+        )
+        self.assertIn_([self.plans], None)
+        response = self.client.post(
+            url,
+            data | {"confirmed": str(self.shared.pk)},
+            headers={"HX-Modal": "true"},
+        )
+        assert_modal_redirect(self, response)
+        self.assertIn_([self.plans], self.shared)
+        self.assertTrue(Item.objects.get(pk=self.budget.pk).is_client_visible)
+
+    def test_nothing_shown_nothing_asked(self):
+        # Internal into internal, visible out; a draft (only its creator
+        # sees it)
+        draft = ops.create_draft(project=self.project, creator=self.ada)
+        self.assertIsNone(visibility.shown_by_moving_items([draft], self.shared))
+        tent = ops.create_doc(
+            project=self.project, title="Tent", creator=self.ada, parent=self.shared
+        )
+        for item, folder in [
+            (self.rates, self.plans),
+            (tent, None),
+        ]:
+            response = self.client.post(
+                f"/items/{item.pk}/move/", {"folder": folder.pk if folder else ""}
+            )
+            self.assertRedirects(
+                response, item.get_absolute_url(), fetch_redirect_response=False
+            )
+            self.assertEqual(
+                Item.objects.get(pk=item.pk).parent_id, folder and folder.pk
+            )
+
+    def test_selection_asks(self):
+        url = (
+            reverse("files_move", args=[self.project.pk])
+            + f"?items={self.plans.pk}&items={self.rates.pk}"
+        )
+        data = {"folder": str(self.shared.pk)}
+        response = self.client.post(url, data, headers={"HX-Modal": "true"})
+        self.assertContains(
+            response, "Makes 3 items and 1 comment visible to 1 client."
+        )
+        self.assertIn_([self.plans, self.rates], None)
+        response = self.client.post(
+            url,
+            data | {"confirmed": str(self.shared.pk)},
+            headers={"HX-Modal": "true"},
+        )
+        assert_modal_redirect(self, response)
+        self.assertIn_([self.plans, self.rates], self.shared)
+
+    def test_dragging_asks_in_the_modal(self):
+        """The drop posts with ``dragged``: ``X-Asks`` instead of moving,
+        and the modal it opens then (a GET with the folder) asks"""
+        url = reverse("files_move", args=[self.project.pk]) + f"?items={self.rates.pk}"
+        response = self.client.post(
+            url, {"folder": str(self.shared.pk), "dragged": "1"}
+        )
+        self.assertEqual(response.headers["X-Asks"], "1")
+        self.assertContains(response, "visible to 1 client")
+        self.assertIn_([self.rates], None)
+        response = self.client.get(
+            f"{url}&folder={self.shared.pk}", headers={"HX-Modal": "true"}
+        )
+        self.assertContains(
+            response, "Makes it, 0 items below it and 0 comments visible to 1 client."
+        )
+        self.assertContains(response, f'name="confirmed" value="{self.shared.pk}"')
+        # Dropping where nothing is shown moves
+        response = self.client.post(url, {"folder": str(self.plans.pk), "dragged": "1"})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn_([self.rates], self.plans)
+
+    def test_api(self):
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+
+        def move(**data):
+            return self.client.post(
+                f"/api/v1/items/{self.plans.pk}/move/",
+                data,
+                content_type="application/json",
+                headers={"authorization": f"Bearer {secret}"},
+            )
+
+        response = move(parent_id=self.shared.pk)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("visible to 1 client", response.json()["detail"])
+        self.assertIn("show_to_clients", response.json()["detail"])
+        self.assertIn_([self.plans], None)
+        response = move(parent_id=self.shared.pk, show_to_clients=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["visible_to_clients"])
+        # Out again needs nothing
+        self.assertEqual(move(parent_id=None).status_code, 200)
+
+
+class ShowingFileMovesCLITest(CLITest):
+    def test_show_to_clients(self):
+        shared = ops.create_folder(
+            project=self.project, title="Shared", creator=self.ada, visible=True
+        )
+        doc = ops.create_doc(project=self.project, title="Rates", creator=self.ada)
+        result = self.biwak("folders", "move", doc.pk, shared.pk)
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("visible to", result.output)
+        self.assertIsNone(Item.objects.get(pk=doc.pk).parent_id)
+        result = self.biwak("folders", "move", doc.pk, shared.pk, "--show-to-clients")
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertTrue(Item.objects.get(pk=doc.pk).is_client_visible)

@@ -53,7 +53,15 @@ class TilesTest(E2ETestCase):
         self.goto(page, self.root())
         self.wait_for_files(page)
         a = self.files[0]
+        # Specs is visible to clients: "Move to…" asks first (specs/access.md)
         self.tile(page, a).drag_to(self.tile(page, self.specs))
+        dialog = page.get_by_role("dialog", name="Move to…")
+        expect(dialog).to_contain_text(
+            "Makes it, 0 items below it and 0 comments visible to 1 client."
+        )
+        expect(self.tile(page, a)).to_be_visible()
+        self.assertIsNone(self.parent_of(a))
+        dialog.get_by_role("button", name="Move").click()
         expect(self.tile(page, a)).to_have_count(0)
         page.wait_for_load_state("networkidle")
         self.assertEqual(self.parent_of(a), self.specs)
@@ -114,6 +122,11 @@ class TilesTest(E2ETestCase):
             label="Specs (clients can see this)"
         )
         dialog.get_by_role("button", name="Move").click()
+        # Into a folder clients see: asks again
+        expect(dialog).to_contain_text(
+            "Makes 2 items and 0 comments visible to 1 client."
+        )
+        dialog.get_by_role("button", name="Move").click()
         expect(self.tile(page, a)).to_have_count(0)
         self.assertEqual(self.parent_of(a), self.specs)
         self.assertEqual(self.parent_of(b), self.specs)
@@ -153,6 +166,12 @@ class TilesTest(E2ETestCase):
         self.tile(page, a).click(modifiers=["ControlOrMeta"])
         self.tile(page, d).click(modifiers=["ControlOrMeta"])
         self.tile(page, d).drag_to(self.tile(page, self.specs))
+        dialog = page.get_by_role("dialog", name="Move to…")
+        expect(dialog).to_contain_text("2 items")
+        expect(dialog).to_contain_text(
+            "Makes 2 items and 0 comments visible to 1 client."
+        )
+        dialog.get_by_role("button", name="Move").click()
         expect(self.tile(page, d)).to_have_count(0)
         expect(self.tile(page, a)).to_have_count(0)
         page.wait_for_load_state("networkidle")

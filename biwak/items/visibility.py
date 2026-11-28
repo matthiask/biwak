@@ -89,6 +89,33 @@ def shown_by_moving(todos, todolist):
     }
 
 
+def shown_by_moving_items(items, folder):
+    """What moving folders, docs and files into ``folder`` (None: the top
+    level) shows clients, asking like the switch (decided 2026-11-28):
+    the internal ones going into a folder clients see and what's in them
+    (``affected()``: not drafts, not the trash), their comments, and the
+    clients of the project (``clients_of()``); None if it shows nothing"""
+    if folder is None or not folder.is_client_visible:
+        return None
+    shown = [item for item in items if not item.is_client_visible and not item.is_draft]
+    if not shown:
+        return None
+    pks = {item.pk for item in shown}
+    for item in shown:
+        pks.update(
+            Item.objects
+            .descendants(item)
+            .filter(is_draft=False)
+            .exclude(status=Status.TRASHED)
+            .values_list("pk", flat=True)
+        )
+    return {
+        "items": len(pks),
+        "comments": Comment.objects.filter(item__in=pks).count(),
+        "clients": clients_of(folder.project),
+    }
+
+
 def check():
     """Items whose stored visibility differs from the tree's, as a list of
     (item, stored, expected)"""

@@ -145,6 +145,22 @@ through every entry point (`AGENTS.md`).
   - Moving a top-level item to another project keeps its switch, so it
     shows nothing internal; who would newly see something visible is
     asked about already (`new_clients()`).
+  - **Internal folders, docs and files into a folder clients see** ask
+    the same way (decided 2026-11-28):
+    `visibility.shown_by_moving_items()` counts what's shown (the items
+    and what's in them, not drafts or the trash) and its comments,
+    `shown_items_note()` says it, for one item the switch's own sentence
+    ("Makes it, 2 items below it and 1 comment visible to 3 clients."),
+    for several "Makes 3 items and 1 comment visible to 3 clients.".
+    "Move to…" (`files.library.item_move`) and the selection's "Move
+    to…" (`files_move`) ask in the dialog (`Confirming`, `confirmed` set
+    to the folder). Dragging tiles posts to `files_move` with `dragged`:
+    instead of moving, the answer has the sentence and `X-Asks` (not an
+    error status, which the console would log), and `frontend/files.js`
+    opens the selection's "Move to…" with `?folder=`, which asks right
+    away. The API's `items/<id>/move/` answers 400 with the sentence
+    unless `show_to_clients: true`; the CLI's `biwak folders move
+    --show-to-clients` (0.78.0).
   Visible to-dos into an internal list say what they hide
   (`hidden_note()`, the selection's "Move…").
 

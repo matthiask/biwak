@@ -1052,6 +1052,28 @@ def shown_note(todos, todolist):
     }
 
 
+def shown_items_note(items, folder):
+    """What moving folders, docs and files into ``folder`` shows clients,
+    as a sentence asking like the switch's
+    (``visibility.shown_by_moving_items()``): one item the switch's own,
+    several together; empty if nothing"""
+    shown = visibility.shown_by_moving_items(items, folder)
+    if shown is None:
+        return ""
+    if len(items) == 1:
+        return show_texts(items[0])[1]
+    return _("Makes %(items)s and %(comments)s visible to %(clients)s.") % {
+        "items": ngettext("%(count)d item", "%(count)d items", shown["items"])
+        % {"count": shown["items"]},
+        "comments": ngettext(
+            "%(count)d comment", "%(count)d comments", shown["comments"]
+        )
+        % {"count": shown["comments"]},
+        "clients": ngettext("%(count)d client", "%(count)d clients", shown["clients"])
+        % {"count": shown["clients"]},
+    }
+
+
 def refuse_showing(request, todos, todolist):
     """The posts of dragging (no page asks there, dragging stays within a
     list): 400 when moving the to-dos into the list shows clients what
