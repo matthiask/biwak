@@ -124,7 +124,7 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: nothing yet.
+Fixed: stale to-dos marked obsolete on the promised day.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -163,10 +163,6 @@ part's spec with the fix):
   - Check-in questions and answers changed in Basecamp aren't updated
     (`_upsert` without `update=`).
 - **To-dos:**
-  - Stale to-dos are marked obsolete a day after the date the mail and
-    the banner promise when the run starts a little earlier or across
-    the spring DST change (`stale.mark_warned()` compares timestamps,
-    `obsolete_on()` dates).
   - Copying a list or a template keeps a group's "Keep untouched to-dos
     for a year" (decided; today 90 days).
   - Archived lists and lists in archived projects refuse new and moved

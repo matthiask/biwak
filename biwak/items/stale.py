@@ -191,10 +191,13 @@ def clear_warnings(now):
 
 
 def mark_warned(now):
-    """Marks the to-dos warned ``WARNING`` days ago and still stale
-    obsolete, as Biwak (no actor)"""
-    due = now - dt.timedelta(days=WARNING)
-    items = stale_todos(now).filter(todo__stale_warned_at__lte=due)
+    """Marks the to-dos still stale obsolete on the day ``obsolete_on()``
+    promised (the local date of the warning plus ``WARNING`` days), as
+    Biwak (no actor): warned before the start of the local day ``WARNING
+    - 1`` days ago, whatever the time of the run or a DST change."""
+    day = timezone.localdate(now) - dt.timedelta(days=WARNING - 1)
+    before = timezone.make_aware(dt.datetime.combine(day, dt.time.min))
+    items = stale_todos(now).filter(todo__stale_warned_at__lt=before)
     count = 0
     for item in Item.objects.filter(pk__in=items.values("pk")).select_related(
         "project"
