@@ -360,6 +360,9 @@ def member_invite(request, project_id: int, data: InviteIn):
     project = project_for(request, project_id)
     staff_only(request)
     no_template(project)
+    if project.archived_at:
+        # The pages offer projects not archived (verification round 2)
+        raise HttpError(400, _("The project is archived."))
     try:
         organization = invitee_organization(data)
     except ValueError as exc:

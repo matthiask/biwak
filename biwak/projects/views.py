@@ -557,11 +557,7 @@ def project_edit(request, pk):
         project=project,
         cancel_url=project.get_absolute_url(),
         # Its name and description are what the project's clients see too
-        extra={
-            "clients_see": project.memberships.filter(
-                user__is_client=True, user__is_active=True
-            ).exists()
-        },
+        extra={"clients_see": project.client_members().exists()},
     )
 
 

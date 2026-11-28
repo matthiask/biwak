@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:41+0100\n"
+"POT-Creation-Date: 2026-11-28 12:29+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -613,6 +613,10 @@ msgstr "Personen"
 #: biwak/accounts/models.py
 msgid "Admins belong to your own organization, an external can't be an admin: move them into it first."
 msgstr "Admins gehören zur eigenen Organisation, Externe können keine Admins sein: Verschiebe die Person zuerst dorthin."
+
+#: biwak/accounts/models.py
+msgid "Admins are staff of your own organization: a client can't be an admin."
+msgstr "Admins sind Mitarbeitende der eigenen Organisation: Kund:innen können keine Admins sein."
 
 #: biwak/accounts/models.py
 msgid "read only"
@@ -2797,7 +2801,7 @@ msgstr "Nur Mitarbeitende leiten Mails weiter."
 msgid "Give the project."
 msgstr "Gib das Projekt an."
 
-#: biwak/forwarding/api.py
+#: biwak/forwarding/api.py biwak/projects/api.py
 msgid "The project is archived."
 msgstr "Das Projekt ist archiviert."
 

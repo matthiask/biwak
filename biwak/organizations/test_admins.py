@@ -43,6 +43,32 @@ class AdminsTest(TestCase):
         pia.refresh_from_db()
         self.assertFalse(pia.is_admin)
 
+    def test_no_admin_clients(self):
+        """Neither way, in the Django admin either (found 2026-11-28,
+        verification round 2: a client who was admin saw all projects)"""
+        cleo = person("Cleo", client=True)
+        self.client.force_login(self.root)
+        for user, changes in [
+            (cleo, {"is_client": "on", "is_admin": "on"}),
+            (self.other_admin, {"is_client": "on", "is_admin": "on"}),
+        ]:
+            response = self.client.post(
+                f"/admin/accounts/user/{user.pk}/change/",
+                {
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "short_name": "",
+                    "language": "",
+                    "organization": user.organization_id or "",
+                    "is_active": "on",
+                }
+                | changes,
+            )
+            with self.subTest(user=user):
+                self.assertContains(response, "client can&#x27;t be an admin")
+                user.refresh_from_db()
+                self.assertFalse(user.is_admin and user.is_client)
+
     def test_moving_an_admin_into_another_organization(self):
         with self.assertRaisesMessage(ValidationError, "no admin"):
             org_ops.set_organization(self.root, self.agency, actor=self.root)
