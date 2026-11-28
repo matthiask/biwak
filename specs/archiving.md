@@ -25,9 +25,12 @@ in the project's "More" menu (`projects-overview.md`).
   projects/{id}/lists/?archived=true`; CLI: `biwak lists
   archive|unarchive LIST`, `biwak lists --project ID --archived`.
 - **Never automatic:** a list isn't archived when it's empty or all done.
-- **Archived lists** are in the project page's "Archived lists" section,
-  and left out of the project's lists, the to-dos page, Home and the
-  calendar feed; last and marked in the palette, left out of search
+- **Archived lists** are at the end of the project's to-dos page, in a
+  closed "Archived lists" section (open with `?archived=1`); the project
+  page links there under its lists ("3 archived lists"; decided
+  2026-11-28 by the user, before that the section was on the project
+  page). They're left out of the project's lists, the to-dos across
+  projects, Home and the calendar feed; last and marked in the palette, left out of search
   unless "Include archived". Their to-dos stay readable through the
   list. Recurring to-dos in them create no next one.
 - `archived` and `unarchived` events, in the feed and the history,

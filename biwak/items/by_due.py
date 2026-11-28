@@ -21,6 +21,7 @@ from biwak.api_conventions import absolute
 from biwak.forms import Form
 from biwak.items import due, glance
 from biwak.items.filters import ANYBODY, assignee_choices, without_empty
+from biwak.items.models import Item, Kind, Status
 from biwak.projects.models import Project
 from biwak.projects.views import project_for
 
@@ -158,6 +159,14 @@ def todos_by_due(request, project=None):
         "completed": completed,
         "title": _title(data),
     }
+    if project is not None:
+        # At the end, the project page links here (decided 2026-11-28)
+        context["archived_lists"] = list(
+            Item.objects.visible_to(request.user).filter(
+                project=project, kind=Kind.LIST, parent=None, status=Status.ARCHIVED
+            )
+        )
+        context["archived_open"] = bool(request.GET.get("archived"))
     if completed:
         page = Paginator(
             todos.order_by("-todo__completed_at", "-pk"), PAGE_SIZE

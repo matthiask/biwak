@@ -47,8 +47,9 @@ project. Staff create lists with "New list" on the project's page.
   "Completed (N)", newest first; "Show more" adds older ones.
 - **Archive:** finished lists go out of the way with "Archive" in the
   list's "More" menu or in the command palette; "Unarchive" brings them back. An archived list
-  stays readable, but is left out of the project's lists (it is under
-  "Archived lists"), of your to-dos, of the calendar link and of the
+  stays readable, but is left out of the project's lists (under the
+  lists, "3 archived lists" leads to them, at the end of the project's
+  to-dos page), of your to-dos, of the calendar link and of the
   palette's suggestions, and its recurring to-dos don't repeat. Nothing
   is archived automatically. To-dos are completed, not archived.
 - **Copy:** "Copy…" in the list's "More" menu (staff) copies its open

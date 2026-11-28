@@ -79,5 +79,6 @@
     {% endfor %}
   {% endif %}
   {% if later %}{% include "items/_starting_later.html" with todos=later %}{% endif %}
+  {% if archived_lists %}{% include "items/_archived_lists.html" with lists=archived_lists open=archived_open %}{% endif %}
   {% include "items/_selection_bar.html" %}
 {% endblock content %}

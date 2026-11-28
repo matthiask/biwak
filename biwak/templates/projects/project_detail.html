@@ -182,18 +182,12 @@
           <div class="list-group-item text-body-secondary">{% translate "No lists yet." %}</div>
         {% endfor %}
       </div>
-      {% if archived_lists %}
-        <details class="mt-4">
-          <summary class="text-body-secondary">{% translate "Archived lists" %}</summary>
-          <div class="list-group mt-2">
-            {% for list in archived_lists %}
-              <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <a class="flex-grow-1 text-reset text-decoration-none" href="{{ list.get_absolute_url }}">{{ list }}
-                  {% client_badge list %}</a>
-              </div>
-            {% endfor %}
-          </div>
-        </details>
+      {% if archived_count %}
+        <p class="small">
+          <a
+            href="{% url 'project_todos' project.pk %}?archived=1#archived-lists"
+          >{% blocktranslate count counter=archived_count %}{{ counter }} archived list{% plural %}{{ counter }} archived lists{% endblocktranslate %}</a>
+        </p>
       {% endif %}
       <h2 class="h5 d-flex justify-content-between align-items-center mt-4">
         <a

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 08:06+0100\n"
+"POT-Creation-Date: 2026-11-28 09:33+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -7500,6 +7500,10 @@ msgstr "Ctrl+Enter fügt hinzu und beginnt das nächste, Esc schliesst"
 msgid "Not saved, please try again."
 msgstr "Nicht gespeichert, bitte versuche es nochmals."
 
+#: biwak/templates/items/_archived_lists.html
+msgid "Archived lists"
+msgstr "Archivierte Listen"
+
 #: biwak/templates/items/_checklist_signal.html
 #, python-format
 msgid "%(done)s of %(total)s done"
@@ -8319,8 +8323,11 @@ msgid "No lists yet."
 msgstr "Noch keine Listen."
 
 #: biwak/templates/projects/project_detail.html
-msgid "Archived lists"
-msgstr "Archivierte Listen"
+#, python-format
+msgid "%(counter)s archived list"
+msgid_plural "%(counter)s archived lists"
+msgstr[0] "%(counter)s archivierte Liste"
+msgstr[1] "%(counter)s archivierte Listen"
 
 #: biwak/templates/projects/project_detail.html
 msgid "All messages"
