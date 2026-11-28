@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:28+0100\n"
+"POT-Creation-Date: 2026-11-28 11:32+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -4030,6 +4030,13 @@ msgstr[1] "%(count)s API-Tokens"
 
 #: biwak/organizations/activation.py
 #, python-format
+msgid "%(count)s device for push notifications"
+msgid_plural "%(count)s devices for push notifications"
+msgstr[0] "%(count)s Gerät für Push-Benachrichtigungen"
+msgstr[1] "%(count)s Geräte für Push-Benachrichtigungen"
+
+#: biwak/organizations/activation.py
+#, python-format
 msgid "%(actor)s reset your sign-in to Biwak"
 msgstr "%(actor)s hat deine Anmeldung bei Biwak zurückgesetzt"
 
@@ -4384,8 +4391,8 @@ msgstr "%(name)s ist zurück."
 
 #: biwak/organizations/people.py
 #, python-format
-msgid "%(name)s has no authenticator app, passkeys or API tokens."
-msgstr "%(name)s hat keine Authenticator-App, keine Passkeys und keine API-Tokens."
+msgid "%(name)s has no authenticator app, passkeys, API tokens or devices for push notifications."
+msgstr "%(name)s hat keine Authenticator-App, keine Passkeys, keine API-Tokens und keine Geräte für Push-Benachrichtigungen."
 
 #: biwak/organizations/people.py
 #, python-format
@@ -6418,8 +6425,8 @@ msgid "Removed:"
 msgstr "Entfernt:"
 
 #: biwak/templates/accounts/sign_in_reset.txt
-msgid "Sign in with a code sent to your address, or through your organization's sign-in if it uses one. You can add a passkey, set up an authenticator app and create API tokens again in your settings:"
-msgstr "Melde dich mit einem Code an, der an deine Adresse geschickt wird, oder über die Anmeldung deiner Organisation, falls sie eine verwendet. In deinen Einstellungen kannst du wieder einen Passkey hinzufügen, eine Authenticator-App einrichten und API-Tokens erstellen:"
+msgid "Sign in with a code sent to your address, or through your organization's sign-in if it uses one. You can add a passkey, set up an authenticator app, create API tokens and turn on push notifications again in your settings:"
+msgstr "Melde dich mit einem Code an, der an deine Adresse geschickt wird, oder über die Anmeldung deiner Organisation, falls sie eine verwendet. In deinen Einstellungen kannst du wieder einen Passkey hinzufügen, eine Authenticator-App einrichten, API-Tokens erstellen und Push-Benachrichtigungen einschalten:"
 
 #: biwak/templates/accounts/sign_in_reset.txt
 #, python-format

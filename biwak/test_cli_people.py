@@ -103,16 +103,20 @@ class PeopleCLITest(test_cli.CLITest):
         """specs/two-factor.md"""
         from allauth.mfa.models import Authenticator
 
+        from biwak.accounts.models import PushSubscription
         from biwak.accounts.test_two_factor import app, passkey
 
         User.objects.filter(pk=self.cleo.pk).update(is_active=True)
         app(self.cleo)
         passkey(self.cleo)
+        PushSubscription.objects.create(
+            user=self.cleo, endpoint="https://push.example.org/1", p256dh="k", auth="a"
+        )
         with self.captureOnCommitCallbacks(execute=True):
             output = self.biwak("people", "reset-sign-in", self.cleo.pk).output
         self.assertIn(
             f"Reset: Cleo Example ({self.cleo.pk}), removed authenticator app,"
-            " 1 passkey(s), signed out everywhere",
+            " 1 passkey(s), 1 push device(s), signed out everywhere",
             output,
         )
         self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())

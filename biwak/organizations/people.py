@@ -493,14 +493,17 @@ def person_back(request, pk):
 
 def person_reset_sign_in(request, pk):
     """Reset sign-in…: the question, then deleting their authenticator app,
-    passkeys and API tokens, ending their sessions and mailing them
+    passkeys, API tokens and push devices, ending their sessions and mailing them
     (specs/two-factor.md)"""
     who = person_to_change(request, pk)
     removed = activation.sign_in(who)
     if not removed:
         messages.info(
             request,
-            _("%(name)s has no authenticator app, passkeys or API tokens.")
+            _(
+                "%(name)s has no authenticator app, passkeys, API tokens or"
+                " devices for push notifications."
+            )
             % {"name": who.display_name},
         )
         return redirect(back(request, who))

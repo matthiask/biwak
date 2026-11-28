@@ -152,7 +152,8 @@ Fixed (each in its part's spec):
   staff only in the own or an external organization; inviting someone
   waiting to be activated activates them; activating with the mail
   someone in no project is refused; withdrawing an invitation unassigns
-  before choosing between deleting and deactivating.
+  before choosing between deleting and deactivating; "Reset sign-in…"
+  counts push devices (CLI 0.78.0).
 - **Notifications:** a first mention merged into an edit marked unread
   is mailed and pushed; unsubscribing from a to-do stops its column
   moves, also through the mail's link; notifications of an item trashed
@@ -204,8 +205,6 @@ decided, marked "consistent"):
   - `unread_counts()` counts in the database; mention syntax in
     forwarded mails isn't a mention; a mention removed again within a
     merged edit doesn't count (consistent).
-- **People:**
-  - "Reset sign-in…" counts push devices (consistent).
 - **Visibility:**
   - "Visible to N clients" counts active and invited clients (decided).
   - Moving an item to another project ends its public links (decided).

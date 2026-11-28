@@ -277,9 +277,16 @@ class SignIn(NamedTuple):
     app: bool  # An authenticator app
     passkeys: int
     api_tokens: int
+    # Devices getting push notifications (counted since 2026-11-28)
+    push_devices: int = 0
 
     def __bool__(self):
-        return self.app or bool(self.passkeys) or bool(self.api_tokens)
+        return (
+            self.app
+            or bool(self.passkeys)
+            or bool(self.api_tokens)
+            or bool(self.push_devices)
+        )
 
 
 def sign_in(user):
@@ -289,6 +296,7 @@ def sign_in(user):
         app=Authenticator.Type.TOTP in types,
         passkeys=types.count(Authenticator.Type.WEBAUTHN),
         api_tokens=APIToken.objects.filter(user=user).count(),
+        push_devices=PushSubscription.objects.filter(user=user).count(),
     )
 
 
@@ -320,7 +328,8 @@ def reset_sign_in(user, *, actor):
         return removed
     Authenticator.objects.filter(user=user).delete()
     APIToken.objects.filter(user=user).delete()
-    # Pushes go to devices somebody else may have (decided 2026-11-28)
+    # Pushes go to devices somebody else may have (decided 2026-11-28),
+    # counted like the rest
     PushSubscription.objects.filter(user=user).delete()
     for session in UserSession.objects.filter(user=user):
         session.end()
@@ -354,6 +363,15 @@ def removed_list(removed, *, theirs=False):
         words.append(
             ngettext("%(count)s API token", "%(count)s API tokens", removed.api_tokens)
             % {"count": removed.api_tokens}
+        )
+    if removed.push_devices:
+        words.append(
+            ngettext(
+                "%(count)s device for push notifications",
+                "%(count)s devices for push notifications",
+                removed.push_devices,
+            )
+            % {"count": removed.push_devices}
         )
     return words
 

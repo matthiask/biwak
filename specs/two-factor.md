@@ -45,10 +45,11 @@ below is what prevents that.
   split of `activation.md`: staff reset clients, admins also own staff
   and externals; nobody resets themselves this way (they change their
   own in the settings). Offered whenever the person has any of an
-  authenticator app, passkeys or API tokens; it deletes all of them,
+  authenticator app, passkeys, API tokens or push devices (these since
+  2026-11-28, verification round 1, consistent); it deletes all of them,
   ends their sessions and mails them what was removed and by whom ("Ada
   reset your sign-in to Biwak", a line per kind: "your authenticator
-  app", "2 passkeys", "1 API token"), so a reset they didn't ask for is
+  app", "2 passkeys", "1 API token", "1 device for push notifications"), so a reset they didn't ask for is
   noticed. They sign in by code or through their organization's identity
   provider then and set up again; where a second factor is required,
   they're led to the setup page first. With none of them nothing
@@ -119,17 +120,19 @@ below is what prevents that.
   stay off (`ACCOUNT_EMAIL_NOTIFICATIONS` unset).
 - **Resets:** `activation.can_reset_sign_in()` (`can_change()`, not
   oneself), `activation.sign_in()` (what the person has: `SignIn(app,
-  passkeys, api_tokens)`) and `activation.reset_sign_in()` in
+  passkeys, api_tokens, push_devices)`) and `activation.reset_sign_in()` in
   `biwak/organizations/activation.py`: deletes the app, the passkeys,
-  the API tokens and the push devices (decided 2026-11-28; not counted
-  in `SignIn` nor named in the mail), ends the sessions
+  the API tokens and the push devices (decided 2026-11-28; counted in
+  `SignIn` and named in the question, the message and the mail since
+  verification round 1), ends the sessions
   (`UserSession.end()`, `live.check_access()`), mails through the outbox
   (`accounts/sign_in_reset.txt`, `Kind.ACCOUNT`, from the actor, not
   to inactive people or bounced addresses). The page
   `/people/<id>/reset-sign-in/` (offered on the person's page and in the
   palette only when there's something to remove), `POST
   /api/v1/people/{id}/reset-sign-in/` (`reset`: whether there was
-  anything, `removed`: `{app, passkeys, api_tokens}`; the old
+  anything, `removed`: `{app, passkeys, api_tokens, push_devices}`, CLI
+  0.78.0; the old
   `…/reset-two-factor/` stays as an alias), `biwak people reset-sign-in
   ID` (`reset-two-factor` stays as a hidden alias). Migration `accounts.0017`
   audits `mfa_authenticator` without `data` (the app's secret, the
