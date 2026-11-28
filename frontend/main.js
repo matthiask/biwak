@@ -5,6 +5,8 @@ import "./styles/main.css"
 import "./styles/icons.css"
 import "./styles/marks.css"
 
+// Before any script changes the page (frontend/live.js)
+import "./live-rendered.js"
 import "./theme.js"
 import "./menus.js"
 import "./reactions.js"

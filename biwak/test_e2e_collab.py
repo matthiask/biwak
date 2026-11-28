@@ -654,6 +654,55 @@ class LiveTest(E2ETestCase):
         )
         expect(ada.locator("#live-comments")).to_contain_text("While you were away")
 
+    def test_nothing_changed_nothing_marked(self):
+        """What the page's scripts add to its forms (the toolbar, mentions,
+        the rich editor) isn't a change: fetched again, nothing is marked"""
+        for target in (self.todolist, self.todo):
+            page = self.login(self.ada)
+            self.watch_classes(page)
+            self.open(self.ada, target, page=page)
+            self.wait_for_editors(page)
+            # Reconnecting fetches the page once
+            page.evaluate("document.body.live.socket.close()")
+            expect(page.locator("body")).to_have_attribute(
+                "data-live-updated", re.compile(r"\d")
+            )
+            self.never_class(page, "wb-live-new")
+
+    def test_back_in_the_history_isnt_marked(self):
+        """A page restored from the back/forward cache takes over what
+        changed meanwhile without marking it, as a reload would show it
+        (GitHub issue #2). Playwright turns the cache off, and Chromium's
+        headless shell has none: the full Chromium with it on."""
+        browser = self.playwright.chromium.launch(
+            channel="chromium",
+            ignore_default_args=["--disable-back-forward-cache"],
+        )
+        self.addCleanup(browser.close)
+        default, self.browser = self.browser, browser
+        try:
+            page = self.login(self.ada)
+        finally:
+            self.browser = default
+        self.watch_classes(page)
+        page.add_init_script(
+            """addEventListener("pageshow", (event) => {
+                if (event.persisted) document.body.dataset.restored = ""
+            })"""
+        )
+        self.open(self.ada, self.todolist, page=page)
+        page.get_by_role("link", name="Order the tent").click()
+        page.wait_for_load_state()
+        Item.objects.filter(pk=self.todo.pk).update(title="Order the big tent")
+        ops.create_todo(todolist=self.todolist, title="Pack", creator=self.bob)
+        # A restored page has no load event
+        page.go_back(wait_until="commit")
+        expect(page.locator("body")).to_have_attribute("data-restored", "")
+        expect(page.locator("main")).to_contain_text("Order the big tent")
+        expect(page.locator("main")).to_contain_text("Pack")
+        self.never_class(page, "wb-live-new")
+        self.never_class(page, "wb-live-enter")
+
     def test_the_lantern_count_and_menu(self):
         ada = self.open(self.ada, reverse("projects"), page=self.page)
         count = ada.locator("[data-lantern-count]")

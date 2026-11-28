@@ -3,18 +3,22 @@
 // with IDs; the page then fetches itself through its normal view (with its
 // permission checks) and takes over the regions that changed:
 //
-// - [data-live] with an id: replaced when its HTML differs, unless it's
+// - [data-live] with an id: replaced when its HTML differs from what the
+//   server rendered before and from what it shows (what scripts add to
+//   forms isn't a change, frontend/live-rendered.js), unless it's
 //   being edited (focus in a field, a changed field, an open <details>):
 //   then it waits, with a note, until the form is saved or closed;
 // - [data-live-list] with an id: its children (each with an id) are added,
 //   removed, reordered and updated one by one.
 //
-// What's new is marked with .wb-live-new (a short highlight). Several
+// What's new is marked with .wb-live-new (a short highlight), except on a
+// page restored from the back/forward cache. Several
 // changes within a moment are fetched once; after reconnecting the page is
 // fetched once, so nothing is missed. The lantern's count is
 // frontend/lantern.js's (the "biwak:lantern" event).
 
 import { report } from "./connection.js"
+import { normalized, remember, unchanged } from "./live-rendered.js"
 
 const body = document.body
 const path = body.dataset.liveSocket
@@ -49,6 +53,8 @@ let pinger = null
 let pongTimer = null
 let fetching = false
 let again = false
+// Back in the history: the page takes over what changed without marking it
+let quiet = false
 // Regions waiting while they're edited: id → the new element
 const waiting = new Map()
 
@@ -147,6 +153,15 @@ addEventListener("online", () => {
   connect()
 })
 
+// Back in the history, restored as it was left (the back/forward cache):
+// whatever changed meanwhile is taken over quietly, as a reload would show
+// it (GitHub issue #2)
+addEventListener("pageshow", (event) => {
+  if (!event.persisted || !path) return
+  quiet = true
+  schedule()
+})
+
 // Back from sleep or another tab: is the socket still there?
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") ping()
@@ -179,6 +194,7 @@ async function refresh() {
       const current = document.getElementById(region.id)
       if (current) update(current, region)
     }
+    quiet = false
     body.dataset.liveUpdated = String(Date.now())
   } catch {
     // Offline: the reconnect fetches again
@@ -215,31 +231,6 @@ function gone() {
 
 // Comparing ---------------------------------------------------------------
 
-function normalized(el) {
-  const clone = el.cloneNode(true)
-  // Django masks the CSRF token differently on every page
-  for (const token of clone.querySelectorAll("[name=csrfmiddlewaretoken]"))
-    token.removeAttribute("value")
-  for (const node of [
-    clone,
-    ...clone.querySelectorAll(".wb-live-new, .wb-live-enter"),
-  ])
-    node.classList.remove("wb-live-new", "wb-live-enter")
-  for (const note of clone.querySelectorAll("[data-live-note]")) note.remove()
-  // What scripts set on the page (menus placed, dragging)
-  for (const node of [clone, ...clone.querySelectorAll("*")]) {
-    node.removeAttribute("style")
-    node.removeAttribute("draggable")
-    for (const name of [...node.classList])
-      if (name.startsWith("htmx-") || name.startsWith("sortable-"))
-        node.classList.remove(name)
-    if (!node.classList.length) node.removeAttribute("class")
-  }
-  for (const node of [clone, ...clone.querySelectorAll("[data-live-waiting]")])
-    node.removeAttribute("data-live-waiting")
-  return clone.outerHTML
-}
-
 function dirty(field) {
   if (field.type === "checkbox" || field.type === "radio")
     return field.checked !== field.defaultChecked
@@ -269,6 +260,7 @@ function adopt(fresh) {
 }
 
 function mark(node) {
+  if (quiet) return
   node.classList.remove("wb-live-new")
   // Restart the animation
   void node.offsetWidth
@@ -278,6 +270,7 @@ function mark(node) {
 // A row that wasn't there slides in, beside the highlight (the class goes
 // when it's done, a row moved later doesn't slide again)
 function enter(node) {
+  if (quiet) return
   node.classList.add("wb-live-enter")
   node.addEventListener("animationend", (event) => {
     if (event.target === node) node.classList.remove("wb-live-enter")
@@ -297,7 +290,7 @@ function update(current, fresh) {
   }
   // Completed here a moment ago, its animation (frontend/celebrate.js) ends it
   if (current.classList.contains("is-completing")) return
-  if (normalized(current) === normalized(fresh)) return
+  if (unchanged(fresh) || normalized(current) === normalized(fresh)) return
   if (editing(current)) {
     wait(current, fresh)
     return
@@ -307,6 +300,7 @@ function update(current, fresh) {
 
 function replace(current, fresh) {
   waiting.delete(current.id)
+  remember(fresh)
   const node = adopt(fresh)
   current.replaceWith(node)
   mark(node)
@@ -348,6 +342,7 @@ function updateChildren(current, fresh) {
       update(node, freshChild)
       node = document.getElementById(freshChild.id)
     } else {
+      remember(freshChild)
       node = adopt(freshChild)
       mark(node)
       enter(node)
