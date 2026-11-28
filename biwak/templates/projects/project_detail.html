@@ -115,7 +115,10 @@
     <div class="col-lg-8">
       {% checkins_due project %}
       <h2 class="h5 d-flex justify-content-between align-items-center">
-        {% translate "To-do lists" %}
+        <a
+          class="text-reset text-decoration-none"
+          href="{% url 'project_todos' project.pk %}"
+        >{% translate "To-do lists" %}</a>
         {% if can_create_lists %}<a
             class="btn btn-sm btn-quiet"
             href="{% url 'list_new' project.pk %}"
@@ -248,13 +251,21 @@
     <div class="col-lg-4">
       {% if not project.is_template %}
         <h2 class="h5 d-flex justify-content-between align-items-center">
-          {% translate "Members" %}
+          <a
+            class="text-reset text-decoration-none"
+            href="{% url 'project_people' project.pk %}"
+          >{% translate "Members" %}</a>
           <a class="btn btn-sm btn-quiet" href="{% url 'project_people' project.pk %}">{% icon "person-plus" %}<span
             >{% if request.user.is_client %}{% translate "All" %}{% else %}{% translate "Manage" %}{% endif %}</span></a>
         </h2>
         {% include "projects/_member_avatars.html" %}
       {% endif %}
-      <h2 class="h5">{% translate "Activity" %}</h2>
+      <h2 class="h5">
+        <a
+          class="text-reset text-decoration-none"
+          href="{% url 'project_feed' project.pk %}"
+        >{% translate "Activity" %}</a>
+      </h2>
       {% include "activity/_events.html" %}
       <p class="small"><a href="{% url 'project_feed' project.pk %}">{% translate "All activity" %}</a></p>
     </div>
