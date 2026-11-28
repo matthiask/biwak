@@ -190,6 +190,28 @@ def _todos_in(todolist_item, group):
     ).exclude(status=Status.TRASHED)
 
 
+def subscribe_watchers(todolist, items):
+    """Watching the list (specs/notifications.md): its watchers are
+    subscribed to every new to-do (decided 2026-11-26), the next one of a
+    repeating one, to-dos moved in from another list or project and added
+    from text (decided 2026-11-28); those who see it only, automatically
+    (an earlier unsubscribing stays). Not while importing: an import
+    brings the source's subscriptions."""
+    if is_importing() or not items:
+        return
+    people = watchers(todolist)
+    if not people:
+        return
+    seeing = {}
+    for item in items:
+        key = (item.project_id, item.is_client_visible, item.status)
+        if key not in seeing:
+            seeing[key] = set(who_can_see(item).values_list("pk", flat=True))
+        for user in people:
+            if user.pk in seeing[key]:
+                subscribe(user, item, explicit=False)
+
+
 @transaction.atomic
 def create_todo(
     *,
@@ -231,13 +253,7 @@ def create_todo(
     )
     attachments.link(item, notes, actor=creator)
     event = created(item, creator)
-    if not is_importing():
-        # Watching the list: subscribed to every new to-do (decided
-        # 2026-11-26); an import brings the source's subscriptions
-        seeing = set(who_can_see(item).values_list("pk", flat=True))
-        for user in watchers(todolist):
-            if user.pk in seeing:
-                subscribe(user, item, explicit=False)
+    subscribe_watchers(todolist, [item])
     mentioned = mentions.update(item, f"{title}\n\n{notes}", actor=creator, event=event)
     if assignees:
         assign(item, assignees, actor=creator, mentioned=(event, mentioned))
@@ -1074,13 +1090,8 @@ def _create_next(item, todo, *, actor):
     for subscription in item.subscriptions.select_related("user"):
         if subscription.user.is_active:
             subscribe(subscription.user, following, added_by=subscription.added_by)
-    if not is_importing():
-        # Watching the list, as for a new to-do (create_todo(), decided
-        # 2026-11-28)
-        seeing = set(who_can_see(following).values_list("pk", flat=True))
-        for user in watchers(todolist):
-            if user.pk in seeing:
-                subscribe(user, following, explicit=False)
+    # Watching the list, as for a new to-do (decided 2026-11-28)
+    subscribe_watchers(todolist, [following])
     record(actor=actor, action=Action.CREATED, project=item.project, item=following)
     # Assignees removed from the project since aren't brought back
     allowed = _assignable(following)
@@ -1204,6 +1215,7 @@ def move_todos(
     index = _index_among(siblings, index, after=after, before=before)
     siblings[index:index] = items
 
+    moved_in = set()
     for item in items:
         list_was, group_was = item.parent_id, item.todo.group_id
         across = {}
@@ -1241,6 +1253,7 @@ def move_todos(
             )
         if changed_list:
             visibility.recompute(item)
+            moved_in.add(item.pk)
             record(
                 actor=actor,
                 action=Action.MOVED,
@@ -1256,6 +1269,9 @@ def move_todos(
                 **across,
                 **batch,
             )
+    # Moved in from another list (or project): the list's watchers follow
+    # them like new to-dos (decided 2026-11-28)
+    subscribe_watchers(todolist, [i for i in items if i.pk in moved_in])
     _renumber(siblings)
     for list_id, group_id in sources:
         if (list_id, group_id) != (todolist.pk, group.pk if group else None):
@@ -2087,6 +2103,9 @@ def add_from_text(todolist, text, *, actor):
         [Subscription(user=actor, item=item) for item in added],
         ignore_conflicts=True,
     )
+    # The list's watchers too, like new to-dos (decided 2026-11-28); told
+    # by the one event below
+    subscribe_watchers(todolist, added)
     record(
         actor=actor,
         action=Action.ADDED_TODOS,

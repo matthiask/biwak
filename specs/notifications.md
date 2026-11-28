@@ -195,6 +195,16 @@ subscribed to a list with "everything" as their level for it
   another level unsubscribes nobody (notifications are additive), and
   unsubscribing from the list ends the watching. The list's
   "Notifications…" says so.
+- **To-dos moved in or added from text subscribe them too** (decided
+  2026-11-28, the user: "People who want to know everything about the
+  list should be subscribed and they should also receive a note about
+  new to-dos on the list"): moved from another list or project
+  (`move_todos()`, `move_todos_to()`) and added from text
+  (`add_from_text()`), the same way (`ops.subscribe_watchers()`), those
+  who see them only. Added from text, they're told by the list's one
+  `added_todos` event ("Bob added 12 to-dos.", `todos-from-text.md`).
+  Moved in, they aren't told yet: how is an open question
+  (`verification.md`).
 - **Moving a to-do into another group of its list** (dragging between
   the board's columns, "Move to…" within the list, the same
   `move_todos()`) tells the to-do's subscribers and the list's watchers,

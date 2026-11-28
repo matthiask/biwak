@@ -66,8 +66,9 @@ Ein Projekt kann eine eigene Stufe haben („Mehr“, dann
 („Benachrichtigungen…“ in ihrem Menü „Mehr“): Die nächstliegende gilt.
 
 **Eine Liste beobachten:** Wähle „Alles“ unter „Benachrichtigungen…“
-einer Liste, und du abonnierst die Liste und jedes neue To-do darin, du
-hörst also auch von ihren Kommentaren und davon, dass sie erledigt
+einer Liste, und du abonnierst die Liste und jedes neue To-do darin
+(auch die, die von anderswo hineinverschoben oder aus einem Text
+hinzugefügt werden), du hörst also auch von ihren Kommentaren und davon, dass sie erledigt
 werden, und du wirst benachrichtigt, wenn ein To-do in eine andere
 Gruppe kommt (eine Spalte des Boards): So taugt ein Board für Kanban.
 Ein To-do in eine andere Gruppe zu verschieben, benachrichtigt auch

@@ -58,7 +58,8 @@ project's page), and so can a list ("Notifications..." in its "More"
 menu): the closest one wins.
 
 **Watching a list:** choose "Everything" in a list's "Notifications..."
-and you're subscribed to the list and to every new to-do in it, so you
+and you're subscribed to the list and to every new to-do in it (also
+those moved into it from elsewhere or added from a text), so you
 hear about their comments and completion too, and you're told when a
 to-do moves to another group (a column of the board): a board works for
 Kanban. Moving a to-do into another group also tells everybody

@@ -74,8 +74,9 @@ disabled and the preview says why.
   `@transaction.atomic`: groups through `create_group()`, to-dos created
   silently like `copy_list()`'s, **one event** "added 12 to-dos to
   Launch" (list subscribers hear about it once, the lantern shows one
-  entry), the adder subscribed to the to-dos as their creator. Live
-  updates reload the list once.
+  entry), the adder subscribed to the to-dos as their creator, and the
+  list's watchers too (decided 2026-11-28, `notifications.md`,
+  "Watching a list"). Live updates reload the list once.
 - **Visibility** is the list's: the to-dos inherit it.
 - **Who:** whoever may add to-dos to the list. Headings that need a new
   group follow the rule for creating groups (`access.md`: clients only

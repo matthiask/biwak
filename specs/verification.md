@@ -160,7 +160,9 @@ Fixed (each in its part's spec):
   forwarded mails isn't a mention (`forwarding.md`);
   `lantern.unread_counts()` counts in the database; switching from "No
   mails" to a mail per change sends what piled up as one digest-form
-  mail (`lantern.md`).
+  mail (`lantern.md`); a list's watchers are subscribed to to-dos moved
+  in or added from text, told of the latter by the list's one event
+  (`notifications.md`).
 - **Check-ins:** a held summary is checked again when it goes; a stored
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
@@ -196,8 +198,9 @@ decided, marked "consistent"):
     (consistent); the API's `previous_id` only names a to-do the reader
     sees (consistent).
 - **Notifications:**
-  - People watching a list ("Everything") are subscribed to to-dos moved
-    in or added from text, and told about them like new to-dos (decided).
+  - People watching a list ("Everything") are told about to-dos moved
+    in like new to-dos (decided; they're subscribed already): how is
+    open, see "Risks and questions".
 - **People:**
   - Mentions of people deactivated later show their current name,
     linked, marked inactive (decided).
@@ -266,6 +269,20 @@ that isn't valid any more (the bug above stops asking for everybody).
 
 **Risks and questions:**
 
+- Telling a list's watchers about to-dos moved in (decided that they
+  are, not how): the to-dos' `moved` events (silent now) could tell the
+  target list's watchers, merged per "Move…" into one lantern entry and
+  mail like "Assign…" ("Ada moved 5 to-dos to Launch."; would one
+  drag between columns of several to-dos merge the same way?), or one
+  event on the list like `added_todos` ("Ada moved 5 to-dos into
+  Launch.", which the feed would show next to the to-dos' own moves).
+  Who: the watchers only, or every list subscriber?
+- `added_todos` (from text) tells every subscriber of the list, also on
+  "only what concerns me", unlike new to-dos one by one ("Levels"): keep,
+  or watchers only?
+- Switching from the daily digest to a mail per change: what waited for
+  the next digest goes as a mail per item (only "No mails" sends what
+  piled up as one mail).
 - Search pages by `-updated_at`: something edited while being read
   moves to the top and is missed (nothing repeats).
 - `check_visibility` compares items only, not events or notifications;
