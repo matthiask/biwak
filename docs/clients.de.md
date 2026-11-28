@@ -110,9 +110,10 @@ teilen: **Teilen…** im Menü „Mehr“ des Eintrags oder in der Palette.
   alten. **Nicht mehr teilen** beendet ihn sofort. Solange er gilt, sehen
   Mitarbeitende ein Abzeichen **„Öffentlicher Link“** neben dem Titel
   des Eintrags auf seiner Seite, das Teilen… öffnet.
-- Den Eintrag (oder das, worin er liegt) in den Papierkorb zu legen oder
-  das Projekt zu archivieren beendet seinen Link endgültig;
-  Wiederherstellen bringt ihn nicht zurück.
+- Den Eintrag (oder das, worin er liegt) in den Papierkorb zu legen, in
+  ein anderes Projekt zu verschieben oder das Projekt zu archivieren
+  beendet seinen Link endgültig; Wiederherstellen bringt ihn nicht
+  zurück. Verschieben innerhalb des Projekts behält ihn.
 - Nichts in einer Vorlage lässt sich öffentlich teilen.
 - **Öffentliche Links** in deinem Menü zeigt die gültigen Links in deinen
   Projekten, jeder mit „Nicht mehr teilen“. Teilen und Nicht-mehr-Teilen

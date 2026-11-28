@@ -131,6 +131,33 @@ class OperationsTest(Fixture, TestCase):
         project_ops.unarchive_project(self.project, actor=self.ada)
         self.assertEqual(list(PublicLink.objects.all()), [kept])
 
+    def test_moving_to_another_project_ends_them(self):
+        """Like trashing (decided 2026-11-28): the item and what's in it;
+        moving within the project keeps them"""
+        other = project("Other", members=[self.ada])
+        internal = ops.create_list(
+            project=self.project, title="Second", creator=self.ada
+        )
+        link = self.share()
+        ops.move_todo(self.todo, todolist=internal, actor=self.ada)
+        self.assertTrue(PublicLink.objects.exists())
+        message = ops.create_message(project=self.project, title="M", creator=self.ada)
+        kept = self.share(message)
+        ops.move_to_project(internal, project=other, actor=self.ada)
+        self.assertEqual(list(PublicLink.objects.all()), [kept])
+        self.assertEqual(self.client.get(f"/p/{link.token}/").status_code, 404)
+        ops.move_to_project(message, project=other, actor=self.ada)
+        self.assertFalse(PublicLink.objects.exists())
+
+    def test_moving_todos_to_another_project_ends_them(self):
+        other = project("Other", members=[self.ada])
+        there = ops.create_list(project=other, title="There", creator=self.ada)
+        here = ops.create_todo(todolist=self.todolist, title="Pegs", creator=self.ada)
+        self.share()
+        kept = self.share(here)
+        ops.move_todos_to([self.todo], todolist=there, actor=self.ada)
+        self.assertEqual(list(PublicLink.objects.all()), [kept])
+
     def test_fairy_tasks_delete_expired_links(self):
         link = self.share(days=1)
         message = ops.create_message(project=self.project, title="M", creator=self.ada)

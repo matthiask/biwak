@@ -16,6 +16,7 @@ from biwak.items import operations as ops, visibility
 from biwak.items.models import Comment, Item, Kind, Status
 from biwak.projects.models import Membership
 from biwak.public_links import operations as link_ops
+from biwak.public_links.models import PublicLink
 from biwak.reactions import operations as reaction_ops
 from biwak.test_utils import external, person, project
 
@@ -237,8 +238,8 @@ class MoveToProjectTest(Fixture, TestCase):
         )
         self.assertEqual(Comment.objects.get(pk=tent_comment.pk).item, self.tent)
         self.assertTrue(self.tent.reactions.exists())
-        link.refresh_from_db()
-        self.assertEqual(link.item, self.tent)
+        # Except its public links, which end (specs/public-links.md)
+        self.assertFalse(PublicLink.objects.filter(pk=link.pk).exists())
         self.assertTrue(Bookmark.objects.filter(item=self.list).exists())
         # Every event moves, the old project keeps only the trace
         self.assertFalse(
