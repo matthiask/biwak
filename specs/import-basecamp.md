@@ -423,7 +423,11 @@ cleanup deleted them a day later). **Links to
   (Basecamp's has none; confirmed 2026-11-21), `start_date` the first
   date. Imported **paused**, so Biwak doesn't start mailing people
   unasked. Occurrences come from the
-  answers' `group_on`.
+  answers' `group_on`. A later run updates a changed question's title
+  and schedule (it stays paused) and a changed answer's text, as
+  Basecamp's changes (found 2026-11-28 in verification round 1: neither
+  was updated). The question's visibility isn't followed (open: its
+  answers have their own in Basecamp).
 - **Email forwards** (decided 2026-11-23 by the user): each forward
   becomes an internal message (also when a client forwarded it) in the
   category "Email forwards" with 📨, created when missing like the

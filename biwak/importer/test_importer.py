@@ -908,6 +908,52 @@ class UndoingBiwakTest(ImportCase):
         )
 
 
+class CheckinsChangedTest(ImportCase):
+    """Check-in questions and answers changed in Basecamp are updated, as
+    Basecamp's changes (found 2026-11-28)"""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def test_a_question(self):
+        self.run_import()
+        rec = self.client_.data["/questionnaires/500/questions.json"][0]
+        rec |= {"title": "What did you bake today?", "updated_at": self.LATER}
+        rec["schedule"] |= {"days": [1, 3], "hour": 16}
+        self.run_import()
+        item = self.item("What did you bake today?", Kind.QUESTION)
+        question = Question.objects.get(item=item)
+        self.assertEqual(
+            (question.rule, question.time_of_day),
+            ("FREQ=WEEKLY;BYDAY=MO,WE", dt.time(16, 0)),
+        )
+        self.assertIsNotNone(question.paused_at)
+        # (pausing at the creation is an edit too)
+        event = Event.objects.filter(item=item, action=Action.EDITED).latest(
+            "created_at"
+        )
+        self.assertEqual(
+            (event.actor, event.created_at, event.data["imported"]),
+            (None, at("2026-03-01T08:00:00+00:00"), "basecamp"),
+        )
+
+    def test_an_answer(self):
+        self.run_import()
+        entry = support.file_entry(7201, "cake.png")
+        self.client_.files[entry["download_url"]] = support.PNG + b"cake"
+        rec = self.client_.data["/questions/5001/answers.json"][2]
+        rec |= {
+            "content": f"<div>Pizza{support.image(entry)}</div>",
+            "content_attachments": [entry],
+            "updated_at": self.LATER,
+        }
+        self.run_import()
+        answer = Answer.objects.get(item__created_at__date="2026-02-13")
+        self.assertTrue(answer.content.startswith("Pizza"))
+        self.assertEqual(Attachment.objects.get(name="cake.png").item, answer.item)
+        event = Event.objects.filter(item=answer.item, action=Action.EDITED).get()
+        self.assertEqual((event.actor, event.data["imported"]), (None, "basecamp"))
+
+
 class SinceLaterTest(ImportCase):
     def test_skipped_comments_come_with_the_next_run(self):
         """A recording whose older comments ``--since`` skipped isn't stored

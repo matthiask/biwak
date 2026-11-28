@@ -35,6 +35,7 @@ from biwak.activity.notify import who_can_see
 from biwak.activity.operations import importing, subscribe
 from biwak.bookmarks import operations as bookmark_ops
 from biwak.checkins import operations as checkin_ops
+from biwak.checkins.models import Answer
 from biwak.files import attachments, models as file_models, operations as file_ops
 from biwak.files.titles import with_heading
 from biwak.forwarding.models import ForwardedMail
@@ -2101,7 +2102,18 @@ class Importer(Resolver):
                 checkin_ops.pause(item, actor=creator)
             return item
 
-        item = self._upsert("Question", rec, create=create, follow=True)
+        def update(item):
+            with self._from_basecamp(rec):
+                checkin_ops.update_question(
+                    item,
+                    actor=None,
+                    title=rec["title"],
+                    rule=rule,
+                    starts_on=starts_on,
+                    time_of_day=time_of_day,
+                )
+
+        item = self._upsert("Question", rec, create=create, update=update, follow=True)
         answers = list(self.client.paginate(f"/questions/{rec['id']}/answers.json"))
         self._preload("Question::Answer", answers)
         if item is not None:
@@ -2177,8 +2189,23 @@ class Importer(Resolver):
                     occurrence,
                 )
 
+        def update(item):
+            text = self._md(
+                rec.get("content"),
+                rec.get("content_attachments"),
+                project=item.project,
+                author=item.creator,
+            )
+            with self._from_basecamp(rec):
+                checkin_ops.update_answer(
+                    Answer.objects.get(item=item), text, actor=None
+                )
+            self._link(item, text, item.creator)
+
         try:
-            item = self._upsert("Question::Answer", rec, create=create, follow=True)
+            item = self._upsert(
+                "Question::Answer", rec, create=create, update=update, follow=True
+            )
         except _Skip:
             return user
         if item is not None:
