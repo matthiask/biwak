@@ -50,3 +50,20 @@ class ImportingTest(TestCase):
         self.comment()
         self.assertEqual(Notification.objects.count(), 1)
         self.assertGreater(Event.objects.latest("created_at").created_at.year, 2020)
+
+    def test_an_edit_dated_in_the_past_leaves_later_edits_alone(self):
+        """Edits merge into the same person's edit of the 10 minutes
+        before, never into a later one (found 2026-11-28, verification
+        round 2: an import's edit at Basecamp's time took the person's
+        edit of today back with it)"""
+        todo = ops.create_todo(todolist=self.list, title="Tent", creator=self.ada)
+        ops.update_todo(todo, actor=self.ada, title="Order the tent")
+        edit = Event.objects.get(item=todo, action=Action.EDITED)
+        when = edit.created_at
+        with importing(at=when - dt.timedelta(days=200)):
+            ops.update_todo(todo, actor=self.ada, notes="From long ago")
+        edit.refresh_from_db()
+        self.assertEqual(edit.created_at, when)
+        self.assertEqual(
+            Event.objects.filter(item=todo, action=Action.EDITED).count(), 2
+        )

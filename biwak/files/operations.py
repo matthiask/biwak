@@ -6,6 +6,7 @@ and subscriptions like the rest.
 """
 
 import datetime as dt
+from contextlib import nullcontext
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -199,15 +200,29 @@ def _save(item, doc, *, actor=None, new_version=False, name_authors=False):
     (specs/doc-titles.md). One ``edited`` event
     per person and editing session (merging into their last one), a
     version by the version rules. Returns whether anything changed.
-    ``name_authors``: the audit log names who typed it (one person, or
-    several short names)."""
-    content, authors, typed, typists = live.merge(doc)
-    if name_authors and authors:
+    The audit log names who typed it (one person, or several short
+    names), whoever caused the save (specs/auditing.md): always with
+    ``name_authors`` (``save_live()``, which keeps the name set before
+    itself), otherwise when somebody other than the actor typed some of
+    it ("Save as a version", a save through the API, a restore; found
+    2026-11-28, verification round 2: those were logged as the actor's),
+    and the request's name comes back afterwards."""
+    merged = live.merge(doc)
+    authors = merged[1]
+    if not authors or not (name_authors or any(a != actor for a in authors)):
+        return _store(item, doc, merged, actor=actor, new_version=new_version)
+    with nullcontext() if name_authors else user_name_kept():
         set_user_name(
             authors[0]
             if len(authors) == 1
             else ", ".join(a.get_short_name() for a in authors)
         )
+        return _store(item, doc, merged, actor=actor, new_version=new_version)
+
+
+def _store(item, doc, merged, *, actor, new_version):
+    """``_save()`` once the audit log's name is set"""
+    content, authors, typed, typists = merged
     if actor is not None and actor not in authors:
         authors.append(actor)
     published = False

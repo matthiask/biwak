@@ -138,6 +138,9 @@ def record(*, actor, action, project, item=None, internal=False, **data):
             action=action,
             is_client_visible=visible,
             created_at__gte=now - EDIT_SESSION,
+            # Never a later one: an import's change at Basecamp's time
+            # would take the person's edit of today back with it
+            created_at__lte=now,
         )
         if group_move:
             events = events.filter(data__has_key="group")

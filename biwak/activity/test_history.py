@@ -162,6 +162,34 @@ class HistoryTest(TestCase):
         )
         self.assertEqual((change.old, change.new), ("another list", "Shared"))
 
+    def test_groups_of_lists_viewers_cant_see(self):
+        """A to-do moved in from a project the viewer can't open doesn't
+        show that project's columns (verification round 2)"""
+        from biwak.test_utils import person, project
+
+        bob = person("Dan")
+        self.project.memberships.create(user=bob)
+        limited = project("Limited", members=[self.ada], all_access=False)
+        there = ops.create_list(project=limited, title="Plans", creator=self.ada)
+        group = ops.create_group(todolist=there.todolist, title="Letting go")
+        LoggedAction.objects.all().delete()
+        todo = ops.create_todo(todolist=there, title="Handbook", creator=self.ada)
+        ops.move_todo(todo, todolist=there, group=group, actor=self.ada)
+        todo.refresh_from_db()
+        ops.move_todos_to([todo], todolist=self.internal, actor=self.ada)
+        todo.refresh_from_db()
+
+        def shown(viewer):
+            return {
+                value
+                for c in history.history(todo, viewer)
+                if c.label == "Group"
+                for value in (c.old, c.new)
+            }
+
+        self.assertEqual(shown(self.ada), {"Letting go", None})
+        self.assertEqual(shown(bob), {"another group", None})
+
     def test_page_for_staff_only(self):
         ops.update_todo(self.item(), actor=self.ada, title="Final")
         url = f"/items/{self.todo.pk}/history/"
