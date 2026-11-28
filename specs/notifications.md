@@ -306,7 +306,11 @@ large).
   23 to-dos", `handover.md`).
 - **Digest:** at 07:00 in `TIME_ZONE`, the unsent notifications of the
   day before, grouped by project and item, a batch as one entry; nothing
-  to say, no mail. Subject `[Biwak] What happened on 19. November 2026`
+  to say, no mail. The to-dos of one "Assign…" or "Due date…" across
+  projects are one entry too (decided 2026-11-28, like the lantern and
+  the mail), in "For you" or, when not for the reader, under their
+  project, or under "Biwak" (the mail's subject) for several; the mail
+  after quiet hours or being away the same. Subject `[Biwak] What happened on 19. November 2026`
   (or "from … to …" for more than one day, the first and last day with
   notifications), from `Biwak <DEFAULT_FROM_EMAIL>`. What it holds:
   "The daily digest" below (decided 2026-11-23).

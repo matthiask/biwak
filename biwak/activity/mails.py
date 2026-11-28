@@ -576,17 +576,31 @@ def digest_mail(user, notifications, *, todos=None, short=True):
         return (batch, 0 if batch else notification.event.item_id)
 
     group_batches(notifications)
+    # The to-dos of one "Assign…" or "Due date…" across projects are one
+    # entry (decided 2026-11-28), like the lantern's and the mail: under
+    # their project, or "Biwak" for several (the mail's subject)
+    batch_projects = {}
+    for notification in notifications:
+        if entry := getattr(notification, "batch_entry", None):
+            batch_projects.setdefault(entry, set()).add(notification.event.item.project)
+
+    def section(notification):
+        entry = getattr(notification, "batch_entry", None)
+        projects = batch_projects[entry] if entry else {notification.event.item.project}
+        return next(iter(projects)) if len(projects) == 1 else None
+
     notifications = sorted(
         notifications,
         key=lambda n: (
-            str(n.event.item.project).lower(),
-            n.event.item.project_id,
+            section(n) is None,
+            str(section(n)).lower(),
+            section(n).pk if section(n) else 0,
             *key(n),
         ),
     )
     for_you = []
     projects = []
-    for project, by_project in groupby(notifications, lambda n: n.event.item.project):
+    for project, by_project in groupby(notifications, section):
         items = []
         for (batch, _item_id), by_key in groupby(by_project, key):
             group = list(by_key)
@@ -610,7 +624,7 @@ def digest_mail(user, notifications, *, todos=None, short=True):
                 entry = _item(item, user) | {"entries": entries}
                 (for_you if mine else items).append(entry)
         if items:
-            projects.append({"project": project, "items": items})
+            projects.append({"project": project or "Biwak", "items": items})
     # The to-do sections only enrich a digest with notifications (decided
     # 2026-11-23): nothing happened, no mail
     if not (for_you or projects):

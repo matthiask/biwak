@@ -108,7 +108,8 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   und ob sie „Statt der bisherigen
   Zugewiesenen“ kommen; sonst werden sie hinzugefügt. Jede neue
   zugewiesene Person bekommt eine Benachrichtigung für alle („Ada hat
-  dir 23 To-dos zugewiesen“). Wer herausgenommen wird, erfährt es nicht.
+  dir 23 To-dos zugewiesen“), auch über Projekte hinweg und in der
+  täglichen Zusammenfassung. Wer herausgenommen wird, erfährt es nicht.
   Liegt eines der To-dos im Papierkorb oder kannst du es nicht mehr
   sehen, ändert sich nichts, und das Formular sagt es. Jemanden
   herausnehmen geht pro To-do.

@@ -133,7 +133,8 @@ remove push devices; single sign-on's 24-hour end keeps the push device
 doesn't matter there anymore); a first mention merged into an edit
 marked unread is mailed and pushed; unsubscribing from a to-do stops
 its column moves, also through the mail's link; notifications of an
-item trashed or hidden when their mail is due are kept unmailed.
+item trashed or hidden when their mail is due are kept unmailed; one
+"Assign…" across projects is one entry in the digest.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -190,8 +191,6 @@ part's spec with the fix):
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
 - **Notifications:**
-  - One "Assign…" across projects is one entry in the digest (today one
-    per project).
   - The outbox gives up retries to deactivated people and undeliverable
     addresses (decided).
   - The admins' notice says the outbox keeps mails 30 days; it's 90.
