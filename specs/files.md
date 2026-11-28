@@ -310,7 +310,9 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
 - **Versions:** `DocVersion(doc, title, content, created_by,
   created_at)`; the newest always equals the doc. A save updates it when
   by the same person within 10 minutes, else starts a new one; "Save as
-  a version" always does (decided 2026-11-20). Unchanged saves do
+  a version" always does (decided 2026-11-20), and that version is kept
+  (`DocVersion.kept`): the saver's next save starts another one
+  (verification round 2, 2026-11-28: it replaced the one asked for). Unchanged saves do
   nothing. Restoring saves the old title and content as a new version.
   A whole-text save over somebody else's newer version is refused
   (`base_version`, 409 in the API; also within the other's ten-minute

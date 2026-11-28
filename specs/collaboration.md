@@ -63,7 +63,13 @@ for or removes somebody else.
 
 - **State** (`biwak/collab/models.py`, `live.py`): `LiveState` the Yjs
   document as of the last save, `LiveUpdate` every update since, stored
-  as it arrives (nothing typed is lost when a process dies). Not
+  as it arrives (nothing typed is lost when a process dies). A state
+  without pending updates follows `Doc.content` only when its own text
+  differs from it (the content changed some other way), never because
+  it holds what Markdown can't, a space at the end or a line just begun
+  (verification round 2, 2026-11-28: it was rewritten behind the open
+  editors whenever somebody opened the doc, and the next words typed
+  arrived glued or were lost). Not
   audited (a row per keystroke); `Doc.content` is. Any number of
   processes serve a doc: the state lives in the database.
 - **The websocket** (`/ws/docs/<id>`, `consumers.DocConsumer`): updates
