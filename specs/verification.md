@@ -164,7 +164,8 @@ Fixed (each in its part's spec):
   merged into it (versions remember their co-authors); a form left open
   while its item moves to another project links what it uploaded;
   lists' descriptions link their files (the import's were deleted after
-  a day).
+  a day); `fairy_tasks` saves typing left over before deleting unlinked
+  files.
 - **API and CLI:** `biwak feed` and `biwak lantern` name events without
   an actor "Biwak" (CLI 0.76.0); the API's cursors are positions in the
   whole ordering.
@@ -225,8 +226,7 @@ decided, marked "consistent"):
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).
-- **Docs and files:** `fairy_tasks` saves pending typing before deleting
-  unlinked attachments; attachments inserted by someone who lost access
+- **Docs and files:** attachments inserted by someone who lost access
   are linked when their typing is kept; read-only takes effect for open editors at once (to check).
 - **Who did what:** nameless changes show 🧙 in the history, as in
   Workbench; management commands and migrations name themselves;

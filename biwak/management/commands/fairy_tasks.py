@@ -35,9 +35,10 @@ class Command(BaseCommand):
         tasks = {
             "purge_trash": purge_trash,
             "prune_api_tokens": prune_api_tokens,
-            "delete_unlinked": delete_unlinked,
             "save_pending": save_pending,
-            # After saving: a draft with text saved is a doc
+            # After saving: typing left over (offline, a lost connection)
+            # links its files, and a draft with text saved is a doc
+            "delete_unlinked": delete_unlinked,
             "delete_drafts": delete_drafts,
             "prune_replies": prune_replies,
             "prune_outbox": prune_outbox,

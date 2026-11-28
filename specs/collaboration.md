@@ -78,7 +78,8 @@ for or removes somebody else.
   update, at least every 30 seconds while somebody types, when an
   editor leaves, and when the doc's reading view opens with unsaved
   typing ("Done" leads there while the editor's connection is still
-  closing); `fairy_tasks` saves what's left. It writes
+  closing); `fairy_tasks` saves what's left, before it deletes unlinked
+  attachments (so their files are linked first). It writes
   `Doc.content` through the doc operations: an `edited` event per
   person whose updates it merges (one per editing session of 10
   minutes), mentions credited to who typed them, a version by the rules
