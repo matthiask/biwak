@@ -343,21 +343,25 @@ def person_activate(request, pk):
         return redirect(back(request, who))
     form = ActivateForm(request.POST if request.method == "POST" else None)
     if form.is_valid():
-        [(_user, mailed)] = activation.activate(
-            [who], actor=request.user, mail=form.cleaned_data["mail"]
-        )
-        messages.success(
-            request,
-            _("%(name)s has been activated.") % {"name": who.display_name}
-            + (" " + _("The invitation mail is on its way.") if mailed else ""),
-        )
-        if form.cleaned_data["mail"] and not mailed:
-            messages.warning(
-                request,
-                _("Mail to %(email)s bounced: no invitation mail was sent.")
-                % {"email": who.email},
+        try:
+            [(_user, mailed)] = activation.activate(
+                [who], actor=request.user, mail=form.cleaned_data["mail"]
             )
-        return redirect(back(request, who))
+        except activation.ActivationError as exc:
+            form.add_error("mail", str(exc))
+        else:
+            messages.success(
+                request,
+                _("%(name)s has been activated.") % {"name": who.display_name}
+                + (" " + _("The invitation mail is on its way.") if mailed else ""),
+            )
+            if form.cleaned_data["mail"] and not mailed:
+                messages.warning(
+                    request,
+                    _("Mail to %(email)s bounced: no invitation mail was sent.")
+                    % {"email": who.email},
+                )
+            return redirect(back(request, who))
     return form_response(
         request,
         form,

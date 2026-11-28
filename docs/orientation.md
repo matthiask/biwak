@@ -246,7 +246,8 @@ everybody who hasn't signed in yet, the oldest invitation first.
 and get no mail until someone activates them. "Inactive" on the People
 page lists them; "Activate…" (there, or on the person's page) activates
 them, with a checkbox to send the invitation mail (not to addresses that
-bounced); nothing else changes. "Deactivate…" is for somebody who left:
+bounced, and not to somebody in no project: add them to one first);
+nothing else changes. "Deactivate…" is for somebody who left:
 they are signed out everywhere, their API tokens, calendar link and
 devices for push notifications are deleted and they can't sign in, while what they did stays. They stay
 assigned to their to-dos, marked as inactive, until someone hands them

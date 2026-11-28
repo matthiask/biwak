@@ -7,7 +7,8 @@ from django.utils import timezone
 
 from biwak import test_cli
 from biwak.accounts.models import User
-from biwak.test_utils import external, person
+from biwak.projects.models import Membership
+from biwak.test_utils import external, person, project
 
 
 class PeopleCLITest(test_cli.CLITest):
@@ -50,6 +51,9 @@ class PeopleCLITest(test_cli.CLITest):
         self.assertIn("not both", result.output)
 
     def test_activate_with_the_mail(self):
+        site = project("Site")
+        for user in [self.cleo, self.dora]:
+            Membership.objects.create(project=site, user=user)
         with self.captureOnCommitCallbacks(execute=True):
             output = self.biwak(
                 "people", "activate", self.cleo.pk, self.dora.pk, "--mail"
@@ -57,6 +61,12 @@ class PeopleCLITest(test_cli.CLITest):
         self.assertIn(f"Activated: Cleo Example ({self.cleo.pk}) (mailed)", output)
         self.assertTrue(self.active(self.dora))
         self.assertEqual(len(mail.outbox), 2)
+
+    def test_with_the_mail_not_in_any_project(self):
+        result = self.biwak("people", "activate", self.cleo.pk, "--mail")
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("isn't in any project", result.output)
+        self.assertFalse(self.active(self.cleo))
 
     def test_activate_without_the_mail(self):
         self.biwak("people", "activate", self.cleo.pk)

@@ -14,6 +14,7 @@ from biwak.accounts.models import APIToken, CalendarToken, PushSubscription, Use
 from biwak.organizations import activation
 from biwak.outbox.models import OutgoingMail
 from biwak.palette.test_actions import palette_data
+from biwak.projects.models import Membership
 from biwak.test_utils import assert_modal, external, organization, person, project
 
 
@@ -121,6 +122,41 @@ class ActivateTest(Base):
         activation.activate([self.cleo, self.staffer, self.extern], actor=self.root)
         for user in [self.cleo, self.staffer, self.extern]:
             self.assertTrue(self.active(user))
+
+
+class NoProjectTest(Base):
+    """Decided 2026-11-28: the invitation mail to somebody in no project
+    (none that isn't archived) would name nothing: activating with it is
+    refused, everywhere; without the mail it works"""
+
+    def test_operation(self):
+        with self.assertRaisesMessage(activation.ActivationError, "Dora Example"):
+            activation.activate([self.cleo, self.dora], actor=self.ada, mail=True)
+        self.assertFalse(self.active(self.cleo))
+        activation.activate([self.dora], actor=self.ada)
+        self.assertTrue(self.active(self.dora))
+
+    def test_page(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(f"/people/{self.dora.pk}/activate/", {"mail": "on"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "isn&#x27;t in any project")
+        self.assertFalse(self.active(self.dora))
+
+    def test_api(self):
+        self.client.force_login(self.ada)
+        for url, data in [
+            (f"people/{self.dora.pk}/activate/", {"mail": True}),
+            ("people/activate/", {"ids": [self.cleo.pk, self.dora.pk], "mail": True}),
+        ]:
+            with self.subTest(url=url):
+                response = self.client.post(
+                    f"/api/v1/{url}", data, content_type="application/json"
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("Dora Example", response.json()["detail"])
+                self.assertFalse(self.active(self.cleo))
+                self.assertFalse(self.active(self.dora))
 
 
 class DeactivateTest(Base):
@@ -418,6 +454,7 @@ class APITest(Base):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_bulk_activate(self):
+        Membership.objects.create(project=self.site, user=self.dora)
         with self.captureOnCommitCallbacks(execute=True):
             response = self.post(
                 "people/activate/",

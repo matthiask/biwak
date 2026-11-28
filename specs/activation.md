@@ -116,6 +116,14 @@ in Basecamp are created active (decided 2026-11-22,
   show as invited until they sign in. Not to addresses that bounced
   (`mail_undeliverable_at`): they can be activated, the page says the
   mail wasn't sent, and they aren't marked as invited.
+- **Not with the mail for somebody in no project** (none that isn't
+  archived; decided by the user 2026-11-28, verification round 1): the
+  mail would name none, so `activate()` refuses (`ActivationError`, all
+  or nothing: the page's form error, the API's 400, the CLI's message)
+  "Dora Example isn't in any project, so the invitation mail would name
+  none: add them to a project first, or activate them without the
+  mail." Without the mail it works; bounced addresses get no mail, so
+  they aren't refused.
 - No event in the feed (it isn't about a project); the audit log records
   the change.
 

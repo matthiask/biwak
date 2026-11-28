@@ -50,11 +50,35 @@ def activate(users, *, actor, mail=False):
     """Sets ``is_active`` and clears ``left_at``; nothing else changes. With ``mail`` the
     invitation mail (naming the projects the person is in) goes out through
     the outbox and the person counts as invited until they sign in, except
-    to addresses that bounced. People who are active already stay as they
+    to addresses that bounced; refused (``ActivationError``) for people in
+    no project that isn't archived (who would be mailed). People who are active already stay as they
     are. All or nothing (``PermissionError``). Returns ``[(user, mailed)]``
     of the people activated."""
     users = list(User.objects.select_for_update().filter(pk__in=[u.pk for u in users]))
     _check(actor, users)
+    if mail:
+        # The mail would name nothing (decided 2026-11-28); bounced
+        # addresses get none anyway
+        nowhere = [
+            user
+            for user in users
+            if not user.is_active
+            and user.mail_undeliverable_at is None
+            and not project_ops.invitation_projects(user).exists()
+        ]
+        if nowhere:
+            raise ActivationError(
+                ngettext(
+                    "%(names)s isn't in any project, so the invitation mail"
+                    " would name none: add them to a project first, or"
+                    " activate them without the mail.",
+                    "%(names)s aren't in any project, so the invitation mail"
+                    " would name none: add them to a project first, or"
+                    " activate them without the mail.",
+                    len(nowhere),
+                )
+                % {"names": ", ".join(sorted(str(user) for user in nowhere))}
+            )
     done = []
     for user in users:
         if user.is_active:

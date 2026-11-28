@@ -285,7 +285,8 @@ können sich nicht anmelden und bekommen keine Mails, bis sie jemand
 aktiviert. „Inaktiv“ auf der Seite Personen zeigt sie; „Aktivieren…“
 (dort oder auf der Seite der Person) aktiviert sie, mit einer Checkbox,
 um die Einladungsmail zu senden (nicht an Adressen, deren Mails
-zurückkamen); sonst ändert sich nichts. „Deaktivieren…“ ist für
+zurückkamen, und nicht an jemanden ohne Projekt: Füge die Person zuerst
+einem hinzu); sonst ändert sich nichts. „Deaktivieren…“ ist für
 jemanden, der nicht mehr dabei ist: Die Person wird überall abgemeldet,
 ihre API-Tokens, ihr Kalenderlink und ihre Geräte für
 Push-Benachrichtigungen werden gelöscht, und sie kann sich

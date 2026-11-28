@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:26+0100\n"
+"POT-Creation-Date: 2026-11-28 11:28+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3990,6 +3990,13 @@ msgstr "Liste bearbeiten"
 #, python-format
 msgid "You may not change %(names)s: only admins change staff."
 msgstr "Du darfst %(names)s nicht ändern: Nur Admins ändern Mitarbeitende."
+
+#: biwak/organizations/activation.py
+#, python-format
+msgid "%(names)s isn't in any project, so the invitation mail would name none: add them to a project first, or activate them without the mail."
+msgid_plural "%(names)s aren't in any project, so the invitation mail would name none: add them to a project first, or activate them without the mail."
+msgstr[0] "%(names)s ist in keinem Projekt, die Einladungsmail würde also keines nennen: Füge die Person zuerst einem Projekt hinzu oder aktiviere sie ohne die Mail."
+msgstr[1] "%(names)s sind in keinem Projekt, die Einladungsmail würde also keines nennen: Füge sie zuerst einem Projekt hinzu oder aktiviere sie ohne die Mail."
 
 #: biwak/organizations/activation.py
 msgid "The last active admin can't be deactivated."
