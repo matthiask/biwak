@@ -3761,11 +3761,8 @@ msgid "co-authors"
 msgstr "Mitautor:innen"
 
 #: biwak/items/models.py
-#, fuzzy
-#| msgctxt "action"
-#| msgid "kept open"
 msgid "kept"
-msgstr "offen gelassen"
+msgstr "behalten"
 
 #: biwak/items/models.py
 msgid "doc version"
