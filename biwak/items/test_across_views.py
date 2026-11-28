@@ -57,6 +57,18 @@ class CopyTest(Fixture, TestCase):
             data["confirmed"] = f"{data['project']}:{int('visible' in data)}"
         return self.client.post(self.url(), data, headers=MODAL)
 
+    def test_no_clients_no_switch(self):
+        """Into a project without clients the copy is internal, like what's
+        created there (specs/access.md, decided 2026-11-28)"""
+        intranet = project("Intranet", members=[self.ada])
+        # Asked as for an internal copy: Cleo isn't on it
+        response = self.post(
+            project=intranet.pk, visible="on", confirmed=f"{intranet.pk}:0"
+        )
+        self.assertIn("HX-Redirect", response.headers)
+        copy = Item.objects.get(project=intranet, kind=Kind.LIST)
+        self.assertFalse(copy.is_client_visible)
+
     def test_the_modal_and_the_page(self):
         response = self.client.get(self.url(), headers=MODAL)
         assert_modal(self, response, title="Copy…")

@@ -28,6 +28,8 @@ class AcrossCLITest(test_cli.CLITest):
         copy = Item.objects.get(title="Launch (copy)")
         self.assertIn(f"Copied to #{copy.pk} Launch (copy): http", result.output)
         self.assertNotIn("[clients]", result.output)
+        # "Visible to clients" where there are clients (specs/access.md)
+        self.shop.memberships.create(user=person("Cleo", client=True))
         data = json.loads(
             self.biwak(
                 "lists",

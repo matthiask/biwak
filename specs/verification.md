@@ -192,7 +192,9 @@ Fixed (each in its part's spec):
   to…" of one to-do says when it hides; the API refuses
   `visible_to_clients` when creating in projects without clients; a
   client's `todos/?assignee=` with somebody they may not know finds
-  nothing; the help says dragging stays within a list.
+  nothing; the help says dragging stays within a list; clients who
+  left don't count for the switch or "N clients", those waiting to be
+  activated do; copying a list follows "no clients, no switch".
 - **Docs and files:** a whole-text save from an old `base_version` is
   refused over the saver's own version with somebody else's typing
   merged into it (versions remember their co-authors); a form left open

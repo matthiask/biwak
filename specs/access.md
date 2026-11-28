@@ -214,8 +214,10 @@ on the hot path.
 
 Decided with the user 2026-11-23: the forms creating things (a list, a
 folder, a message, uploading files, a check-in, a project link) offer
-"Visible to clients" only in projects with a client member, invited
-ones included, and in templates, whose visibility is copied
+"Visible to clients" only in projects with a client member who hasn't
+left (active, invited or waiting to be activated, decided 2026-11-28;
+`Project.client_members()`, also what "visible to N clients" counts),
+and in templates, whose visibility is copied
 (`Project.offers_client_switch()`). Without it, what's created is
 internal. "Show to clients…" in the "More" menu, the tiles' menu and the
 palette stays everywhere: staff prepare what a client will see before
@@ -226,7 +228,10 @@ docs, files, check-ins and project links answers 400
 (`api_conventions.refuse_client_switch()`), so the CLI's `--visible`
 and `--clients` say so too; its visibility switch
 (`items/{id}/visibility/`) stays, like "Show to clients…". Editing a
-link and copying a list keep their switch, as on the pages. Tests:
+link keeps its switch, as on the page. Copying a list into a project
+without clients makes an internal copy (the page, whose form offers
+the switch before the project is chosen) or is refused (the API),
+decided 2026-11-28. Tests:
 `biwak/projects/test_client_switch.py`.
 
 ## Making it obvious

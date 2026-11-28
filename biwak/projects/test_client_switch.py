@@ -5,9 +5,11 @@ invited ones too, and in templates; "Show to clients…" stays"""
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from biwak.accounts.models import APIToken
 from biwak.items.models import Item
+from biwak.items.visibility import clients_of
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
@@ -49,10 +51,30 @@ class ClientSwitchTest(TestCase):
         self.assert_switch(shown=True)
 
     def test_an_invited_client(self):
+        cleo = person("Cleo", client=True)
+        cleo.invited_at = timezone.now()
+        cleo.save()
+        Membership.objects.create(project=self.project, user=cleo)
+        self.assert_switch(shown=True)
+
+    def test_a_client_waiting_to_be_activated(self):
+        """Imported, not activated yet: they'll see it once activated"""
         Membership.objects.create(
             project=self.project, user=person("Cleo", client=True, is_active=False)
         )
         self.assert_switch(shown=True)
+        self.assertEqual(clients_of(self.project), 1)
+
+    def test_a_deactivated_client(self):
+        """Who left counts nowhere (decided 2026-11-28)"""
+        Membership.objects.create(
+            project=self.project,
+            user=person(
+                "Cleo", client=True, is_active=False, left_at=timezone.localdate()
+            ),
+        )
+        self.assert_switch(shown=False)
+        self.assertEqual(clients_of(self.project), 0)
 
     def test_templates(self):
         """Their visibility is copied into the projects made from them"""
