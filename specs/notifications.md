@@ -31,7 +31,9 @@ another list, to its watchers** (decided 2026-11-28,
 
 **Edits merge:** an `edited` event by the same person on the same item
 within 10 minutes of their last one updates that event's time instead of
-creating a new one, even when others' events came in between; a merged
+creating a new one, even when others' events came in between (never a
+later one: an import's edit at Basecamp's time left the person's edit of
+today alone, verification round 2, 2026-11-28); a merged
 edit tells nobody again who was told already, except people mentioned in
 it for the first time. Its `mentioned` follows the text after its last
 change (consistent, 2026-11-28, `mentions.update()`): somebody mentioned
