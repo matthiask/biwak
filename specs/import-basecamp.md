@@ -401,7 +401,11 @@ same way.
 new ones in a text changed in Basecamp are linked to its item by the
 importer (found 2026-11-28 in verification round 1: the operations link
 only their actor's uploads, Basecamp's changes name nobody, so the
-cleanup deleted them a day later). **Links to
+cleanup deleted them a day later). A file in texts of several items (or
+projects) is downloaded once and gets a row per item sharing the stored
+file (`Importer._own_attachment()`, as the next to-do of a repeating
+one, `files.md`; found 2026-11-28 in verification round 1: the second
+text reused the first item's row and showed a plain "attachment"). **Links to
   recordings** (on `3.basecamp.com` and `app.basecamp.com`) keep
   Basecamp's address in the stored text and are shown as links to a
   trampoline, `/basecamp/?to=<address>` (`render_markdown()`,

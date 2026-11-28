@@ -1372,6 +1372,65 @@ class NewAttachmentsTest(ImportCase):
         self.assertEqual(attachment.item, self.item("Budget"))
 
 
+class SharedAttachmentTest(ImportCase):
+    """The same Basecamp file in texts of several items (found 2026-11-28 in
+    verification round 1: one row, another item's, shown as a plain
+    "attachment"): a row per item, sharing the stored file"""
+
+    def setUp(self):
+        super().setUp()
+        logo = support.file_entry(7001, "menu.png")
+        message = self.client_.data["/message_boards/200/messages.json"][1]
+        message |= {
+            "content": f"<div>The menu.{support.image(logo)}</div>",
+            "content_attachments": [logo],
+        }
+        comment = self.client_.data["/recordings/2001/comments.json"][0]
+        comment |= {
+            "content": f"<div>Again.{support.image(logo)}</div>",
+            "content_attachments": [logo],
+        }
+
+    def rows(self, title):
+        item = self.item(title)
+        return item, list(Attachment.objects.filter(item=item))
+
+    def test_each_item_its_own(self):
+        self.run_import()
+        todo, (in_todo,) = self.rows("Negotiate the price")
+        message, (in_message,) = self.rows("We have a camp")
+        self.assertNotEqual(in_todo.key, in_message.key)
+        self.assertEqual(in_todo.file.name, in_message.file.name)
+        url = f"{support.BASE}/blobs/7001/download/menu.png"
+        self.assertEqual(self.client_.downloads.count(url), 1)
+        for item, row, text in [
+            (todo, in_todo, todo.todo.notes),
+            (message, in_message, message.message.content),
+            (
+                message,
+                in_message,
+                Comment.objects.get(content__contains="Again").content,
+            ),
+        ]:
+            with self.subTest(item.title):
+                self.assertIn(f"attachment:{row.key}", text)
+                # Not the plain "attachment" of another item's
+                self.assertIn("wb-attachment-image", render_markdown(text, item))
+
+    def test_a_later_run_makes_no_more(self):
+        self.run_import()
+        self.run_import(full=True)
+        self.assertEqual(Attachment.objects.filter(name="menu.png").count(), 2)
+
+    def test_the_file_stays_with_the_other_row(self):
+        self.run_import()
+        _todo, (in_todo,) = self.rows("Negotiate the price")
+        _message, (in_message,) = self.rows("We have a camp")
+        with self.captureOnCommitCallbacks(execute=True):
+            in_message.delete()
+        self.assertTrue(in_todo.file.storage.exists(in_todo.file.name))
+
+
 class UnchangedTest(ImportCase):
     """A later run skips recordings whose ``updated_at`` and comment count
     are as stored: no update, no requests for comments and subscribers"""

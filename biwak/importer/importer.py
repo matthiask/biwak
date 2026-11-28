@@ -37,6 +37,7 @@ from biwak.bookmarks import operations as bookmark_ops
 from biwak.checkins import operations as checkin_ops
 from biwak.checkins.models import Answer
 from biwak.files import attachments, models as file_models, operations as file_ops
+from biwak.files.models import Attachment, new_key
 from biwak.files.titles import with_heading
 from biwak.forwarding.models import ForwardedMail
 from biwak.forwarding.operations import forwarded_line
@@ -957,9 +958,47 @@ class Importer(Resolver):
             self._remember(ATTACHMENT, entry["id"], known)
             self._count(ATTACHMENT, "created")
         else:
-            self._count(ATTACHMENT, "updated")
+            known = self._own_attachment(known, text)
         bang = "!" if known.is_image else ""
         return f"{bang}[{known.name}](attachment:{known.key})"
+
+    def _own_attachment(self, known, text):
+        """The row of a file imported before for the text's item: texts
+        show only their own item's attachments, so a file in texts of
+        several items (or projects) gets a row per item, sharing the stored
+        file, which goes with its last row (specs/files.md; found
+        2026-11-28: the second text showed a plain "attachment"). A new
+        item's (``text["item"]`` None) is linked by the operation creating
+        it, as the author's upload."""
+        item, author = text["item"], text["author"]
+        if item is not None and known.item_id == item.pk:
+            self._count(ATTACHMENT, "updated")
+            return known
+        if (
+            known.item_id is None
+            and known.uploaded_by_id == (author.pk if author else None)
+            and known.project_id == text["project"].pk
+        ):
+            # Not linked yet: the text being converted (or the one before
+            # it, for the same new item) has it
+            self._count(ATTACHMENT, "updated")
+            return known
+        if item is not None and (
+            found := Attachment.objects.filter(item=item, file=known.file.name).first()
+        ):
+            self._count(ATTACHMENT, "updated")
+            return found
+        self._count(ATTACHMENT, "created")
+        return Attachment.objects.create(
+            project=text["project"],
+            item=item,
+            key=new_key(),
+            file=known.file.name,
+            name=known.name,
+            size=known.size,
+            content_type=known.content_type,
+            uploaded_by=author,
+        )
 
     def _link(self, item, text, author):
         """Links the files of a text changed in Basecamp: the operations link
@@ -968,14 +1007,16 @@ class Importer(Resolver):
         deleted them a day later (found 2026-11-28)"""
         attachments.link(item, text, actor=author)
 
-    def _md(self, html, rec_attachments, *, project, author, plain=False):
+    def _md(self, html, rec_attachments, *, project, author, item=None, plain=False):
         """Markdown of a Basecamp text; files in it are downloaded and
-        uploaded as ``author``, who saves the text next. ``plain``: a
-        forwarded mail's plain lines"""
+        uploaded as ``author``, who saves the text next. ``item``: the
+        text's item, None for one not created yet. ``plain``: a forwarded
+        mail's plain lines"""
         self._text = {
             "attachments": rec_attachments or [],
             "project": project,
             "author": author,
+            "item": item,
         }
         try:
             text = (plain_to_markdown if plain else to_markdown)(html, self)
@@ -1471,6 +1512,7 @@ class Importer(Resolver):
                     comment.get("content_attachments"),
                     project=item.project,
                     author=author,
+                    item=item,
                 )
                 with importing(at=when):
                     created = ops.add_comment(item, author=author, content=content)
@@ -1553,6 +1595,7 @@ class Importer(Resolver):
                 rec.get("description_attachments"),
                 project=project,
                 author=item.creator,
+                item=item,
             )
             with self._from_basecamp(rec):
                 ops.update_list(item, actor=None, title=rec["title"], description=text)
@@ -1626,12 +1669,13 @@ class Importer(Resolver):
             return
         title = rec["title"]
 
-        def notes():
+        def notes(todo=None):
             text = self._md(
                 rec.get("description"),
                 rec.get("description_attachments"),
                 project=project,
                 author=creator,
+                item=todo,
             )
             steps = "\n".join(
                 f"- [{'x' if step.get('completed') else ' '}] {step['title']}"
@@ -1667,7 +1711,7 @@ class Importer(Resolver):
                 )
 
         def update(todo):
-            text = notes()
+            text = notes(todo)
             with self._from_basecamp(rec):
                 ops.update_todo(
                     todo, actor=None, title=title, notes=text, **dates(), **repeat
@@ -1895,12 +1939,13 @@ class Importer(Resolver):
         creator = self._user(rec.get("creator"))
         visible = bool(rec.get("visible_to_clients"))
 
-        def content():
+        def content(item=None):
             return self._md(
                 rec.get("content"),
                 rec.get("content_attachments"),
                 project=project,
                 author=creator,
+                item=item,
             )
 
         def create():
@@ -1915,7 +1960,7 @@ class Importer(Resolver):
                 )
 
         def update(item):
-            text = content()
+            text = content(item)
             with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
@@ -1962,12 +2007,13 @@ class Importer(Resolver):
         created = parse_time(rec["created_at"])
         title = rec.get("subject") or rec.get("title") or ""
 
-        def content(author):
+        def content(author, item=None):
             text = self._md(
                 rec.get("content"),
                 rec.get("content_attachments"),
                 project=project,
                 author=author,
+                item=item,
                 plain=True,
             )
             mail = ForwardedMail(
@@ -1990,7 +2036,7 @@ class Importer(Resolver):
                 )
 
         def update(item):
-            text = content(item.creator)
+            text = content(item.creator, item)
             with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
@@ -2083,12 +2129,13 @@ class Importer(Resolver):
             return
         creator = self._user(rec.get("creator"))
 
-        def content():
+        def content(item=None):
             return self._md(
                 rec.get("content"),
                 rec.get("content_attachments"),
                 project=project,
                 author=creator,
+                item=item,
             )
 
         def create():
@@ -2109,7 +2156,7 @@ class Importer(Resolver):
                 file_ops.update_doc(
                     item,
                     actor=item.creator,
-                    content=with_heading(rec["title"], content()),
+                    content=with_heading(rec["title"], content(item)),
                 )
 
         item = self._upsert("Document", rec, create=create, update=update, follow=True)
@@ -2134,12 +2181,13 @@ class Importer(Resolver):
             return
         creator = self._user(rec.get("creator"))
 
-        def description():
+        def description(item=None):
             return self._md(
                 rec.get("description"),
                 rec.get("description_attachments"),
                 project=project,
                 author=creator,
+                item=item,
             )
 
         def create():
@@ -2163,7 +2211,7 @@ class Importer(Resolver):
                 raise _Skip from exc
 
         def update(item):
-            text = description()
+            text = description(item)
             with self._from_basecamp(rec):
                 file_ops.update_upload(item, actor=None, description=text)
             self._link(item, text, creator)
@@ -2309,6 +2357,7 @@ class Importer(Resolver):
                 rec.get("content_attachments"),
                 project=item.project,
                 author=item.creator,
+                item=item,
             )
             with self._from_basecamp(rec):
                 checkin_ops.update_answer(
