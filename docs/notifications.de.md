@@ -290,5 +290,7 @@ sie zu lesen. Dann:
 
 Abgelegte Mails verschwinden aus der Liste; Mails, die du nicht ablegst,
 werden nach 30 Tagen gelöscht. Anhänge über 25 MB fallen weg, mit einer
-Zeile, die sagt, welche. Weiterleiten geht nur, wo Antworten per Mail
-eingeschaltet ist.
+Zeile, die sagt, welche. Erwähnungen, die in der Mail stehen (die
+Schreibweise `[@Ada](person:12)`), bleiben Text: Das Ablegen erwähnt
+niemanden. Weiterleiten geht nur, wo Antworten per Mail eingeschaltet
+ist.

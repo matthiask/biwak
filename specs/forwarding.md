@@ -114,3 +114,8 @@ Made-up samples of each shape in `biwak/forwarding/samples/`.
   audit log nor in the admin: the forwarder's only.
 - The message form has no "Subscribers": the project is chosen in the same
   form, so posting tells those told by default only.
+- **Mention syntax from outside isn't a mention** (consistent,
+  2026-11-28, verification round 1): filing escapes links to people in
+  the text (`[@Ada](person:12)`, `<person:12>`, reference definitions;
+  `operations.defused()`), so they show as written, and turns mentions
+  in the title into "@Ada" (`defused_title()`); nobody is mentioned.

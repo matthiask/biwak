@@ -250,4 +250,6 @@ some wait. Open "Text" to read it. Then:
 
 Filed mails leave the list; mails you don't file are deleted after 30
 days. Attachments larger than 25 MB are left out, with a line saying
-which. Forwarding works only where replying by mail is switched on.
+which. Mentions written into the mail (the syntax `[@Ada](person:12)`)
+stay text: filing it mentions nobody. Forwarding works only where
+replying by mail is switched on.

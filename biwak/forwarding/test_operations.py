@@ -8,7 +8,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from biwak.activity.models import Notification
+from biwak.activity.models import Event, Mention, Notification
 from biwak.files.models import Attachment
 from biwak.forwarding import operations
 from biwak.forwarding.models import ForwardedFile, ForwardedMail
@@ -127,6 +127,34 @@ class FileAsTodoTest(FilingTestCase):
         [csv] = Attachment.objects.filter(item=item)
         self.assertIn(f"[analytics-2026-11.csv](attachment:{csv.key})", notes)
         self.assertFalse(ForwardedMail.objects.exists())
+
+    def test_mentions_from_outside_are_text(self):
+        """Mention syntax in a forwarded mail (and its subject) isn't a
+        mention when staff file it, it shows as text (consistent,
+        2026-11-28)"""
+        from biwak.templatetags.biwak import render_markdown
+
+        pk = self.bea.pk
+        forwarded = self.forwarded("gmail_en.eml")
+        forwarded.text = (
+            f"Ask [@Bea](person:{pk}) and [Bea]( <person:{pk}>).\n\n"
+            f"Or [her][b].\n\n[b]: person:{pk}"
+        )
+        forwarded.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            item = operations.file_as_todo(
+                forwarded,
+                todolist=self.internal,
+                title=f"For [@Bea](person:{pk})",
+                actor=self.ada,
+            )
+        self.assertFalse(Mention.objects.exists())
+        self.assertFalse(Event.objects.filter(data__has_key="mentioned").exists())
+        self.assertEqual(item.title, "For @Bea")
+        html = render_markdown(item.todo.notes, item)
+        self.assertNotIn("wb-mention", html)
+        self.assertIn(f"Ask [@Bea](person:{pk}) and [Bea]( &lt;person:{pk}&gt;).", html)
+        self.assertIn(f"[b]: person:{pk}", html)
 
     def test_into_a_list_clients_see_the_todo_follows_it(self):
         item = operations.file_as_todo(

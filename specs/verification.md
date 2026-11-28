@@ -156,7 +156,8 @@ Fixed (each in its part's spec):
   admins' notice names the outbox's retention (90 days); the
   "Subscriptions" bullet follows "Levels" (`notifications.md`);
   "Assign…" reads by acting like "Due date…" (`lantern.md`); a mention
-  removed again within a merged edit doesn't count.
+  removed again within a merged edit doesn't count; mention syntax in
+  forwarded mails isn't a mention (`forwarding.md`).
 - **Check-ins:** a held summary is checked again when it goes; a stored
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
@@ -196,8 +197,7 @@ decided, marked "consistent"):
     in or added from text, and told about them like new to-dos (decided).
   - Switching from "No mails" (or after held mails) sends what piled up
     as one digest-form mail, mails per change from then on (decided).
-  - `unread_counts()` counts in the database; mention syntax in
-    forwarded mails isn't a mention (consistent).
+  - `unread_counts()` counts in the database (consistent).
 - **People:**
   - Mentions of people deactivated later show their current name,
     linked, marked inactive (decided).
