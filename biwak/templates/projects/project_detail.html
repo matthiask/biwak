@@ -6,7 +6,8 @@
   <div class="wb-page-header">
     <div>
       <h1 class="wb-title">
-        {% project_dot project %}{{ project }}
+        {# One piece: a long name wraps after the dot, not below it #}
+        <span>{% project_dot project %}{{ project }}</span>
         {% if project.is_template %}<span
             class="badge wb-tone-neutral fs-6"
           >{% translate "Template" %}</span>{% endif %}
