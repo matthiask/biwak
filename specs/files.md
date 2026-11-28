@@ -344,6 +344,9 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   draft whose creator never answered tells those who want to hear once
   it had no change for an hour (`TELL_AFTER`), as "No one else" would
   (`shared`, the creator as the actor), and then isn't asked any more.
+  The creator stays the actor also when they were deactivated or
+  removed from the project meanwhile (decided 2026-11-28: name the
+  author; someone removed on purpose makes clear the doc may go too).
   `send_mails` runs `tell_unanswered()` every minute (`fairy_tasks` is
   daily, too slow); each doc locked with `skip_locked` and checked
   again, so two runs or the creator's answer can't tell twice; typing

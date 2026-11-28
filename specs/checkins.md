@@ -122,7 +122,9 @@ Traps the tests cover (`schedule.py`):
   the installation's time zone, or the day after it was asked when that was
   later (after downtime), to subscribers in `summary` mode who see the
   question; none for an occurrence without answers; later answers
-  aren't sent.
+  aren't sent. An occurrence that was asked gets its summary also when
+  the project is archived or the question paused meanwhile (decided
+  2026-11-28: it was asked).
 - **`each`** goes through the normal notifications to the question's
   subscribers; everybody else gets nothing per answer unless mentioned.
   "Each" counts only while the person is subscribed to the question (decided 2026-11-21): a choice left from before
