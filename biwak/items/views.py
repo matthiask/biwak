@@ -574,6 +574,10 @@ def todo_move(request, pk):
     index. The to-do's page (keyboard): ``target`` is ``LIST`` or
     ``LIST:GROUP``, ``index`` 0 (the top) or empty (the end)."""
     item = item_for(request, pk, Kind.TODO)
+    if item.todo.is_completed:
+        # No grip and no "Move to…" (404 there); the selection's "Move…"
+        # takes them on purpose
+        return HttpResponse(status=400)
     list_id, group_id = (
         request.POST.get("list", item.parent_id),
         request.POST.get("group"),
@@ -692,8 +696,8 @@ def todo_move_to(request, pk):
 
 def todos_to_move(request, target, ids):
     """The to-dos by ID, for moving into the list ``target``: 404 unless
-    the person sees them all, 400 for to-dos of another project (the pages
-    and the API)"""
+    the person sees them all, 400 for to-dos of another project and for
+    completed ones, which have no grip (the pages and the API)"""
     todos = {
         todo.pk: todo
         for todo in Item.objects
@@ -705,6 +709,8 @@ def todos_to_move(request, target, ids):
         raise Http404(_("Not all of these to-dos were found."))
     if any(todo.project_id != target.project_id for todo in todos.values()):
         raise BadRequest(_("To-dos can't move to another project."))
+    if any(todo.todo.is_completed for todo in todos.values()):
+        raise BadRequest(_("Completed to-dos can't be moved."))
     return todos
 
 
