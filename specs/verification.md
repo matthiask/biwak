@@ -194,7 +194,6 @@ part's spec with the fix):
   - Copying a list, a project from a template, or a template's check-in
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
-- **Notifications:**
 - **Visibility:**
   - Moving internal to-dos into a list clients see asks first, like the
     switch; the API and CLI need an explicit flag (decided).
