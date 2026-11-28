@@ -197,7 +197,10 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
 
 - `Todo.recurrence` (empty for none), `recurrence_ends_on`,
   `recurrence_count` (how many more after this one: 2 makes two more, the
-  last has 0), `previous`.
+  last has 0), `previous`. The last one's form shows the 0 and takes it
+  back, and so does the API; elsewhere a count is 1 or more (found
+  2026-11-28, verification round 2: the 0 was shown empty, so saving
+  the form made the series endless).
 - **Completing** a recurring to-do creates the next one in the same list
   and group, at the end, with the same title, notes, assignees and
   subscribers; the list's watchers are subscribed as to any new to-do

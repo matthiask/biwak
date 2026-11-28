@@ -577,7 +577,11 @@ def invalid_dates():
         bad_request(str(exc))
 
 
-def _count(value):
+def _count(value, *, todo=None):
+    """``todo``: the last one of a counted series has 0 left, and sending
+    back what was read is fine"""
+    if value == 0 and todo is not None and todo.recurrence_count == 0:
+        return value
     if value is not None and value < 1:
         bad_request(_("The number of repeats left must be 1 or more."))
     return value
@@ -1013,7 +1017,7 @@ def todo_update(request, todo_id: int, data: TodoPatch):
     for field in ["recurrence_ends_on", "recurrence_count"]:
         if field in given:
             changes[field] = getattr(data, field)
-    _count(changes.get("recurrence_count"))
+    _count(changes.get("recurrence_count"), todo=item.todo)
     with invalid_dates():
         ops.update_todo(item, actor=request.user, **changes)
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)

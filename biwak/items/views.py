@@ -4,6 +4,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import BadRequest, PermissionDenied
+from django.core.validators import MinValueValidator
 from django.db.models import Q
 from django.http import (
     Http404,
@@ -106,7 +107,6 @@ class RepeatForm(RuleFormMixin, Form):
     recurrence_count = forms.IntegerField(
         label=_("Repeats left"),
         required=False,
-        min_value=1,
         widget=EndsCountInput(),
         help_text=_("How many more to-dos to create; empty: no limit."),
     )
@@ -115,6 +115,11 @@ class RepeatForm(RuleFormMixin, Form):
         super().__init__(*args, **kwargs)
         widget = self.fields["recurrence"].widget
         widget.anchor = self.initial.get("due_on") or schedules.today()
+        # The last to-do of a counted series has 0 left: shown and taken
+        # back as that (found 2026-11-28, verification round 2: it was
+        # shown empty, and saving the form made the series endless)
+        self.least = 0 if self.initial.get("recurrence_count") == 0 else 1
+        self.fields["recurrence_count"].validators.append(MinValueValidator(self.least))
         widget.ends = self.ends()
 
     def ends(self, *, posted=True):
@@ -124,9 +129,15 @@ class RepeatForm(RuleFormMixin, Form):
         def shown(name):
             field = self[name]
             value = field.value() if posted else field.initial
-            return value.isoformat() if hasattr(value, "isoformat") else value or ""
+            if hasattr(value, "isoformat"):
+                return value.isoformat()
+            return "" if value is None else value
 
-        return {"on": shown("recurrence_ends_on"), "count": shown("recurrence_count")}
+        return {
+            "on": shown("recurrence_ends_on"),
+            "count": shown("recurrence_count"),
+            "least": self.least,
+        }
 
     def clean(self):
         data = super().clean()

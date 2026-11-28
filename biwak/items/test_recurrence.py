@@ -417,6 +417,39 @@ class PagesTest(RecurrenceTestCase):
             self.assertEqual(item.todo.recurrence, schedules.validate(rule))
             self.assertEqual(Item.objects.get(pk=item.pk).title, "Renamed")
 
+    def test_the_last_of_a_counted_series_stays_the_last(self):
+        """It has 0 left: the form shows and takes that, the API takes
+        back what it gave (found 2026-11-28, verification round 2: shown
+        empty, saved as no limit, the series went on for ever)"""
+        first = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.update_todo(first, actor=self.ada, recurrence_count=1)
+        ops.complete(first, actor=self.ada)
+        last = Item.objects.get(todo__previous=first)
+        self.assertEqual(last.todo.recurrence_count, 0)
+        self.client.force_login(self.ada)
+        url = last.get_absolute_url()
+        page = self.client.get(url + "edit/").content.decode()
+        shown = re.search(
+            r'name="recurrence_count"[^>]*?value="([^"]*)"', page, re.DOTALL
+        )
+        self.assertEqual(shown.group(1), "0")
+        data = rule_post("FREQ=DAILY") | {
+            "form": "todo",
+            "title": "Renamed",
+            "due_on": last.todo.due_on.isoformat(),
+            "assignees": [],
+            "recurrence_count": shown.group(1),
+        }
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertEqual(Todo.objects.get(item=last).recurrence_count, 0)
+        # Elsewhere 0 isn't a count to ask for
+        other = self.todo("FREQ=DAILY", "2026-11-20")
+        response = self.client.post(
+            other.get_absolute_url(), data | {"due_on": "2026-11-20"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(Todo.objects.get(item=other).recurrence_count)
+
     def test_saving_an_unchanged_form_changes_nothing(self):
         """Rules written differently (order of days, the default interval
         and week start) are stored in their canonical form, which the
@@ -649,6 +682,18 @@ class APITest(RecurrenceTestCase):
             content_type="application/json",
             headers=self.api(user),
         )
+
+    def test_the_last_one_takes_back_its_0(self):
+        first = self.todo("FREQ=DAILY", "2026-11-20", recurrence_count=1)
+        ops.complete(first, actor=self.ada)
+        last = Item.objects.get(todo__previous=first)
+        data = {"title": "Renamed", "recurrence_count": 0}
+        response = self.send("patch", f"todos/{last.pk}/", self.ada, data)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["recurrence_count"], 0)
+        other = self.todo("FREQ=DAILY", "2026-11-20")
+        response = self.send("patch", f"todos/{other.pk}/", self.ada, data)
+        self.assertEqual(response.status_code, 400)
 
     def test_create_patch_and_complete(self):
         response = self.send(
