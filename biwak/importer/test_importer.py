@@ -35,6 +35,7 @@ from biwak.items.models import (
     TodoList,
 )
 from biwak.organizations.models import Organization
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
 from biwak.templatetags.biwak import render_markdown
 from biwak.test_utils import organization, person
@@ -1115,6 +1116,22 @@ class ArchivedProjectTest(ImportCase):
         self.assertIsNone(self.project.archived_at)
         self.run_import(full=True)
         self.assertIsNone(self.project.archived_at)
+
+    def test_both_ways(self):
+        """Unarchived in Basecamp after the first import doesn't unarchive
+        it either (found 2026-11-28 in verification round 1: archived in
+        Biwak, unarchived by a change in Basecamp)"""
+        self.run_import()
+        project_ops.archive_project(self.project, actor=self.ada)
+        self.client_.data[f"/projects/{support.PROJECT}.json"] |= {
+            "name": "Camp kitchen 2",
+            "updated_at": "2026-03-06T08:00:00.000Z",
+        }
+        self.run_import()
+        self.assertEqual(self.project.name, "Camp kitchen 2")
+        self.assertIsNotNone(self.project.archived_at)
+        self.run_import(full=True)
+        self.assertIsNotNone(self.project.archived_at)
 
 
 class TrashedTest(ImportCase):

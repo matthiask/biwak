@@ -48,7 +48,10 @@ were written on what was imported before).
   lists, categories and visibility, and adds new comments (a project
   archived in Basecamp is archived only at its first import, decided
   2026-11-28 by the user: after `--archive` Basecamp says so of the
-  project people work in, and archiving it ended its public links); it doesn't
+  project people work in, and archiving it ended its public links; both
+  ways and for templates too, found 2026-11-28 in verification round 1:
+  a later run unarchived a project archived in Biwak, and templates
+  followed Basecamp's archiving); it doesn't
   change imported comments, positions or files. **Moves are followed**
   (decided 2026-11-28 by the user, found in verification round 1: a to-do
   moved into an internal list stayed visible to clients): a changed to-do
@@ -504,7 +507,7 @@ text reused the first item's row and showed a plain "attachment"). **Links to
   (decided 2026-11-22: one library) holding those lists. Mapped as `Template`, so a second run
   updates them; created with `create_template()`, so no members
   (Basecamp's people of a template aren't added), visibility as in
-  Basecamp, archived templates archived. `Importer.run_templates()`.
+  Basecamp, archived templates archived at their first import only. `Importer.run_templates()`.
 - **Not imported:** trashed recordings (anything in Basecamp's trash:
   to-dos, messages, docs, files, comments; confirmed 2026-11-21), pins of
   messages (not in the API), older versions of files, docs' history.
