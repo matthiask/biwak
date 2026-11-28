@@ -210,6 +210,21 @@ class LiveConsumerTest(TransactionTestCase):
             await self.run_op(change)
             self.assertEqual((await self.receive(shared))["action"], "grouped")
 
+    async def test_a_client_hears_of_a_todo_leaving_for_an_internal_list(self):
+        """The client's page of the list the to-do left re-fetches and
+        loses the row; the internal list is never named to it"""
+        cleo = await self.connect(self.cleo, self.shared)
+        bob = await self.connect(self.bob, self.shared)
+        await self.run_op(
+            ops.move_todo, self.todo, todolist=self.internal, actor=self.ada
+        )
+        told = await self.receive(cleo)
+        self.assertEqual(told["action"], "reordered")
+        self.assertEqual(told["item"], self.shared.pk)
+        self.assertEqual(told["watched"], self.shared.pk)
+        await self.assertQuiet(cleo)
+        self.assertEqual((await self.receive(bob))["action"], "reordered")
+
     async def test_own_changes_dont_come_back(self):
         ada = await self.connect(self.ada, self.todo)
         await self.run_op(ops.add_comment, self.todo, author=self.ada, content="Hi")

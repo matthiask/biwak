@@ -188,7 +188,10 @@ socket per tab: the editor's); its lantern count is fetched on load.
 - **Announcements** (`biwak/live/announce.py`), after the commit only:
   every event of an item (`record()`) tells the pages of the item and
   its parent; reordering, the lists a to-do left, groups changed and
-  reactions removed are told explicitly. The person's own group gets
+  reactions removed are told explicitly. The lists a to-do left are told
+  by their own visibility: a client's page of a list whose to-do moved
+  into an internal one hears "reordered" (of its own list, never naming
+  the other) and loses the row (fixed 2026-11-28, verification round 1). The person's own group gets
   lantern pings (`lantern_changed()`), only for events about items they
   see then, for clients only of the time clients saw the item (the same
   filter as `notify()`'s). The actor's own pages aren't told.
