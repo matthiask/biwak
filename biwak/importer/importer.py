@@ -552,17 +552,20 @@ class Importer(Resolver):
         self, bc_type, rec, item, *, comments=True, subscriptions=True, replies=None
     ):
         """The comments and subscribers of a recording (two requests), not
-        for one unchanged since the last run; then its state is stored.
-        ``replies``: where an email forward's replies are, its comments"""
+        for one unchanged since the last run; then its state is stored,
+        unless ``--since`` skipped older comments (found 2026-11-28: they
+        came only with ``--full``). ``replies``: where an email forward's
+        replies are, its comments"""
         if (bc_type, rec["id"]) in self._skipped:
             return
+        complete = True
         if replies:
-            self._comments(rec, item, path=replies, bc_type="Inbox::Reply")
+            complete = self._comments(rec, item, path=replies, bc_type="Inbox::Reply")
         elif comments:
-            self._comments(rec, item)
+            complete = self._comments(rec, item)
         if subscriptions and item is not None:
             self._subscriptions(rec, item)
-        if item is not None:
+        if item is not None and complete:
             self._settle(bc_type, rec)
 
     def _skip(self, rec):
@@ -1345,20 +1348,23 @@ class Importer(Resolver):
                 ops.unarchive(item, actor=None)
 
     def _comments(self, rec, item, *, path=None, bc_type="Comment"):
-        """``path`` and ``bc_type``: an email forward's replies"""
+        """``path`` and ``bc_type``: an email forward's replies. Whether
+        all were read (``--since`` skips older ones)."""
         if self.since and self._skip(rec):
-            return
+            return False
         if comment_count(rec) == 0:
-            return
+            return True
         try:
             comments = list(
                 self.client.paginate(path or f"/recordings/{rec['id']}/comments.json")
             )
         except api.NotFound:
-            return
+            return True
         self._preload(bc_type, comments)
+        complete = True
         for comment in comments:
             if self._skip(comment):
+                complete = False
                 continue
             author = self._user(comment.get("creator"))
             when = parse_time(comment["created_at"])
@@ -1379,6 +1385,7 @@ class Importer(Resolver):
                 return created
 
             self._upsert(bc_type, comment, create=create)
+        return complete
 
     def _subscriptions(self, rec, item):
         """Subscribers as in Basecamp, who can see the item"""

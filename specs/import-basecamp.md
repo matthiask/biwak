@@ -84,7 +84,10 @@ were written on what was imported before).
   (`activity` 0025: their times are Basecamp's, in milliseconds).
   Unchanged recordings aren't touched. `--since` skips leaves
   (to-dos, cards, messages, docs, files, answers, comments) last updated
-  before the date; containers are always read.
+  before the date; containers are always read. A recording whose older
+  comments `--since` skipped isn't stored as read completely, so the next
+  run reads it again (found 2026-11-28 in verification round 1: the
+  comments came only with `--full`).
 - **`--archive`** (decided 2026-11-22): archives each project in
   Basecamp (`PUT /projects/ID/status/archived.json`) once its import went
   through; a failed import archives nothing, projects already archived

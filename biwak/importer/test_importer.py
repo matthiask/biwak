@@ -908,6 +908,19 @@ class UndoingBiwakTest(ImportCase):
         )
 
 
+class SinceLaterTest(ImportCase):
+    def test_skipped_comments_come_with_the_next_run(self):
+        """A recording whose older comments ``--since`` skipped isn't stored
+        as read completely (found 2026-11-28: they came only with --full)"""
+        data = self.client_.data
+        data["/todolists/301/todos.json"][0]["updated_at"] = "2026-03-01T08:00:00.000Z"
+        self.run_import(since=at("2026-02-05T00:00:00+00:00"))
+        food = self.item("Buy giraffe food")
+        self.assertEqual(Comment.objects.filter(item=food).count(), 0)
+        self.run_import()
+        self.assertEqual(Comment.objects.filter(item=food).count(), 2)
+
+
 class BiwakChangesStayTest(ImportCase):
     """A recording unchanged in Basecamp isn't touched at all: what was
     changed in Biwak since stays (decided 2026-11-28); toggles which don't
