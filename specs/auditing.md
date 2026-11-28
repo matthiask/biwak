@@ -28,11 +28,12 @@ forever.
   `user-<id>-…` (`set_user_name()`, the short name without accents:
   PostgreSQL keeps only ASCII in `application_name`, "Jürg" is "Jurg";
   the history finds the person by the ID), `user-0-anonymous` without a
-  sign-in; jobs name themselves: "Send mails", "Fairy tasks", "Resend"
-  (the webhook, until an incoming mail's sender is known), "Basecamp
-  import"; other commands and migrations are "manage.py <command>"
-  (`PGAPPNAME`, set in `manage.py`). Nothing named shows as 🧙 in the
-  history, as in Workbench (decided 2026-11-28). Production reaches
+  sign-in; jobs name themselves: "Send mails", "Fairy tasks", "Inbound mail"
+  (the webhook, until an incoming mail's sender is known), "Mail
+  delivery" (its delivery events), "Basecamp import" (names without
+  the mail provider's, decided 2026-11-28); other commands and migrations are "manage.py <command>"
+  (`PGAPPNAME`, set in `manage.py`). Nothing named shows as 🧚 in the
+  history (decided 2026-11-28). Production reaches
   PostgreSQL through PgBouncer in transaction mode, which keeps
   `application_name` per client (checked with 1.26.1 on 2026-11-28: two
   clients on one server connection each see their own name). Mail replies

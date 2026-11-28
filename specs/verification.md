@@ -197,9 +197,9 @@ Fixed (each in its part's spec):
 - **Who did what:** the mails' signed links ("Keep open",
   unsubscribing) are logged as their recipient; names lose their
   accents instead of turning into escapes; a live save is logged as who
-  typed it, not who caused it; nameless changes show 🧙, commands and
+  typed it, not who caused it; nameless changes show 🧚, commands and
   migrations name themselves, sign-in addresses and linked accounts
-  are audited, the webhook names "Resend"; PgBouncer keeps names per
+  are audited, the webhook names "Inbound mail" and "Mail delivery"; PgBouncer keeps names per
   client (checked).
 
 **To fix:** the findings are fixed. From the risks and questions,

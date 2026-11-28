@@ -101,7 +101,7 @@ def _people_tables():
 @dataclasses.dataclass
 class Change:
     when: dt.datetime
-    # The person, or the audit's name (a job, 🧙 for nobody) if it's not a person
+    # The person, or the audit's name (a job, 🧚 for nobody) if it's not a person
     user: User | None
     user_name: str
     field: str
@@ -256,7 +256,7 @@ def history(item, viewer):
         who = {
             "when": row.created_at,
             "user": user,
-            "user_name": "" if user else (row.user_name or "🧙"),
+            "user_name": "" if user else (row.user_name or "🧚"),
         }
         if row.table_name in _people_tables():
             if row.action in {"I", "D"}:
