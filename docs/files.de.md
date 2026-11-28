@@ -73,8 +73,10 @@ oder heraus, und Shift mit den Pfeiltasten wählt weiter bis zur
 nächsten. Ein einfacher Klick öffnet die Kachel wie immer. Mit einer
 Auswahl zeigt eine Leiste „Verschieben nach…“, „In den Papierkorb legen“
 und „Auswahl aufheben“ (oder drücke Escape); eine der gewählten Kacheln
-zu ziehen verschiebt sie alle. Du verschiebst, was du ändern darfst;
-Kund:innen nur, was sie hinzugefügt haben.
+zu ziehen verschiebt sie alle. Etwas Internes in einen Ordner zu
+verschieben, den Kund:innen sehen, fragt vorher und sagt, was sie sehen
+werden. Du verschiebst, was du ändern darfst; Kund:innen nur, was sie
+hinzugefügt haben.
 
 Mitarbeitende wählen die Reihenfolge des Inhalts eines Ordners mit
 „Reihenfolge…“ in seinem Menü „Mehr“ (für die oberste Ebene im Menü

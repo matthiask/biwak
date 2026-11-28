@@ -13,7 +13,13 @@ from biwak.forms import Confirming, Form, PeopleField, next_url
 from biwak.items import operations as ops
 from biwak.items.across import ProjectChoice, _names
 from biwak.items.models import Group, Item, Kind, Status
-from biwak.items.views import MoveTodoForm, _index, item_for, shown_note
+from biwak.items.views import (
+    MoveTodoForm,
+    _index,
+    hidden_note,
+    item_for,
+    shown_note,
+)
 from biwak.modals import form_response
 from biwak.projects.models import Project
 
@@ -220,19 +226,6 @@ def new_list_visible(todos):
     return all(todo.parent.is_client_visible for todo in todos)
 
 
-def hidden_note(todos, visible):
-    """What moving the to-dos into an internal list hides from clients, as
-    a sentence (empty when the list is visible or hides nothing)"""
-    count = 0 if visible else sum(todo.is_client_visible for todo in todos)
-    if not count:
-        return ""
-    return ngettext(
-        "Clients won't see %(count)d to-do any more: the list is internal.",
-        "Clients won't see %(count)d to-dos any more: the list is internal.",
-        count,
-    ) % {"count": count}
-
-
 def move_notes(todos, project, visible, viewer):
     """Who moving the to-dos into a list of ``project`` adds there and who
     it drops, as sentences (empty when nobody)"""
@@ -316,8 +309,8 @@ def todos_move(request):
             visible = target.is_client_visible
         note = move_notes(todos, chosen, visible, request.user)
         # Hiding them says so, showing them asks like the switch
-        clients_note = hidden_note(todos, visible) or (
-            shown_note(todos, target) if target is not None else ""
+        clients_note = hidden_note(todos, visible) or shown_note(
+            todos, target, project=chosen, visible=visible
         )
         if not (note or clients_note) or form.asked(f"{chosen.pk}:{value}"):
             try:

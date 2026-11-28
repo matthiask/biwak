@@ -5,7 +5,8 @@
 // Shift+arrows on the focused tile the same; the bar acts on the
 // selection, Escape and "Deselect" clear it. Tiles are dragged onto a
 // folder, ".." or a breadcrumb ([data-drop-folder]); dragging a selected
-// tile drags the selection. A plain click opens the tile as before.
+// tile drags the selection, and a drop that would show clients something
+// opens "Move to…" asking first. A plain click opens the tile as before.
 
 import { send } from "./http.js"
 import { openModal } from "./modal.js"
@@ -187,13 +188,28 @@ document.addEventListener("drop", (event) => {
   const target = targetOf(event)
   if (!droppable(target)) return
   event.preventDefault()
-  const data = [["folder", target.dataset.dropFolder]]
-  for (const id of ids(dragged)) data.push(["items", id])
-  for (const tile of dragged) tile.closest("li").hidden = true
+  const folder = target.dataset.dropFolder
+  const moved = ids(dragged)
+  const hidden = dragged.map((tile) => tile.closest("li"))
+  const data = [
+    ["folder", folder],
+    ["dragged", "1"],
+  ]
+  for (const id of moved) data.push(["items", id])
+  for (const li of hidden) li.hidden = true
   // The page as the server has it now: the order, the counts, and the
   // message of a refused move
   const reload = () => window.location.reload()
-  send(grid.dataset.tilesMove, data).then(reload, reload)
+  send(grid.dataset.tilesMove, data).then((response) => {
+    if (!response.headers.get("X-Asks")) return reload()
+    // It would show clients something: the selection's "Move to…" with
+    // this folder asks first (specs/access.md)
+    for (const li of hidden) li.hidden = false
+    const url = new URL(grid.dataset.tilesMove, window.location.href)
+    for (const id of moved) url.searchParams.append("items", id)
+    if (folder) url.searchParams.set("folder", folder)
+    openModal(url.pathname + url.search, target)
+  }, reload)
 })
 
 // Files from the computer (part 4b): dropped anywhere into the window

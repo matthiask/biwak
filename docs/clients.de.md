@@ -30,7 +30,8 @@ intern, bis es gezeigt wird: lieber einmal zu wenig zeigen.
   Menü „…“ der Kacheln in „Dokumente & Dateien“. Wenn du eine Liste,
   einen Ordner, eine Mitteilung, eine Datei oder einen Check-in in einem
   Projekt mit Kund:innen erstellst (auch eingeladenen), kannst du sie
-  gleich sichtbar machen; Projekte ohne Kund:innen fragen nicht danach.
+  gleich sichtbar machen; Projekte ohne Kund:innen fragen nicht danach
+  (und die API und die Kommandozeile lehnen es ab).
   Um vorzubereiten, was Kund:innen sehen werden, bevor du sie einlädst,
   nimm „Kund:innen zeigen…“.
 - **Kund:innen zeigen…** fragt vorher und sagt, was sich ändert („Macht
@@ -39,9 +40,11 @@ intern, bis es gezeigt wird: lieber einmal zu wenig zeigen.
   Inhalt wieder, mit dem, was Kund:innen darin geschrieben haben.
 - Einen Eintrag in einen sichtbaren Ordner oder eine sichtbare Liste zu
   verschieben zeigt ihn den Kund:innen; ihn in einen internen zu
-  verschieben verbirgt ihn. Interne To-dos in eine sichtbare Liste zu
-  verschieben fragt vorher, wie „Kund:innen zeigen…“ („Macht 2 To-dos
-  und 5 Kommentare für 3 Kund:innen sichtbar.“).
+  verschieben verbirgt ihn. Interne To-dos in eine sichtbare Liste oder
+  interne Ordner, Docs und Dateien in einen sichtbaren Ordner zu
+  verschieben (auch durch Ziehen) fragt vorher, wie „Kund:innen
+  zeigen…“ („Macht 2 To-dos und 5 Kommentare für 3 Kund:innen
+  sichtbar.“).
 - Etwas Sichtbares in ein anderes Projekt zu verschieben lässt es
   sichtbar: Die Kund:innen dieses Projekts sehen es, mit seinen
   Kommentaren und dem, was Kund:innen vorher von seiner Aktivität
@@ -110,9 +113,10 @@ teilen: **Teilen…** im Menü „Mehr“ des Eintrags oder in der Palette.
   alten. **Nicht mehr teilen** beendet ihn sofort. Solange er gilt, sehen
   Mitarbeitende ein Abzeichen **„Öffentlicher Link“** neben dem Titel
   des Eintrags auf seiner Seite, das Teilen… öffnet.
-- Den Eintrag (oder das, worin er liegt) in den Papierkorb zu legen oder
-  das Projekt zu archivieren beendet seinen Link endgültig;
-  Wiederherstellen bringt ihn nicht zurück.
+- Den Eintrag (oder das, worin er liegt) in den Papierkorb zu legen, in
+  ein anderes Projekt zu verschieben oder das Projekt zu archivieren
+  beendet seinen Link endgültig; Wiederherstellen bringt ihn nicht
+  zurück. Verschieben innerhalb des Projekts behält ihn.
 - Nichts in einer Vorlage lässt sich öffentlich teilen.
 - **Öffentliche Links** in deinem Menü zeigt die gültigen Links in deinen
   Projekten, jeder mit „Nicht mehr teilen“. Teilen und Nicht-mehr-Teilen

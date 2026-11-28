@@ -305,7 +305,10 @@ class FilesCLITest(test_cli.CLITest):
             project=self.project, title="Specs", creator=self.ada, visible=True
         )
         doc = ops.create_doc(project=self.project, title="Notes", creator=self.ada)
-        output = self.biwak("folders", "move", doc.pk, folder.pk).output
+        # Clients will see it: said so first (biwak/items/test_showing_moves.py)
+        output = self.biwak(
+            "folders", "move", doc.pk, folder.pk, "--show-to-clients"
+        ).output
         self.assertIn("[clients]", output)
         self.assertEqual(Item.objects.get(pk=doc.pk).parent, folder)
         self.biwak("folders", "move", doc.pk)

@@ -193,7 +193,8 @@ class DocPageTest(Fixture, TestCase):
     def test_moving(self):
         self.client.force_login(self.ada)
         response = self.client.post(
-            reverse("item_move", args=[self.secret.pk]), {"folder": self.public.pk}
+            reverse("item_move", args=[self.secret.pk]),
+            {"folder": self.public.pk, "confirmed": self.public.pk},
         )
         self.assertRedirects(response, self.secret.get_absolute_url())
         self.secret.refresh_from_db()

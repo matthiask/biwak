@@ -25,6 +25,7 @@ from biwak.api_conventions import (
     page_of,
     paginated,
     person_out,
+    refuse_client_switch,
 )
 from biwak.checkins import mails, operations as ops
 from biwak.checkins.models import (
@@ -204,6 +205,7 @@ def question_create(request, project_id: int, data: QuestionIn):
     ``time_of_day`` in the installation's time zone."""
     project = project_for(request, project_id)
     staff_only(request)
+    refuse_client_switch(project, data.visible_to_clients)
     starts_on = data.starts_on or schedules.today()
     try:
         item = ops.create_question(

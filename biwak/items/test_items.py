@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event, Subscription
@@ -7,6 +8,7 @@ from biwak.activity.operations import subscribe, unsubscribe
 from biwak.items import operations as ops, visibility
 from biwak.items.models import Comment, Item, Kind, Status
 from biwak.projects import operations as project_ops
+from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
 
@@ -307,6 +309,21 @@ class VisibilityTest(TestCase):
         self.assertEqual(
             visibility.affected(todolist), {"items": 1, "comments": 1, "clients": 1}
         )
+
+    def test_affected_counts_active_and_invited_clients(self):
+        """Deactivated clients see nothing, invited ones will (decided
+        2026-11-28); the same count when moving shows to-dos"""
+        gone = person("Gus", client=True, is_active=False)
+        invited = person("Ivy", client=True, invited_at=timezone.now())
+        for user in [gone, invited]:
+            Membership.objects.create(project=self.project, user=user)
+        todolist = ops.create_list(
+            project=self.project, title="Launch", creator=self.ada
+        )
+        self.assertEqual(visibility.affected(todolist)["clients"], 2)
+        todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
+        shown = visibility.shown_by_moving_into([todo], self.project, visible=True)
+        self.assertEqual(shown["clients"], 2)
 
     def test_affected_leaves_out_drafts_and_the_trash(self):
         """Somebody's draft and trashed items aren't what the switch shows

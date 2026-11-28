@@ -112,8 +112,12 @@ there (asked 2026-11-22), so nothing stays shared unnoticed.
   `items.operations.trash()` and `projects.operations.archive_project()`),
   so restoring or unarchiving doesn't bring them back. The page checks
   the item's status on every request too.
+- **Moving the item (or its container) to another project** ends it the
+  same way (decided 2026-11-28, verification round 1): `move_to_project()`
+  and `move_todos_to()` call `end_links()`. Moves within the project
+  keep it.
 - `fairy_tasks` deletes expired links daily (`delete_expired()`).
-- Ending a link by trashing, archiving or expiring records no event of
+- Ending a link by trashing, moving, archiving or expiring records no event of
   its own.
 - **Deactivating** the person who created a link keeps it, unlike their
   calendar link: the link is the item's, it expires within 30 days and

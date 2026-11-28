@@ -11,6 +11,7 @@ from icalendar import Calendar
 from biwak.accounts.models import APIToken, CalendarToken, User
 from biwak.items import due, operations as ops
 from biwak.items.models import Item
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership
 from biwak.test_utils import person, project
 
@@ -461,6 +462,21 @@ class APITest(ByDueTestCase):
         self.assertEqual(self.get(self.cleo, project_id=self.other.pk).status_code, 404)
         self.assertEqual(self.titles(self.get(self.cleo, assignee="me")), ["Visible"])
         self.assertEqual(self.client.get("/api/v1/todos/").status_code, 401)
+
+    def test_clients_find_nobody_by_somebody_they_may_not_know(self):
+        """Somebody removed from the project stays assigned to completed
+        to-dos; ``assignees`` doesn't name them to clients, and filtering
+        by their ID finds nothing either (2026-11-28, specs/access.md)"""
+        todo = self.todo("Pitch", assignees=[self.bob, self.ada])
+        ops.complete(todo, actor=self.ada)
+        project_ops.remove_member(self.project, self.bob, actor=self.ada)
+        for user, titles in [(self.ada, ["Pitch"]), (self.cleo, [])]:
+            with self.subTest(user=user):
+                response = self.get(user, assignee=str(self.bob.pk), completed="true")
+                self.assertEqual(self.titles(response), titles)
+        # Members they know
+        response = self.get(self.cleo, assignee=str(self.ada.pk), completed="true")
+        self.assertEqual(self.titles(response), ["Pitch"])
 
 
 class FeedTest(ByDueTestCase):

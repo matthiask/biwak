@@ -24,10 +24,10 @@ project. Staff create lists with "New list" on the project's page.
   color, which marks its card and heading), moves it up or down
   (without a mouse) or removes it; removing it keeps its to-dos. Drag a
   group by its grip to move it with its to-dos.
-- **Order:** drag a to-do by its grip to move it within the list, into
-  another group or into another list. Click several grips to select
-  several to-dos and drag them together. Without a mouse, use "Move
-  to..." in the to-do's "More" menu.
+- **Order:** drag a to-do by its grip to move it within the list or
+  into another of its groups. Click several grips to select several
+  to-dos and drag them together. Into another list, and without a
+  mouse, use "Move to..." in the to-do's "More" menu.
 - **Board:** "Board" shows the groups as columns, "List" goes back, for
   this visit. How a list opens is its "Shown as" in "Edit" (list or
   board). Dragging between columns moves the to-do to that group and
@@ -101,8 +101,9 @@ somebody leaves and their to-dos go to someone else:
   visible to clients when the lists they come from are. Before to-dos
   clients see go into an internal list, the form says clients won't
   see them any more; before internal ones go into a list clients see,
-  it asks first, saying what clients will see ("Move to…" of one to-do
-  too). Into another project, the form first says who will be added to it
+  or visible ones into another project whose clients didn't see them,
+  it asks first, saying what clients will see. "Move to…" of one to-do
+  does both too. Into another project, the form first says who will be added to it
   and who won't see the to-dos there (they're unassigned and
   unsubscribed); their comments and history come along, and the
   project they left shows one line in its activity ("moved 23 to-dos to

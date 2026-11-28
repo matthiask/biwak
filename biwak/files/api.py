@@ -12,7 +12,7 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext as _
-from ninja import File, Form, Router, Schema, Status, UploadedFile
+from ninja import Field, File, Form, Router, Schema, Status, UploadedFile
 from ninja.errors import HttpError
 
 from biwak.accounts.models import Color, User
@@ -26,6 +26,7 @@ from biwak.api_conventions import (
     page_of,
     paginated,
     person_out,
+    refuse_client_switch,
 )
 from biwak.files import attachments, operations, queries
 from biwak.files.library import (
@@ -41,6 +42,7 @@ from biwak.items import operations as ops
 from biwak.items.across import move_notes
 from biwak.items.api import item_for
 from biwak.items.models import Kind, MessageCategory
+from biwak.items.views import shown_items_note
 from biwak.permissions import api_staff_only
 from biwak.projects.api import project_for
 from biwak.reactions.models import Reaction
@@ -359,6 +361,8 @@ def message_create(request, project_id: int, data: MessageIn):
     are visible to clients. Mentions are written as ``[@Name](person:ID)``."""
     project = project_for(request, project_id)
     title = clean_title(data.title)
+    if not request.user.is_client:
+        refuse_client_switch(project, data.visible_to_clients)
     visible = ops.message_visibility(request.user, data.visible_to_clients)
     item = ops.create_message(
         project=project,
@@ -554,6 +558,7 @@ def folder_create(request, project_id: int, data: FolderIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.FOLDER)
+    refuse_client_switch(project, data.visible_to_clients)
     title = clean_title(data.title)
     item = ops.create_folder(
         project=project,
@@ -573,6 +578,12 @@ class MoveIn(Schema):
     project_id: int | None = None
     # Moving there drops people or shows it to clients: say so
     confirm: bool = False
+    # An internal one into a folder clients see (specs/access.md)
+    show_to_clients: bool = Field(
+        default=False,
+        description="Into a folder clients see: show the internal item, what's"
+        " in it and the comments to clients (else 400, saying what it shows).",
+    )
 
 
 @router.post("items/{item_id}/move/", response=ItemOut)
@@ -583,7 +594,8 @@ def item_move(request, item_id: int, data: MoveIn):
     top-level list, message, folder, doc or file moves to its top level,
     with everything in it; assignees and subscribers who aren't members
     there are dropped and clients there may see it: without ``confirm``
-    that's a 400 saying so."""
+    that's a 400 saying so. An internal item into a folder clients see is
+    a 400 saying what it shows without ``show_to_clients``."""
     item = item_for(request, item_id)
     if data.project_id is not None and data.project_id != item.project_id:
         return _move_to_project(request, item, data)
@@ -592,6 +604,11 @@ def item_move(request, item_id: int, data: MoveIn):
     if not ops.can_change(request.user, item):
         raise HttpError(403, _("You can only move what you created."))
     folder = parent_folder(request, item.project, data.parent_id)
+    if not data.show_to_clients and (note := shown_items_note([item], folder)):
+        raise HttpError(
+            400,
+            " ".join([note, _("Send “show_to_clients”: true to move it anyway.")]),
+        )
     try:
         ops.move_item(item, parent=folder, actor=request.user)
     except ValueError as exc:
@@ -665,6 +682,7 @@ def doc_create(request, project_id: int, data: DocIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.DOC)
+    refuse_client_switch(project, data.visible_to_clients)
     title = clean_title(data.title)
     item = ops.create_doc(
         project=project,
@@ -915,6 +933,7 @@ def file_create(request, project_id: int, file: File[UploadedFile], data: Form[F
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.FILE)
+    refuse_client_switch(project, data.visible_to_clients)
     try:
         item = ops.create_upload(
             project=project,

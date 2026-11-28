@@ -36,6 +36,7 @@ from biwak.api_conventions import (
     page_of,
     paginated,
     person_out,
+    refuse_client_switch,
 )
 from biwak.items import due, operations as ops, stale
 from biwak.items.filters import NO_GROUP, in_group
@@ -156,6 +157,7 @@ def list_create(request, project_id: int, data: ListIn):
     project = project_for(request, project_id)
     if not ops.can_create(request.user, Kind.LIST):
         raise HttpError(403, _("Only staff create lists."))
+    refuse_client_switch(project, data.visible_to_clients)
     item = ops.create_list(
         project=project,
         title=data.title,

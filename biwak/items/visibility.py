@@ -7,6 +7,7 @@ subtrees whenever a switch changes, an item moves or is created, in the
 same transaction. ``check()`` compares the stored values with the tree.
 """
 
+from biwak.accounts.models import User
 from biwak.items.models import Comment, Item, Status
 
 
@@ -37,11 +38,25 @@ def set_switch(item, *, visible):
     recompute(item)
 
 
+def clients_of(project):
+    """How many clients the "visible to N clients" of the questions counts:
+    the project's active client members, invited ones included,
+    deactivated ones not (decided 2026-11-28)"""
+    return (
+        project.memberships
+        .filter(user__is_client=True, user__is_active=True)
+        .values("user")
+        .distinct()
+        .count()
+    )
+
+
 def affected(item):
     """What turning the switch on would show, for the switch's question:
-    the item's descendants, their comments and its own, and the clients among the
-    project's members who would see them. Not drafts (only their creators
-    see them) and not what's in the trash."""
+    the item's descendants, their comments and its own, and the clients
+    among the project's members who would see them (``clients_of()``).
+    Not drafts (only their creators see them) and not what's in the
+    trash."""
 
     pks = list(
         Item.objects
@@ -53,31 +68,72 @@ def affected(item):
     return {
         "items": len(pks),
         "comments": Comment.objects.filter(item__in=[item.pk, *pks]).count(),
-        "clients": item.project.memberships.filter(user__is_client=True).count(),
+        "clients": clients_of(item.project),
     }
 
 
-def shown_by_moving(todos, todolist):
-    """What moving the to-dos into the list ``todolist`` shows clients,
+def shown_by_moving_into(todos, project, *, visible):
+    """What moving the to-dos into a list of ``project`` (``visible`` to
+    clients or not; a new one too) shows clients,
     for asking first like the switch (decided 2026-11-28): the internal
-    ones going into a list clients see, their comments, and the active
-    clients among the list's project's members; None if it shows
-    nothing"""
-    if not todolist.is_client_visible:
+    ones going into a list clients see, shown to the clients of the
+    list's project (``clients_of()``), and visible ones from other
+    projects whose clients there didn't see them (as
+    ``operations.new_clients()``); their comments, and how many clients
+    see something new. None if it shows nothing."""
+    if not visible:
         return None
-    hidden = [todo.pk for todo in todos if not todo.is_client_visible]
-    if not hidden:
+    clients = User.objects.active().filter(is_client=True, memberships__project=project)
+    shown = [todo.pk for todo in todos if not todo.is_client_visible]
+    new = set(clients.values_list("pk", flat=True)) if shown else set()
+    sources = {
+        todo.project_id
+        for todo in todos
+        if todo.is_client_visible and todo.project_id != project.pk
+    }
+    for source in sources:
+        if newly := set(
+            clients.exclude(memberships__project=source).values_list("pk", flat=True)
+        ):
+            new |= newly
+            shown += [
+                todo.pk
+                for todo in todos
+                if todo.is_client_visible and todo.project_id == source
+            ]
+    if not shown:
         return None
     return {
-        "items": len(hidden),
-        "comments": Comment.objects.filter(item__in=hidden).count(),
-        "clients": (
-            todolist.project.memberships
-            .filter(user__is_client=True, user__is_active=True)
-            .values("user")
-            .distinct()
-            .count()
-        ),
+        "items": len(shown),
+        "comments": Comment.objects.filter(item__in=shown).count(),
+        "clients": len(new),
+    }
+
+
+def shown_by_moving_items(items, folder):
+    """What moving folders, docs and files into ``folder`` (None: the top
+    level) shows clients, asking like the switch (decided 2026-11-28):
+    the internal ones going into a folder clients see and what's in them
+    (``affected()``: not drafts, not the trash), their comments, and the
+    clients of the project (``clients_of()``); None if it shows nothing"""
+    if folder is None or not folder.is_client_visible:
+        return None
+    shown = [item for item in items if not item.is_client_visible and not item.is_draft]
+    if not shown:
+        return None
+    pks = {item.pk for item in shown}
+    for item in shown:
+        pks.update(
+            Item.objects
+            .descendants(item)
+            .filter(is_draft=False)
+            .exclude(status=Status.TRASHED)
+            .values_list("pk", flat=True)
+        )
+    return {
+        "items": len(pks),
+        "comments": Comment.objects.filter(item__in=pks).count(),
+        "clients": clients_of(folder.project),
     }
 
 

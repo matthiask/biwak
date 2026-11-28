@@ -41,6 +41,23 @@ Title = Annotated[
 ]
 
 
+def refuse_client_switch(project, visible):
+    """No clients, no switch (decided 2026-11-23 for the pages, 2026-11-28
+    for the API, specs/access.md): creating something visible to clients
+    is a 400 in projects without clients
+    (``Project.offers_client_switch()``); the visibility switch
+    (``items/{id}/visibility/``) stays, like "Show to clients…"."""
+    if visible and not project.offers_client_switch():
+        raise HttpError(
+            400,
+            gettext(
+                "This project has no clients: what's created in it is internal."
+                " Leave out “visible_to_clients”, or show it to clients later"
+                " (“items/{id}/visibility/”)."
+            ),
+        )
+
+
 def absolute(url):
     return settings.BASE_URL + url
 

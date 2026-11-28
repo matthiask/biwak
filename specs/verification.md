@@ -181,7 +181,15 @@ Fixed (each in its part's spec):
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
   it for an internal list; moving internal to-dos into a list clients
-  see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0).
+  see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0);
+  "visible to N clients" counts active and invited clients only; moving
+  to another project ends public links; internal docs, files and
+  folders into a visible folder, and visible to-dos into another
+  project's visible list (new clients), ask first (CLI 0.79.0); "Move
+  to…" of one to-do says when it hides; the API refuses
+  `visible_to_clients` when creating in projects without clients; a
+  client's `todos/?assignee=` with somebody they may not know finds
+  nothing; the help says dragging stays within a list.
 - **Docs and files:** a whole-text save from an old `base_version` is
   refused over the saver's own version with somebody else's typing
   merged into it (versions remember their co-authors); a form left open
@@ -210,17 +218,6 @@ decided, marked "consistent"):
   - People watching a list ("Everything") are told about to-dos moved
     in like new to-dos (decided; they're subscribed already): how is
     open, see "Risks and questions".
-- **Visibility:**
-  - "Visible to N clients" counts active and invited clients (decided).
-  - Moving an item to another project ends its public links (decided).
-  - Moving internal docs and files into a visible folder, and visible
-    to-dos into another project's visible list (new clients), ask first
-    like to-dos into a visible list (decided); "Move to…" of one to-do
-    says when it hides, like "Move…" (consistent).
-  - The API refuses `visible_to_clients` in projects without clients
-    (the pages hide the switch); a client's `todos/?assignee=` with
-    somebody they may not know finds nothing (consistent).
-  - Help: dragging stays within a list (`docs/todos.md`).
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).

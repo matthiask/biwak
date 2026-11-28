@@ -28,7 +28,7 @@ once.
   menu of tiles in "Docs and files". When you create a list, folder,
   message, file or check-in in a project with clients (invited ones
   too) you can make it visible right away; projects without clients
-  don't ask. To prepare what a client will see before inviting them, use
+  don't ask (and the API and the command line refuse it). To prepare what a client will see before inviting them, use
   "Show to clients…".
 - **Show to clients…** asks first and says what changes ("Makes 12
   to-dos and 34 comments visible to 3 clients"). Hiding is one click
@@ -36,8 +36,9 @@ once.
   wrote in it.
 - Moving an item into a visible folder or list shows it to clients;
   moving it into an internal one hides it. Moving internal to-dos into
-  a visible list asks first, like "Show to clients…" ("Makes 2 to-dos
-  and 5 comments visible to 3 clients").
+  a visible list, or internal folders, docs and files into a visible
+  folder (also by dragging), asks first, like "Show to clients…" ("Makes
+  2 to-dos and 5 comments visible to 3 clients").
 - Moving something visible to another project keeps it visible: the
   clients of that project see it, with its comments and what clients
   saw of its activity before. "Move to…" asks first when that's anybody
@@ -97,8 +98,9 @@ palette.
   it. **Stop sharing** ends it at once. While it's live, staff see a
   **"Public link"** badge next to the item's title on its page, which
   opens Share….
-- Trashing the item (or what it's in) or archiving the project ends its
-  link for good; restoring doesn't bring it back.
+- Trashing the item (or what it's in), moving it (or what it's in) to
+  another project or archiving the project ends its link for good;
+  restoring doesn't bring it back. Moves within the project keep it.
 - Nothing in a template can be shared publicly.
 - **Public links** in your account menu lists the live links in your
   projects, each with "Stop sharing". Sharing and stopping show in the

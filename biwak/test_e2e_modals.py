@@ -475,6 +475,9 @@ class MoreMenuModalTest(E2ETestCase):
         self.goto(page, todo)
         dialog = self.open_more(page, "Move to…")
         dialog.locator("select").first.select_option(label="Other")
+        # Clients won't see it any more: the dialog says so first
+        dialog.get_by_role("button", name="Move", exact=True).click()
+        expect(dialog).to_contain_text("Clients won't see 1 to-do any more")
         # The redirect loads the page again
         with page.expect_navigation():
             dialog.get_by_role("button", name="Move", exact=True).click()

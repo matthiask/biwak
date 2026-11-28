@@ -31,9 +31,9 @@ auf der Seite des Projekts.
   oder entfernt sie; beim Entfernen bleiben ihre To-dos. Ziehe eine
   Gruppe an ihrem Griff, um sie mit ihren To-dos zu verschieben.
 - **Reihenfolge:** Ziehe ein To-do an seinem Griff, um es innerhalb der
-  Liste, in eine andere Gruppe oder in eine andere Liste zu verschieben.
-  Klicke mehrere Griffe an, um mehrere To-dos zu wählen und sie
-  zusammen zu ziehen. Ohne Maus nimmst du „Verschieben nach…“ im Menü
+  Liste oder in eine andere ihrer Gruppen zu verschieben. Klicke mehrere
+  Griffe an, um mehrere To-dos zu wählen und sie zusammen zu ziehen. In
+  eine andere Liste und ohne Maus nimmst du „Verschieben nach…“ im Menü
   „Mehr“ des To-dos.
 - **Board:** „Board“ zeigt die Gruppen als Spalten, „Liste“ geht
   zurück, für diesen Besuch. Wie sich eine Liste öffnet, ist ihr
@@ -123,8 +123,9 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   aus denen sie kommen, es sind. Bevor To-dos, die Kund:innen sehen, in
   eine interne Liste kommen, sagt das Formular, dass Kund:innen sie
   nicht mehr sehen; bevor interne in eine Liste kommen, die Kund:innen
-  sehen, fragt es vorher und sagt, was Kund:innen sehen werden (auch
-  „Verschieben nach…“ eines To-dos). In ein anderes Projekt sagt das Formular
+  sehen, oder sichtbare in ein anderes Projekt, dessen Kund:innen sie
+  nicht sahen, fragt es vorher und sagt, was Kund:innen sehen werden. „Verschieben
+  nach…“ eines To-dos tut beides auch. In ein anderes Projekt sagt das Formular
   zuerst, wer dort hinzugefügt wird und wer die To-dos dort nicht sieht
   (Zuweisungen und Abonnements fallen weg); Kommentare und Verlauf
   kommen mit, und das Projekt, das sie verlassen, zeigt eine Zeile in

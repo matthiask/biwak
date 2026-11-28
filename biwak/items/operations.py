@@ -1882,7 +1882,8 @@ def move_to_project(item, *, project, actor):
     in it, comments, reactions, events and history to the top level of
     another project. Assignees who don't see it there are added as members
     or, clients, dropped; subscribers who don't are dropped
-    (``move_people()``); the item keeps its switch. Records a ``moved``
+    (``move_people()``); the item keeps its switch, its public links (and
+    those of what's in it) end. Records a ``moved``
     event naming both projects, notifying nobody, and a trace in the old
     project (an event without item, for its staff)."""
     if item.kind not in MOVABLE or item.parent_id is not None:
@@ -1898,6 +1899,9 @@ def move_to_project(item, *, project, actor):
     pks = list(
         Item.objects.descendants(item, include_self=True).values_list("pk", flat=True)
     )
+    # Its public links (and those of what's in it) end, like trashing
+    # (decided 2026-11-28, specs/public-links.md)
+    end_links(item=item)
     added, dropped = (list(people) for people in move_people(item, project))
     for user in added:
         project_ops.add_member(project, user, actor=actor)
@@ -1970,7 +1974,8 @@ def move_todos_to(items, *, todolist, group=None, index=None, actor):
     with their comments, reactions, events and attachments, completed ones
     too. Their assignees who don't see them there are added as members or,
     clients, dropped; subscribers who don't are dropped
-    (``todos_move_people()``, as ``move_to_project()``). Each to-do's
+    (``todos_move_people()``, as ``move_to_project()``), and their public
+    links end. Each to-do's
     ``moved`` event names both projects; each project they left keeps one
     line for all of them (an event without item, for its staff) pointing
     to the list. Nobody is told."""
@@ -1999,6 +2004,9 @@ def move_todos_to(items, *, todolist, group=None, index=None, actor):
     for user in added:
         project_ops.add_member(project, user, actor=actor)
     pks = [item.pk for item in foreign]
+    # Their public links end, as with move_to_project()
+    for item in foreign:
+        end_links(item=item)
     if dropped:
         todos = Item.objects.filter(
             pk__in=pks,

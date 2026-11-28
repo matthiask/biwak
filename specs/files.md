@@ -224,7 +224,9 @@ the counts of the top level's folders, docs and files.
   ".." or a breadcrumb moves it, the same operation as "Move to…"
   (`move_item()`, visibility recomputed; a folder never into itself or
   below). Only tiles the person may move (`can_change()`) are draggable
-  and selectable; a refused or failed drop reloads the page.
+  and selectable; a refused or failed drop reloads the page. A drop
+  that would show clients something internal opens the selection's
+  "Move to…" asking first instead (decided 2026-11-28, `access.md`).
 - **Selecting several** (decided 2026-11-21: no checkboxes, it looks
   nicer, at the price of being less discoverable): Ctrl-click (Cmd on a
   Mac) adds or removes a tile, Shift-click a range, a plain click opens.

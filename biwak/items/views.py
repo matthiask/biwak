@@ -645,8 +645,11 @@ def todo_move_to(request, pk):
         group = None
         if group_id:
             group = get_object_or_404(Group, pk=int(group_id), todolist=target.todolist)
-        # Into a list clients see: asks first, like the switch
-        clients_note = shown_note([item], target)
+        # Into a list clients see: asks first, like the switch; out of it
+        # says so, like the selection's "Move…"
+        clients_note = hidden_note([item], target.is_client_visible) or shown_note(
+            [item], target
+        )
         if not clients_note or form.asked(form.cleaned_data["target"]):
             clients_note = ""
             try:
@@ -1036,15 +1039,52 @@ def show_texts(item, clients=None):
     return title, intro
 
 
-def shown_note(todos, todolist):
-    """What moving the to-dos into the list shows clients, as a sentence
-    asking like the switch's (``visibility.shown_by_moving()``); empty if
-    nothing"""
-    shown = visibility.shown_by_moving(todos, todolist)
+def hidden_note(todos, visible):
+    """What moving the to-dos into an internal list hides from clients, as
+    a sentence (empty when the list is visible or hides nothing)"""
+    count = 0 if visible else sum(todo.is_client_visible for todo in todos)
+    if not count:
+        return ""
+    return ngettext(
+        "Clients won't see %(count)d to-do any more: the list is internal.",
+        "Clients won't see %(count)d to-dos any more: the list is internal.",
+        count,
+    ) % {"count": count}
+
+
+def shown_note(todos, todolist=None, *, project=None, visible=None):
+    """What moving the to-dos into the list (or a new one of ``project``,
+    ``visible`` or not) shows clients, as a sentence asking like the
+    switch's (``visibility.shown_by_moving_into()``); empty if nothing"""
+    if todolist is not None:
+        project, visible = todolist.project, todolist.is_client_visible
+    shown = visibility.shown_by_moving_into(todos, project, visible=visible)
     if shown is None:
         return ""
     return _("Makes %(todos)s and %(comments)s visible to %(clients)s.") % {
         "todos": ngettext("%(count)d to-do", "%(count)d to-dos", shown["items"])
+        % {"count": shown["items"]},
+        "comments": ngettext(
+            "%(count)d comment", "%(count)d comments", shown["comments"]
+        )
+        % {"count": shown["comments"]},
+        "clients": ngettext("%(count)d client", "%(count)d clients", shown["clients"])
+        % {"count": shown["clients"]},
+    }
+
+
+def shown_items_note(items, folder):
+    """What moving folders, docs and files into ``folder`` shows clients,
+    as a sentence asking like the switch's
+    (``visibility.shown_by_moving_items()``): one item the switch's own,
+    several together; empty if nothing"""
+    shown = visibility.shown_by_moving_items(items, folder)
+    if shown is None:
+        return ""
+    if len(items) == 1:
+        return show_texts(items[0])[1]
+    return _("Makes %(items)s and %(comments)s visible to %(clients)s.") % {
+        "items": ngettext("%(count)d item", "%(count)d items", shown["items"])
         % {"count": shown["items"]},
         "comments": ngettext(
             "%(count)d comment", "%(count)d comments", shown["comments"]

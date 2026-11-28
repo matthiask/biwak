@@ -98,7 +98,11 @@ through every entry point (`AGENTS.md`).
   People removed from the project who stay assigned to to-dos aren't
   named to clients and externals either: the rows, the to-do's page, the
   API's `assignees` and mails show only the people they may know
-  (2026-11-21, after a review: `{% known_in %}`, `known_ids_for()`). The
+  (2026-11-21, after a review: `{% known_in %}`, `known_ids_for()`), and
+  filtering by such a person's ID (`todos/?assignee=`, a list's
+  `todos/?assignee=`) finds nothing in projects where they may not know
+  them (`due.known_assignee()`, 2026-11-28; the pages' filters offer
+  clients nobody by name, an ID there is refused). The
   feed API's event data (`mentioned`, `assigned`, `people`, `assignees`,
   by ID) lists only those too (`event_out()`).
   Both halves of the rule (after the second visibility review):
@@ -122,9 +126,9 @@ through every entry point (`AGENTS.md`).
 - **Moving internal to-dos into a visible list** asks first, like the
   switch (decided by the user 2026-11-28, verification round 1; before,
   they and every comment written while internal were shown without a
-  word): `visibility.shown_by_moving()` counts the internal to-dos
-  going into a list clients see, their comments and the active clients
-  of the list's project, and `shown_note()` (`biwak/items/views.py`)
+  word): `visibility.shown_by_moving_into()` counts the internal to-dos
+  going into a list clients see, their comments and the clients of the
+  list's project (`clients_of()`), and `shown_note()` (`biwak/items/views.py`)
   says "Makes 2 to-dos and 5 comments visible to 3 clients.", also
   with no clients yet (like the switch: staff prepare). The entry
   points:
@@ -145,8 +149,31 @@ through every entry point (`AGENTS.md`).
   - Moving a top-level item to another project keeps its switch, so it
     shows nothing internal; who would newly see something visible is
     asked about already (`new_clients()`).
+  - **Visible to-dos into another project's visible list** (the
+    selection's "Move…", a new list made visible too, and the API's
+    `todos/move/`) ask the same way when clients there didn't see them,
+    as `new_clients()` (decided 2026-11-28): they count as shown, and
+    the sentence's clients are everybody who sees something new.
+  - **Internal folders, docs and files into a folder clients see** ask
+    the same way (decided 2026-11-28):
+    `visibility.shown_by_moving_items()` counts what's shown (the items
+    and what's in them, not drafts or the trash) and its comments,
+    `shown_items_note()` says it, for one item the switch's own sentence
+    ("Makes it, 2 items below it and 1 comment visible to 3 clients."),
+    for several "Makes 3 items and 1 comment visible to 3 clients.".
+    "Move to…" (`files.library.item_move`) and the selection's "Move
+    to…" (`files_move`) ask in the dialog (`Confirming`, `confirmed` set
+    to the folder). Dragging tiles posts to `files_move` with `dragged`:
+    instead of moving, the answer has the sentence and `X-Asks` (not an
+    error status, which the console would log), and `frontend/files.js`
+    opens the selection's "Move to…" with `?folder=`, which asks right
+    away. The API's `items/<id>/move/` answers 400 with the sentence
+    unless `show_to_clients: true`; the CLI's `biwak folders move
+    --show-to-clients` (0.79.0).
   Visible to-dos into an internal list say what they hide
-  (`hidden_note()`, the selection's "Move…").
+  (`hidden_note()`, `biwak/items/views.py`) and ask again, in the
+  selection's "Move…" and "Move to…" of one to-do (consistent,
+  2026-11-28).
 
 ## One check
 
@@ -192,7 +219,14 @@ ones included, and in templates, whose visibility is copied
 (`Project.offers_client_switch()`). Without it, what's created is
 internal. "Show to clients…" in the "More" menu, the tiles' menu and the
 palette stays everywhere: staff prepare what a client will see before
-inviting them. The API and CLI keep their `visible` options. Tests:
+inviting them. The API refuses `visible_to_clients: true` there the
+same way (decided 2026-11-28, verification round 1; before, it kept
+its `visible` options): creating lists, folders, messages (staff),
+docs, files, check-ins and project links answers 400
+(`api_conventions.refuse_client_switch()`), so the CLI's `--visible`
+and `--clients` say so too; its visibility switch
+(`items/{id}/visibility/`) stays, like "Show to clients…". Editing a
+link and copying a list keep their switch, as on the pages. Tests:
 `biwak/projects/test_client_switch.py`.
 
 ## Making it obvious
@@ -221,7 +255,10 @@ Like Basecamp's bright yellow:
   clients." The text is built per kind by the view (`show_texts()` in
   `biwak/items/views.py`, `visibility.affected()`). It counts neither drafts
   (anybody's, only their creators see them) nor what's in the trash
-  (decided 2026-11-21). The POST with `visible=1`
+  (decided 2026-11-21). "N clients" counts the project's active client
+  members, invited ones included, deactivated ones not
+  (`visibility.clients_of()`, decided 2026-11-28; before, every client
+  membership), the same in every such question. The POST with `visible=1`
   shows the item, without it hides it. Staff only (403 for clients).
   The switch is an entry of the item's "More" menu, "Show to clients…"
   or "Hide from clients" (`items/_more_entries.html`, also the tiles'

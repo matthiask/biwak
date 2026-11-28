@@ -1121,7 +1121,7 @@ msgid_plural "%(count)d answers"
 msgstr[0] "%(count)d Antwort"
 msgstr[1] "%(count)d Antworten"
 
-#: biwak/activity/feed.py
+#: biwak/activity/feed.py biwak/items/views.py
 #, python-format
 msgid "%(count)d item"
 msgid_plural "%(count)d items"
@@ -2048,6 +2048,11 @@ msgid "Your own level for this list instead of the one of the project. On “Eve
 msgstr "Deine eigene Stufe für diese Liste statt der des Projekts. Bei „Alles“ beobachtest du sie: Du abonnierst sie und jedes neue To-do darin und erfährst, wenn To-dos zwischen ihren Gruppen verschoben werden. Bei To-dos, die du abonniert hast, erfährst du alles. Die Aktivität zeigt immer alles."
 
 #: biwak/api_conventions.py
+#, python-brace-format
+msgid "This project has no clients: what's created in it is internal. Leave out “visible_to_clients”, or show it to clients later (“items/{id}/visibility/”)."
+msgstr "Dieses Projekt hat keine Kund:innen: Was darin erstellt wird, ist intern. Lass „visible_to_clients“ weg oder zeige es den Kund:innen später („items/{id}/visibility/“)."
+
+#: biwak/api_conventions.py
 msgid "Invalid cursor."
 msgstr "Ungültiger Cursor."
 
@@ -2400,6 +2405,10 @@ msgstr "Nur Ordner, Dokumente und Dateien können verschoben werden."
 #: biwak/files/api.py
 msgid "You can only move what you created."
 msgstr "Du kannst nur verschieben, was du erstellt hast."
+
+#: biwak/files/api.py
+msgid "Send “show_to_clients”: true to move it anyway."
+msgstr "Sende „show_to_clients“: true, um es trotzdem zu verschieben."
 
 #: biwak/files/api.py biwak/files/library.py
 msgid "A folder can't be moved into itself."
@@ -3280,13 +3289,6 @@ msgstr "Verschobene To-dos"
 
 #: biwak/items/assigning.py
 #, python-format
-msgid "Clients won't see %(count)d to-do any more: the list is internal."
-msgid_plural "Clients won't see %(count)d to-dos any more: the list is internal."
-msgstr[0] "Kund:innen sehen %(count)d To-do nicht mehr: Die Liste ist intern."
-msgstr[1] "Kund:innen sehen %(count)d To-dos nicht mehr: Die Liste ist intern."
-
-#: biwak/items/assigning.py
-#, python-format
 msgid "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
 msgid_plural "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
 msgstr[0] "%(names)s sieht die To-dos in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
@@ -3966,8 +3968,20 @@ msgstr "Macht den Eintrag, %(items)s und %(comments)s für %(clients)s sichtbar.
 
 #: biwak/items/views.py
 #, python-format
+msgid "Clients won't see %(count)d to-do any more: the list is internal."
+msgid_plural "Clients won't see %(count)d to-dos any more: the list is internal."
+msgstr[0] "Kund:innen sehen %(count)d To-do nicht mehr: Die Liste ist intern."
+msgstr[1] "Kund:innen sehen %(count)d To-dos nicht mehr: Die Liste ist intern."
+
+#: biwak/items/views.py
+#, python-format
 msgid "Makes %(todos)s and %(comments)s visible to %(clients)s."
 msgstr "Macht %(todos)s und %(comments)s für %(clients)s sichtbar."
+
+#: biwak/items/views.py
+#, python-format
+msgid "Makes %(items)s and %(comments)s visible to %(clients)s."
+msgstr "Macht %(items)s und %(comments)s für %(clients)s sichtbar."
 
 #: biwak/items/views.py
 msgid "Show to clients"

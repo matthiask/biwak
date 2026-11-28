@@ -62,8 +62,9 @@ all tiles from the last one clicked; with the keyboard, <kbd>x</kbd>
 selects the current tile or takes it out and Shift with the arrow keys selects on to the
 next one. A plain click opens the tile as always. With a selection a bar
 shows "Move to…", "Move to trash" and "Deselect" (or press Escape);
-dragging one of the selected tiles moves them all. You move what you may
-change; clients only what they added.
+dragging one of the selected tiles moves them all. Moving something
+internal into a folder clients see asks first and says what they will
+see. You move what you may change; clients only what they added.
 
 Staff choose the order of a folder's contents with "Order…" in its
 "More" menu (for the top level in the "More" menu of "Docs and files"):

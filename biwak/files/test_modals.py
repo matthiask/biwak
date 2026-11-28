@@ -36,7 +36,12 @@ class MoveItemModalTest(TestCase):
         assert_page(self, self.client.get(self.url), title="Move to…")
 
     def test_moving(self):
-        response = self.client.post(self.url, {"folder": self.public.pk}, headers=MODAL)
+        # Clients will see it: answered (biwak/items/test_showing_moves.py)
+        response = self.client.post(
+            self.url,
+            {"folder": self.public.pk, "confirmed": self.public.pk},
+            headers=MODAL,
+        )
         assert_modal_redirect(self, response, self.doc.get_absolute_url())
         self.doc.refresh_from_db()
         self.assertEqual(self.doc.parent, self.public)
