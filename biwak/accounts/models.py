@@ -338,6 +338,14 @@ class User(AbstractBaseUser):
                     " external can't be an admin: move them into it first."
                 )
             )
+        if self.is_admin and self.is_client:
+            # Found 2026-11-28, verification round 2: the Django admin
+            # took both
+            raise ValidationError(
+                _(
+                    "Admins are staff of your own organization: a client can't be an admin."
+                )
+            )
 
     def get_full_name(self):
         return str(self)

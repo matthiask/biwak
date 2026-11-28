@@ -76,6 +76,9 @@ moving people without an organization along 2026-11-23.
   admin into another organization, merging an organization with admins
   into one that isn't the own, unmarking or moving the own mark
   (`_no_admin_externals()`, on the pages, the API and the Django admin).
+  A client can't be an admin either, nor an admin made a client
+  (`User.clean()`; verification round 2, 2026-11-28: the Django admin
+  took both, and such a client saw "All projects").
 - **Leaving the own organization** (moved, merged, another one marked,
   unmarked in the admin) drops the person's subscriptions in projects
   they can't open anymore (`forget_lost_access()`, through

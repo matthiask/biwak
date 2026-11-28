@@ -337,10 +337,13 @@ def _referred_to(user, *, leaving=()):
     them (comments, items, events, files, links: ``PROTECT``), what others
     gave them (assignments, check-ins asking them), mentions and reactions.
     Not the assignments on open to-dos of the projects they're ``leaving``,
-    which ``remove_member()`` takes away (decided 2026-11-28)."""
+    which ``remove_member()`` takes away (decided 2026-11-28). Not their
+    teams, which a deleted account simply leaves (specs/teams.md; found
+    2026-11-28, verification round 2)."""
     from biwak.activity.models import Mention
     from biwak.items.models import Todo
     from biwak.reactions.models import Reaction
+    from biwak.teams.models import Team
 
     for relation in User._meta.get_fields(include_hidden=True):
         if not (relation.auto_created and relation.is_relation) or relation.concrete:
@@ -348,6 +351,8 @@ def _referred_to(user, *, leaving=()):
         if relation.many_to_many or relation.on_delete is models.PROTECT:
             manager = relation.related_model._base_manager
             rows = manager.filter(**{relation.field.name: user})
+            if relation.related_model is Team:
+                continue
             if relation.related_model is Todo:
                 rows = rows.exclude(
                     completed_at__isnull=True, item__project__in=list(leaving)

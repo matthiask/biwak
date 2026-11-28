@@ -568,6 +568,34 @@ class InvitationsVisibleTest(TestCase):
             Event.objects.filter(action=Action.ADDED, data__user=self.dora.pk).exists()
         )
 
+    def test_a_team_doesnt_keep_the_account(self):
+        """Teams aren't among what keeps it (specs/activation.md; found
+        2026-11-28, verification round 2)"""
+        from biwak.teams import operations as team_ops
+
+        team_ops.create_team(name="Client people", members=[self.dora], actor=self.ada)
+        url = reverse("invitation_withdraw", args=[self.dora.pk])
+        self.client.force_login(self.bob)
+        self.assertContains(self.client.get(url), "the account is deleted")
+        self.client.post(url)
+        self.assertFalse(User.objects.filter(pk=self.dora.pk).exists())
+
+    def test_the_api_doesnt_invite_into_an_archived_project(self):
+        """As the pages, which offer projects not archived (round 2)"""
+        project_ops.archive_project(self.website, actor=self.ada)
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        mail.outbox.clear()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/api/v1/projects/{self.website.pk}/members/invite/",
+                {"email": "eve@example.com"},
+                content_type="application/json",
+                headers={"Authorization": f"Bearer {secret}"},
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(mail.outbox, [])
+        self.assertFalse(User.objects.filter(email="eve@example.com").exists())
+
     def test_withdraw_keeps_an_account_something_refers_to(self):
         todolist = ops.create_list(
             project=self.website, title="Launch", creator=self.ada, visible=True

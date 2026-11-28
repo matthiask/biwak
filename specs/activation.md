@@ -51,7 +51,9 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
   an error of the second row.
 - **The projects:** one set for all rows, those the inviter can open and
   not archived, with one "Only when tagged / Everything new" choice
-  for the round, stored per project.
+  for the round, stored per project. The API's
+  `projects/{id}/members/invite/` refuses an archived project too (400,
+  verification round 2, 2026-11-28: it invited and mailed).
 - **All or nothing:** errors per row (the address of somebody who left,
   "activate them first", staff invited by a non-admin, an organization
   the inviter may not touch).
@@ -91,7 +93,8 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
   withdrawing"), recorded as
   "removed", the "added" events stay. The account goes when nothing
   refers to it (comments, items, events, files, links, assignments,
-  check-ins asking them, mentions, reactions), decided after removing
+  check-ins asking them, mentions, reactions; not their teams, which
+  the deleted account leaves, round 2), decided after removing
   them from the projects, which unassigns them from the open to-dos
   there (consistent, verification round 1, 2026-11-28: open assignments
   alone don't keep the account; `_referred_to(leaving=)` for the
