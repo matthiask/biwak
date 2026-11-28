@@ -23,6 +23,25 @@
   --wb-backdrop: rgb(20 16 30 / 0.45);
 }
 
+/* A word longer than its line (a file name, an address) breaks instead of
+   widening the page past the screen (the user, 2026-11-28: "We need to break
+   super long words"); short words wrap as before. Text in a flex row needs
+   .wb-break too, where the long word would still widen the row. */
+body {
+  overflow-wrap: break-word;
+}
+
+/* Text in a flex row (the project page's list rows, the pages' titles
+   beside their buttons, a list's group names): it may shrink, and a long
+   word breaks anywhere instead of widening the row */
+.wb-break,
+.wb-title,
+.wb-group-title,
+.wb-group-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 [data-bs-theme="dark"] {
   --bs-body-bg: color-mix(in oklab, var(--wb-accent-bar) 12%, #0e0d11);
   --bs-body-color: #e2e3dc;
