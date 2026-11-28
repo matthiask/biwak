@@ -48,7 +48,10 @@ were written on what was imported before).
   lists, categories and visibility, and adds new comments (a project
   archived in Basecamp is archived only at its first import, decided
   2026-11-28 by the user: after `--archive` Basecamp says so of the
-  project people work in, and archiving it ended its public links); it doesn't
+  project people work in, and archiving it ended its public links; both
+  ways and for templates too, found 2026-11-28 in verification round 1:
+  a later run unarchived a project archived in Biwak, and templates
+  followed Basecamp's archiving); it doesn't
   change imported comments, positions or files. **Moves are followed**
   (decided 2026-11-28 by the user, found in verification round 1: a to-do
   moved into an internal list stayed visible to clients): a changed to-do
@@ -193,7 +196,13 @@ were written on what was imported before).
   an older answer is fetched and overwritten, none is deleted. What
   changes in Basecamp within the hour is missed by that run, not lost:
   the run stores the `updated_at` it saw, so the next run after the
-  answers expired takes it up. Downloads still ask the API for the
+  answers expired takes it up. **Except a recording's comments**: the
+  listing may be fresher than their cached answer, and the run stores
+  the listing's count, so a comment added in between was lost for good
+  (found 2026-11-28 in verification round 1). Comments are read again
+  when the listing's `updated_at` is newer than the cached answer
+  (`paginate(newer_than=)`) or the answer has another number of comments
+  than the listing says. Downloads still ask the API for the
   redirect (the signed location is short-lived). The report counts
   "Basecamp answers: N from the cache".
 - **Few queries** (decided 2026-11-23: the import may run locally
@@ -329,7 +338,13 @@ same way.
   visible container** goes into an internal "<container> (internal)"
   (decided 2026-11-21): a top-level folder for docs and files (nested
   folders flattened into it), a list for to-dos (groups of the same
-  title; a board for a card table). An internal answer to a visible
+  title; a board for a card table). They follow renames of their
+  originals in Basecamp, as Basecamp's change, and so do their groups,
+  found by their mapping (`Todolist::Group::Internal`,
+  `Kanban::Column::Internal`), not their titles (found 2026-11-28 in
+  verification round 1: they kept the old names, a renamed group got a
+  second one; twins made before have none and are found by the title
+  once). A folder renamed in Basecamp is renamed too (it wasn't). An internal answer to a visible
   question can't move and is skipped and reported. A client's internal
   message stays internal.
 - **People** by address. Those without an account are created (never
@@ -381,7 +396,13 @@ same way.
   without writing. People with `left_at` who are among the account's
   people again get it cleared ("Back in Basecamp:", decided 2026-11-22
   by the user), only when the importer set it (`left_in_basecamp`), not
-  when somebody was deactivated in Biwak.
+  when somebody was deactivated in Biwak. **Back with a new Basecamp
+  ID** (removed and added again, Basecamp makes a new person for the
+  same address and keeps the old one as a tombstone): the new ID is
+  matched by the address and mapped to the same person, so both are;
+  who is among the account's people under any of their IDs hasn't left
+  (found 2026-11-28 in verification round 1: marked left and cleared in
+  every run, listed under both headings).
 - **Marks:** imported people get a drawn mark like everybody when
   they're created (`people.md`, "Stage 2: drawn marks"), counted with
   the organization's people who haven't left, so those imported
@@ -401,14 +422,20 @@ same way.
 new ones in a text changed in Basecamp are linked to its item by the
 importer (found 2026-11-28 in verification round 1: the operations link
 only their actor's uploads, Basecamp's changes name nobody, so the
-cleanup deleted them a day later). **Links to
+cleanup deleted them a day later). A file in texts of several items (or
+projects) is downloaded once and gets a row per item sharing the stored
+file (`Importer._own_attachment()`, as the next to-do of a repeating
+one, `files.md`; found 2026-11-28 in verification round 1: the second
+text reused the first item's row and showed a plain "attachment"). **Links to
   recordings** (on `3.basecamp.com` and `app.basecamp.com`) keep
   Basecamp's address in the stored text and are shown as links to a
   trampoline, `/basecamp/?to=<address>` (`render_markdown()`,
   `biwak/importer/links.py`; decided 2026-11-28 by the user): it leads
   to what was imported from the recording when the person may see it (a
-  comment's anchor, `#__recording_ID`, to the imported comment), else to
-  Basecamp. Nothing is looked up to show a text; whatever was imported
+  comment's anchor, `#__recording_ID`, to the imported comment; a
+  group's link, `todolists/ID` like a list's, to its list at the group,
+  `#group-PK`, found 2026-11-28 in verification round 1: they led to
+  Basecamp), else to Basecamp. Nothing is looked up to show a text; whatever was imported
   first, links pasted later work too, and a link doesn't tell whether
   its target is in Biwak ("not imported" and "not visible" both lead to
   Basecamp). Only Basecamp's addresses of recordings (else 404: no open
@@ -475,8 +502,10 @@ cleanup deleted them a day later). **Links to
   removed). The report lists them ("Schedules added to to-dos imported
   before", a dry run "to add").
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
-  come in completed at the recording's `updated_at`, by the importing
-  person unless Basecamp names who completed it, with their comments;
+  come in completed at the recording's `updated_at`, by who completed
+  them when Basecamp names them, else by nobody as Basecamp's change
+  (`_from_basecamp()`; found 2026-11-28 in verification round 1: the
+  importing person completed them), with their comments;
   archived lists and projects stay archived; archived messages, docs,
   files and questions are skipped and listed in the report.
 - **Templates** (decided 2026-11-22, `templates.md`): `--templates`
@@ -490,7 +519,7 @@ cleanup deleted them a day later). **Links to
   (decided 2026-11-22: one library) holding those lists. Mapped as `Template`, so a second run
   updates them; created with `create_template()`, so no members
   (Basecamp's people of a template aren't added), visibility as in
-  Basecamp, archived templates archived. `Importer.run_templates()`.
+  Basecamp, archived templates archived at their first import only. `Importer.run_templates()`.
 - **Not imported:** trashed recordings (anything in Basecamp's trash:
   to-dos, messages, docs, files, comments; confirmed 2026-11-21), pins of
   messages (not in the API), older versions of files, docs' history.

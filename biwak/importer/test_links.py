@@ -69,6 +69,7 @@ class TrampolineTest(TestCase):
         todolist = ops.create_list(project=self.project, title="Camp", creator=self.ada)
         self.todo = ops.create_todo(todolist=todolist, title="Tent", creator=self.ada)
         self.comment = ops.add_comment(self.todo, author=self.ada, content="Done")
+        self.todolist = todolist
         imported(self.todo, "Todo", 9001)
         imported(self.comment, "Comment", 9002)
 
@@ -97,6 +98,21 @@ class TrampolineTest(TestCase):
         self.assertRedirects(
             response, self.todo.get_absolute_url(), fetch_redirect_response=False
         )
+
+    def test_a_group_to_its_list(self):
+        """Basecamp's groups are to-do lists, linked as ``todolists/ID``;
+        mapped as groups (found 2026-11-28 in verification round 1: they
+        led to Basecamp)"""
+        group = ops.create_group(todolist=self.todolist.todolist, title="Week 1")
+        imported(group, "Todolist::Group", 9003)
+        self.assertRedirects(
+            self.follow(f"{BC}/todolists/9003"),
+            f"{self.todolist.get_absolute_url()}#group-{group.pk}",
+            fetch_redirect_response=False,
+        )
+        # Not for who can't see the list
+        response = self.follow(f"{BC}/todolists/9003", self.cleo)
+        self.assertEqual(response["Location"], f"{BC}/todolists/9003")
 
     def test_to_basecamp_when_not_imported_or_not_visible(self):
         """Both look the same: nothing tells whether it was imported"""

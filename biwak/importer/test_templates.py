@@ -14,6 +14,7 @@ from biwak.activity.models import Action, Event, Notification
 from biwak.importer import support
 from biwak.importer.importer import Importer
 from biwak.items.models import Item, Kind
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Project
 from biwak.test_utils import person
 
@@ -105,12 +106,12 @@ class TemplatesImportTest(TestCase):
 
     def test_renames_and_archiving_name_nobody(self):
         """At Basecamp's time, without a person (decided 2026-11-28)"""
-        self.run_import()
         template = self.client_.data["/templates.json"][0]
+        template |= {"status": "archived", "updated_at": "2026-04-01T09:00:00.000Z"}
+        self.run_import()
         template |= {
             "name": "Website project",
-            "status": "archived",
-            "updated_at": "2026-04-01T09:00:00.000Z",
+            "updated_at": "2026-04-02T09:00:00.000Z",
         }
         self.run_import()
         events = Event.objects.filter(
@@ -132,10 +133,25 @@ class TemplatesImportTest(TestCase):
                 key=lambda event: event[0],
             ),
             [
-                (action, None, "2026-04-01T09:00:00+00:00", "basecamp")
-                for action in sorted([Action.ARCHIVED, Action.EDITED_PROJECT])
+                (Action.ARCHIVED, None, "2026-04-01T09:00:00+00:00", "basecamp"),
+                (Action.EDITED_PROJECT, None, "2026-04-02T09:00:00+00:00", "basecamp"),
             ],
         )
+
+    def test_archived_as_in_basecamp_only_at_the_first_import(self):
+        """Like projects (found 2026-11-28 in verification round 1: later
+        runs followed Basecamp's archiving, both ways)"""
+        self.run_import()
+        template = self.client_.data["/templates.json"][0]
+        template |= {"status": "archived", "updated_at": "2026-04-01T09:00:00.000Z"}
+        self.run_import()
+        web = Project.objects.get(name="Web project")
+        self.assertIsNone(web.archived_at)
+        project_ops.archive_project(web, actor=self.ada)
+        template |= {"status": "active", "updated_at": "2026-04-02T09:00:00.000Z"}
+        self.run_import()
+        web.refresh_from_db()
+        self.assertIsNotNone(web.archived_at)
 
     def test_dry_run(self):
         report = self.run_import(dry_run=True)

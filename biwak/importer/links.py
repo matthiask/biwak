@@ -22,6 +22,8 @@ LINK = re.compile(
     r"(todos|todolists|messages|documents|uploads|vaults|card_tables/cards"
     r"|card_tables|questions|inbox_forwards)/(\d+)[^\s)\]\"']*"
 )
+# How the importer maps groups (``importer.GROUP``)
+GROUP = "Todolist::Group"
 COMMENT = re.compile(r"#__recording_(\d+)$")
 LINK_TYPES = {
     "todos": "Todo",
@@ -59,13 +61,17 @@ def trampoline(href, *, absolute=False):
 def destination(user, href):
     """Where the trampoline leads ``user`` for a link to a recording: what
     was imported from it if they may see it (its comment's anchor when the
-    comment was imported too), else Basecamp. Both look the same, nothing
-    tells whether it was imported."""
+    comment was imported too, a group's on its list), else Basecamp. Both
+    look the same, nothing tells whether it was imported."""
     from biwak.importer.models import ImportedObject
-    from biwak.items.models import Comment, Item
+    from biwak.items.models import Comment, Group, Item
 
     bc_type, bc_id, comment = recording(href)
     keys = [(bc_type, bc_id)]
+    if bc_type == "Todolist":
+        # Basecamp's groups are lists, linked as ``todolists/ID``, mapped as
+        # groups (found 2026-11-28: they led to Basecamp)
+        keys.append((GROUP, bc_id))
     if comment is not None:
         keys.append(("Comment", comment))
     query = Q()
@@ -76,18 +82,23 @@ def destination(user, href):
         for m in ImportedObject.objects.filter(
             query,
             content_type__in=[
-                ContentType.objects.get_for_model(Item),
-                ContentType.objects.get_for_model(Comment),
+                ContentType.objects.get_for_model(model)
+                for model in (Item, Comment, Group)
             ],
         )
     }
     pk = mapped.get((bc_type, bc_id))
+    anchor = ""
+    if pk is None and (group_pk := mapped.get((GROUP, bc_id))) is not None:
+        group = Group.objects.filter(pk=group_pk).select_related("todolist").first()
+        if group is not None:
+            pk, anchor = group.todolist.item_id, f"#group-{group.pk}"
     item = (
         Item.objects.visible_to(user).filter(pk=pk).first() if pk is not None else None
     )
     if item is None:
         return href
-    url = item.get_absolute_url()
+    url = item.get_absolute_url() + anchor
     if (
         comment is not None
         and (comment_pk := mapped.get(("Comment", comment)))

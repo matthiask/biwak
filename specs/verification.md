@@ -5,8 +5,8 @@ features over time, and keeping the open findings here until they're
 fixed or decided (adapted from Workbench's `specs/verification.md`,
 decided 2026-11-28 by the user).
 
-**Status:** spec written (2026-11-28); round 1 run 2026-11-28, its
-findings open below.
+**Status:** spec written (2026-11-28); round 1 run and fixed on
+2026-11-28, its remaining risks below.
 
 ## Why
 
@@ -134,7 +134,16 @@ Fixed (each in its part's spec):
   of projects and templates name nobody, at Basecamp's time; new files
   in texts changed in Basecamp are linked; `--since` doesn't store a
   recording as completely read when it skipped older comments; changed
-  check-in questions and answers are updated.
+  check-in questions and answers are updated; links to a list's group
+  lead to the group on its list; archived to-dos without a completion
+  are completed by nobody, at Basecamp's time; the same Basecamp file in
+  texts of several items gets a row per item, sharing the stored file;
+  "(internal)" lists and folders and their groups follow renames, and
+  folders do too; a project's and a template's archived state comes from
+  Basecamp only at the first import, both ways; people back with a new
+  Basecamp ID haven't left (they were marked left and back in every
+  run); a recording's comments are read again when its listing is newer
+  than their cached answer.
 - **To-dos:** stale to-dos are marked obsolete on the promised day;
   copies keep a group's "Keep untouched to-dos for a year" and
   deactivated assignees and people asked instead of failing; archived
@@ -220,18 +229,8 @@ Fixed (each in its part's spec):
   are audited, the webhook names "Inbound mail" and "Mail delivery"; PgBouncer keeps names per
   client (checked).
 
-**To fix:** the findings are fixed. From the risks and questions,
-decided by the user on 2026-11-28 (or following a rule already
-decided, marked "consistent"):
-
-- **Import:** links to a list's group lead to the list in Biwak;
-  archived to-dos without a completion are completed by nobody, at
-  Basecamp's time; the same Basecamp attachment in two texts gets an
-  attachment per item; "(internal)" lists and folders follow renames and
-  a renamed group isn't doubled; a project's (and template's) archived
-  state comes from Basecamp only at the first import, both ways; people
-  back with a new Basecamp ID (to check); comments read fresh when a
-  listing is newer than the cached answer (consistent).
+**To fix:** nothing left: the findings and the risks and questions
+decided on 2026-11-28 are fixed (the "Fixed" list above).
 
 **Decided, no change:**
 
@@ -251,7 +250,9 @@ decided, marked "consistent"):
   they left or were removed (`files.md`).
 
 **Data:** check production for check-in questions with a stored rule
-that isn't valid any more (the bug above stops asking for everybody).
+that isn't valid any more: since the fix they're skipped and their
+`next_at` cleared, so they're never asked again until somebody saves a
+valid rule.
 
 **Risks and questions:**
 

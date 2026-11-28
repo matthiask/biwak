@@ -42,7 +42,8 @@ speckenv 7; `biwak/storage_url.py` adds Biwak's defaults; decided
   of a repeating one shares the files its notes show (decided
   2026-11-28, verification round 1): rows of its own (new keys, the notes
   rewritten to them, the same uploader) with the same stored file, so
-  deleting the old to-do for good leaves it. Moves never rename stored
+  deleting the old to-do for good leaves it. So does the Basecamp import
+  for a file in texts of several items (`import-basecamp.md`). Moves never rename stored
   files (a path keeps its first project's ID); copies (`copy_list()`,
   templates) store copies of the files.
 - **Limit:** 100 MB per file (`MAX_SIZE`, decided 2026-11-20; the

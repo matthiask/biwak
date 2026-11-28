@@ -35,6 +35,7 @@ from biwak.items.models import (
     TodoList,
 )
 from biwak.organizations.models import Organization
+from biwak.projects import operations as project_ops
 from biwak.projects.models import Membership, Project
 from biwak.templatetags.biwak import render_markdown
 from biwak.test_utils import organization, person
@@ -159,7 +160,8 @@ class ImportEveryKindTest(ImportCase):
         whale = self.item("Whale watching")
         self.assertEqual(whale.status, Status.ACTIVE)
         self.assertEqual(whale.todo.completed_at, at("2026-01-08T09:00:00+00:00"))
-        self.assertEqual(whale.todo.completed_by, self.ada)
+        # Basecamp doesn't say who archived: by nobody (decided 2026-11-28)
+        self.assertIsNone(whale.todo.completed_by)
 
         # Messages
         announcement = self.item("We have a camp")
@@ -1115,6 +1117,22 @@ class ArchivedProjectTest(ImportCase):
         self.run_import(full=True)
         self.assertIsNone(self.project.archived_at)
 
+    def test_both_ways(self):
+        """Unarchived in Basecamp after the first import doesn't unarchive
+        it either (found 2026-11-28 in verification round 1: archived in
+        Biwak, unarchived by a change in Basecamp)"""
+        self.run_import()
+        project_ops.archive_project(self.project, actor=self.ada)
+        self.client_.data[f"/projects/{support.PROJECT}.json"] |= {
+            "name": "Camp kitchen 2",
+            "updated_at": "2026-03-06T08:00:00.000Z",
+        }
+        self.run_import()
+        self.assertEqual(self.project.name, "Camp kitchen 2")
+        self.assertIsNotNone(self.project.archived_at)
+        self.run_import(full=True)
+        self.assertIsNotNone(self.project.archived_at)
+
 
 class TrashedTest(ImportCase):
     """Trashed in Basecamp means trashed in Biwak; deleted in Biwak isn't
@@ -1369,6 +1387,122 @@ class NewAttachmentsTest(ImportCase):
         self.run_import()
         attachment = Attachment.objects.get(name="new-7105.png")
         self.assertEqual(attachment.item, self.item("Budget"))
+
+
+class SharedAttachmentTest(ImportCase):
+    """The same Basecamp file in texts of several items (found 2026-11-28 in
+    verification round 1: one row, another item's, shown as a plain
+    "attachment"): a row per item, sharing the stored file"""
+
+    def setUp(self):
+        super().setUp()
+        logo = support.file_entry(7001, "menu.png")
+        message = self.client_.data["/message_boards/200/messages.json"][1]
+        message |= {
+            "content": f"<div>The menu.{support.image(logo)}</div>",
+            "content_attachments": [logo],
+        }
+        comment = self.client_.data["/recordings/2001/comments.json"][0]
+        comment |= {
+            "content": f"<div>Again.{support.image(logo)}</div>",
+            "content_attachments": [logo],
+        }
+
+    def rows(self, title):
+        item = self.item(title)
+        return item, list(Attachment.objects.filter(item=item))
+
+    def test_each_item_its_own(self):
+        self.run_import()
+        todo, (in_todo,) = self.rows("Negotiate the price")
+        message, (in_message,) = self.rows("We have a camp")
+        self.assertNotEqual(in_todo.key, in_message.key)
+        self.assertEqual(in_todo.file.name, in_message.file.name)
+        url = f"{support.BASE}/blobs/7001/download/menu.png"
+        self.assertEqual(self.client_.downloads.count(url), 1)
+        for item, row, text in [
+            (todo, in_todo, todo.todo.notes),
+            (message, in_message, message.message.content),
+            (
+                message,
+                in_message,
+                Comment.objects.get(content__contains="Again").content,
+            ),
+        ]:
+            with self.subTest(item.title):
+                self.assertIn(f"attachment:{row.key}", text)
+                # Not the plain "attachment" of another item's
+                self.assertIn("wb-attachment-image", render_markdown(text, item))
+
+    def test_a_later_run_makes_no_more(self):
+        self.run_import()
+        self.run_import(full=True)
+        self.assertEqual(Attachment.objects.filter(name="menu.png").count(), 2)
+
+    def test_the_file_stays_with_the_other_row(self):
+        self.run_import()
+        _todo, (in_todo,) = self.rows("Negotiate the price")
+        _message, (in_message,) = self.rows("We have a camp")
+        with self.captureOnCommitCallbacks(execute=True):
+            in_message.delete()
+        self.assertTrue(in_todo.file.storage.exists(in_todo.file.name))
+
+
+class CachedCommentsTest(ImportCase):
+    """A recording's listing may be fresher than its comments' cached answer
+    (``--answers-max-age``): a comment added in between was missed while the
+    fresh count was stored (found 2026-11-28 in verification round 1)"""
+
+    COMMENTS = "/recordings/3011/comments.json"
+
+    def setUp(self):
+        super().setUp()
+        self.run_import()
+        # The cache's answer, fetched before the third comment
+        self.cached = self.client_.data[self.COMMENTS]
+        self.fetched = at("2026-03-01T08:00:00+00:00")
+        third = dict(self.cached[0], id=8003, content="<div>And Monday.</div>")
+        third["created_at"] = third["updated_at"] = "2026-03-01T09:00:00.000Z"
+        self.client_.data[self.COMMENTS] = [*self.cached, third]
+        self.fresh = []
+        paginate = self.client_.paginate
+
+        def cached_paginate(path, *, newer_than=None, **params):
+            if path == self.COMMENTS:
+                self.fresh.append(newer_than)
+                if newer_than is None or newer_than <= self.fetched:
+                    return iter(self.cached)
+            return paginate(path, newer_than=newer_than, **params)
+
+        self.client_.paginate = cached_paginate
+
+    def food(self, **changes):
+        self.client_.data["/todolists/301/todos.json"][0] |= {
+            "comments_count": 3,
+            **changes,
+        }
+
+    def comments(self):
+        return Comment.objects.filter(item=self.item("Buy giraffe food")).count()
+
+    def test_changed_after_the_cached_answer(self):
+        self.food(updated_at="2026-03-01T09:00:00.000Z")
+        self.run_import()
+        self.assertEqual(self.comments(), 3)
+        self.assertEqual(len(self.fresh), 1)
+
+    def test_more_comments_than_the_cached_answer(self):
+        """Only the count says so: read again"""
+        self.food()
+        self.run_import()
+        self.assertEqual(self.comments(), 3)
+        self.assertEqual(len(self.fresh), 2)
+
+    def test_a_fresh_cached_answer_is_used(self):
+        self.food(updated_at="2026-02-28T09:00:00.000Z", comments_count=2)
+        self.run_import()
+        self.assertEqual(self.comments(), 2)
+        self.assertEqual(len(self.fresh), 1)
 
 
 class UnchangedTest(ImportCase):
@@ -1704,6 +1838,21 @@ class ArchivedTest(ImportCase):
         self.assertEqual(
             Event.objects.filter(item=whale, action="completed").count(), 1
         )
+
+    def test_archived_to_dos_are_completed_by_nobody(self):
+        """Basecamp doesn't say who archived: its change, at its time (found
+        2026-11-28 in verification round 1: the importing person completed
+        them)"""
+        listing = self.client_.data["/todolists/303/todos.json?status=archived"]
+        listing[0]["updated_at"] = "2026-01-20T10:00:00.000Z"
+        self.run_import()
+        whale = self.item("Whale watching")
+        self.assertIsNone(whale.todo.completed_by)
+        self.assertEqual(whale.todo.completed_at, at("2026-01-20T10:00:00+00:00"))
+        event = Event.objects.get(item=whale, action=Action.COMPLETED)
+        self.assertIsNone(event.actor)
+        self.assertEqual(event.created_at, at("2026-01-20T10:00:00+00:00"))
+        self.assertEqual(event.data.get("imported"), "basecamp")
 
     def test_archived_lists_stay_archived(self):
         self.run_import()
@@ -2191,6 +2340,43 @@ class PeopleWhoLeftTest(ImportCase):
         self.assertIsNone(bob.left_at)
         self.assertFalse(bob.left_in_basecamp)
         self.assertEqual(self.run_import().back, [])
+
+    def test_back_with_a_new_basecamp_id(self):
+        """Removed and added again, Basecamp makes a new person for the same
+        address; the old one is a tombstone. Who is among the account's
+        people under any of their IDs hasn't left (checked 2026-11-28 in
+        verification round 1: marked left and cleared in every run, listed
+        under both headings)"""
+        self.run_import()
+        again = support.person(
+            33,
+            "Cleo Example",
+            "cleo@example.org",
+            client=True,
+            company={"id": 10, "name": "Example Client Ltd"},
+        )
+        data = self.client_.data
+        data["/people.json"] = [
+            p for p in data["/people.json"] if p["id"] != support.CLEO["id"]
+        ] + [again]
+        data[f"/projects/{support.PROJECT}/people.json"] = [
+            support.ADA,
+            support.BOB,
+            again,
+        ]
+        for _run in range(2):
+            report = self.run_import()
+            self.assertEqual((report.left, report.back), ([], []))
+            self.assertIsNone(self.left_at("cleo@example.org"))
+        cleo = User.objects.get(email="cleo@example.org")
+        self.assertEqual(
+            set(
+                ImportedObject.objects.filter(
+                    basecamp_type="Person", object_id=cleo.pk
+                ).values_list("basecamp_id", flat=True)
+            ),
+            {support.CLEO["id"], 33},
+        )
 
     def test_deactivated_in_biwak_stays_whatever_basecamp_lists(self):
         from biwak.organizations import activation
@@ -2700,6 +2886,54 @@ class InternalInsideVisibleTest(ImportCase):
         self.assertEqual(pots.todo.group.todolist, internal.todolist)
         self.assertEqual(self.item("Peel potatoes").todo.group.title, "Week 1")
         self.assertEqual(internal.todolist.groups.count(), 1)
+
+
+class InternalRenamedTest(ImportCase):
+    """The internal twins follow renames of their originals in Basecamp
+    (found 2026-11-28 in verification round 1: they kept the old names, and
+    a renamed group got a second one)"""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def setUp(self):
+        super().setUp()
+        grouped = self.client_.data["/todolists/3014/todos.json"]
+        grouped.append(
+            dict(grouped[0], id=3016, title="Wash the pots", visible_to_clients=False)
+        )
+        self.run_import()
+
+    def rename(self, rec, title):
+        rec |= {"title": title, "name": title, "updated_at": self.LATER}
+
+    def test_a_list_and_its_group(self):
+        data = self.client_.data
+        self.rename(data["/todosets/300/todolists.json"][1], "Kitchen")
+        self.rename(data["/todolists/301/groups.json"][0], "First week")
+        self.run_import()
+        internal = self.item("Kitchen (internal)")
+        self.assertEqual(
+            list(internal.todolist.groups.values_list("title", flat=True)),
+            ["First week"],
+        )
+        pots = self.item("Wash the pots")
+        self.assertEqual(pots.parent, internal)
+        self.assertEqual(pots.todo.group.title, "First week")
+        event = Event.objects.filter(item=internal, action=Action.EDITED).get()
+        self.assertIsNone(event.actor)
+        self.assertEqual(event.created_at, at("2026-03-01T08:00:00+00:00"))
+
+    def test_a_folder(self):
+        data = self.client_.data
+        self.rename(data["/vaults/400/vaults.json"][2], "Shared")
+        self.run_import()
+        self.assertEqual(self.item("Shared (internal)").kind, Kind.FOLDER)
+        self.assertEqual(
+            self.item("Internal in a public folder").parent,
+            self.item("Shared (internal)"),
+        )
+        # The folder itself too, like lists
+        self.assertEqual(self.item("Shared").kind, Kind.FOLDER)
 
 
 class StartDatesTest(ImportCase):

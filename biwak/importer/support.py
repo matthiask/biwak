@@ -940,7 +940,8 @@ class FakeClient:
     def get(self, path, **params):
         return self._lookup(path, params)
 
-    def paginate(self, path, **params):
+    def paginate(self, path, *, newer_than=None, **params):
+        """``newer_than``: no cache here, every answer is fresh"""
         found = self._lookup(path, params)
         # A collection without that variant is empty, not missing
         return iter(found)
