@@ -86,7 +86,8 @@ for or removes somebody else.
   of `files.md` (with several authors kept by whoever started it within
   its 10 minutes). What people typed who can't change the doc anymore is
   dropped unless others' updates build on it; then it stays without
-  credit (decided 2026-11-20).
+  credit (decided 2026-11-20), and the files it shows are linked like
+  the authors' (found 2026-11-28: the cleanup deleted them).
 - **Storing writes Markdown** (`collab/ytext.py`): the document
   serialized like the browser's editor would, keeping `Doc.content`
   where the document is what it says and the source of unchanged blocks

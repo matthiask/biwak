@@ -295,6 +295,23 @@ class LiveTest(TestCase):
         self.assertEqual(event.actor, self.ada)
         self.assertNotIn("mentioned", event.data)
 
+    def test_files_others_built_on_stay_too(self):
+        """Bob's file in the text that stays is linked, or the cleanup
+        deletes it a day later and the text shows a plain attachment"""
+        photo = attachments.upload(
+            project=self.project,
+            file=ContentFile(b"x", name="photo.png"),
+            uploaded_by=self.bob,
+        )
+        self.type(self.bob, f"Agenda\n\n{photo.markdown}")
+        self.type(self.ada, f"Agenda\n\n{photo.markdown}\n\nApproved")
+        Project.objects.filter(pk=self.project.pk).update(is_all_access=False)
+        operations.save_live(self.doc.pk)
+        self.refresh()
+        self.assertIn(photo.key, self.doc.content)
+        photo.refresh_from_db()
+        self.assertEqual(photo.item_id, self.item.pk)
+
     def test_search_finds_what_was_typed_and_clients_still_dont(self):
         self.type(self.ada, "Agenda zeppelin")
         operations.save_live(self.doc.pk)
