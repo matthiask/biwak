@@ -1863,17 +1863,12 @@ def move_people(item, project):
 
 
 def new_clients(item, project):
-    """The active clients of ``project`` who would see the item there and
-    don't see it now (no members of its project): moving asks first"""
+    """The clients of ``project`` (``client_members()``: also those
+    waiting to be activated) who would see the item there and don't see it
+    now (no members of its project): moving asks first"""
     if not item.is_client_visible:
         return User.objects.none()
-    return (
-        User.objects
-        .active()
-        .filter(is_client=True, memberships__project=project)
-        .exclude(memberships__project=item.project_id)
-        .distinct()
-    )
+    return project.client_members().exclude(memberships__project=item.project_id)
 
 
 @transaction.atomic

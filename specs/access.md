@@ -263,7 +263,10 @@ Like Basecamp's bright yellow:
   (decided 2026-11-21). "N clients" counts the project's active client
   members, invited ones included, deactivated ones not
   (`visibility.clients_of()`, decided 2026-11-28; before, every client
-  membership), the same in every such question. The POST with `visible=1`
+  membership), the same in every such question, the moves' too
+  (`shown_by_moving_into()`, `new_clients()`; verification round 2,
+  2026-11-28: they counted active clients only, so projects whose
+  clients wait to be activated asked about "0 clients" or not at all). The POST with `visible=1`
   shows the item, without it hides it. Staff only (403 for clients).
   The switch is an entry of the item's "More" menu, "Show to clients…"
   or "Hide from clients" (`items/_more_entries.html`, also the tiles'

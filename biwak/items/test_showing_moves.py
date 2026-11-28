@@ -285,6 +285,35 @@ class ShowingAcrossProjectsTest(Fixture, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn_([self.tent], self.there)
 
+    def test_clients_waiting_to_be_activated_count(self):
+        """As in ``clients_of()`` (found 2026-11-28, verification round 2:
+        imported clients, not activated yet, weren't asked about), those
+        who left don't"""
+        from django.utils import timezone
+
+        self.dot.is_active = False
+        self.dot.save()
+        shown = visibility.shown_by_moving_into([self.tent], self.other, visible=True)
+        self.assertEqual(shown, {"items": 1, "comments": 1, "clients": 1})
+        self.assertEqual(ops.new_clients(self.shared, self.other).count(), 1)
+        response = self.api(
+            "todos/move/", {"ids": [self.tent.pk], "list_id": self.there.pk}
+        )
+        self.assertEqual(response.status_code, 400)
+        # Within the project
+        self.cleo.is_active = False
+        self.cleo.save()
+        shown = visibility.shown_by_moving_into(
+            [self.budget], self.project, visible=True
+        )
+        self.assertEqual(shown["clients"], 1)
+        self.dot.left_at = timezone.now()
+        self.dot.save()
+        self.assertIsNone(
+            visibility.shown_by_moving_into([self.tent], self.other, visible=True)
+        )
+        self.assertEqual(ops.new_clients(self.shared, self.other).count(), 0)
+
     def test_internal_and_visible_together(self):
         """Internal ones show to every client there, visible ones to the
         new ones: everybody who sees something new"""
