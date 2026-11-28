@@ -6,10 +6,13 @@ from unittest.mock import patch
 
 import time_machine
 from django.core.files.base import ContentFile
+from django.db import connection
 from django.test import TestCase
 from django.utils import timezone
 
+from biwak.accounts.middleware import set_user_name
 from biwak.activity.models import Event, Subscription
+from biwak.audit.models import LoggedAction
 from biwak.collab import live, ytext
 from biwak.collab.models import LiveState, LiveUpdate
 from biwak.files import attachments, operations
@@ -142,14 +145,14 @@ class LiveTest(TestCase):
 
     def test_saving_sets_the_title_from_the_first_line(self):
         self.type(self.bob, "# Budget meeting\n\nAgenda")
-        operations.save_live(self.doc.pk, self.bob)
+        operations.save_live(self.doc.pk)
         self.item.refresh_from_db()
         self.assertEqual(self.item.title, "Budget meeting")
         self.assertEqual(self.doc.versions.first().title, "Budget meeting")
 
     def test_saving_merges_and_records(self):
         self.type(self.bob, "Agenda\n- Budget")
-        self.assertTrue(operations.save_live(self.doc.pk, self.bob))
+        self.assertTrue(operations.save_live(self.doc.pk))
         self.refresh()
         # (a list after a paragraph: a blank line between them, like the
         # editor writes it)
@@ -163,7 +166,7 @@ class LiveTest(TestCase):
             [("Agenda\n\n- Budget", self.bob), ("Agenda", self.ada)],
         )
         # Nothing new: nothing happens
-        self.assertFalse(operations.save_live(self.doc.pk, self.bob))
+        self.assertFalse(operations.save_live(self.doc.pk))
 
     def test_one_event_per_person_and_session_and_a_version_per_ten_minutes(self):
         start = timezone.now()
@@ -341,3 +344,54 @@ class LiveTest(TestCase):
 
     def test_deleted_docs_are_skipped(self):
         self.assertFalse(operations.save_live(0))
+
+
+class AuditNameTest(TestCase):
+    """The audit log names who typed what a save merges, not who caused it
+    (decided 2026-11-28, specs/auditing.md)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        self.cleo = person("Cleo", client=True)
+        self.project = project(members=[self.ada, self.bob, self.cleo])
+        self.item = bare_doc(
+            project=self.project,
+            title="Minutes",
+            content="Agenda",
+            creator=self.ada,
+            visible=True,
+        )
+        live.prepare(self.item.pk)
+        LoggedAction.objects.all().delete()
+
+    def type(self, user, text):
+        live.append(self.item.pk, ytext.edit(live.load(self.item.pk), text), user)
+
+    def names(self):
+        return set(
+            LoggedAction.objects.filter(table_name="items_doc").values_list(
+                "user_name", flat=True
+            )
+        )
+
+    def test_a_client_opening_the_page(self):
+        self.type(self.bob, "Agenda by Bob")
+        self.client.force_login(self.cleo)
+        self.assertContains(self.client.get(self.item.get_absolute_url()), "by Bob")
+        self.assertEqual(self.names(), {f"user-{self.bob.pk}-Bob"})
+
+    def test_several_people_typing(self):
+        self.type(self.bob, "Agenda by Bob")
+        self.type(self.ada, "Agenda by Bob and Ada")
+        operations.save_live(self.item.pk)
+        self.assertEqual(self.names(), {"Bob, Ada"})
+
+    def test_the_job_keeps_its_name(self):
+        set_user_name("Fairy tasks")
+        self.type(self.bob, "Agenda by Bob")
+        operations.save_pending()
+        self.assertEqual(self.names(), {f"user-{self.bob.pk}-Bob"})
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT current_setting('application_name')")
+            self.assertEqual(cursor.fetchone()[0], "Fairy tasks")

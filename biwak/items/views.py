@@ -19,6 +19,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from biwak import cursors, schedules
+from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import Color, User
 from biwak.activity import timeline as timelines
 from biwak.activity.mentions import (
@@ -890,6 +891,8 @@ def todo_keep_link(request, token):
         raise Http404
     done = False
     if request.method == "POST" and not item.todo.is_completed:
+        # The audit log names the recipient, not who's signed in here
+        set_user_name(user)
         stale.keep(item, actor=user)
         done = True
     with mention_reading_as(user):

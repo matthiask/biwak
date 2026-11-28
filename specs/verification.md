@@ -139,7 +139,10 @@ of a repeating one keeps deactivated assignees and subscribes the
 list's watchers;
 `biwak feed` and `biwak lantern` name events without an actor
 "Biwak" (CLI 0.76.0); the API's cursors are positions in the whole
-ordering (`api-cli.md`).
+ordering (`api-cli.md`); the mails' signed links ("Keep open",
+unsubscribing) are logged as their recipient; names in the audit log
+lose their accents instead of turning into escapes; a live save is
+logged as who typed it, not who caused it.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -206,13 +209,6 @@ part's spec with the fix):
     conflict check skips the saver's own versions).
   - An editor left open while its doc moves to another project uploads
     attachments to the old project, never linked, deleted a day later.
-- **Who did what:**
-  - A live save names the authors of the typing it merges (decided;
-    today whoever triggered it, also a client who only opened the page).
-  - "Keep open" from the stale mail is logged as anonymous or whoever is
-    signed in, not the recipient; links signed for a person run as them.
-  - Names that aren't ASCII are garbled in `user_name`
-    (`application_name`).
 
 **Decided, no change:**
 

@@ -75,7 +75,7 @@ def doc(request, pk):
     # closing (and saving): what was typed is saved first, as in doc_tell,
     # credited to who typed it (collab.live.merge())
     if LiveUpdate.objects.filter(doc_id=item.pk).exists():
-        operations.save_live(item.pk, request.user)
+        operations.save_live(item.pk)
         item = item_for(request, pk, Kind.DOC, drafts=True)
     if item.is_draft:
         # "Done" before writing anything: nothing to show
@@ -180,7 +180,7 @@ def doc_tell(request, pk):
     item = item_for(request, pk, Kind.DOC, drafts=True)
     if item.creator_id != request.user.pk:
         return redirect(item)
-    operations.save_live(item.pk, request.user)
+    operations.save_live(item.pk)
     item.refresh_from_db()
     if item.is_draft:
         return redirect(library_url(item.project, item.parent))

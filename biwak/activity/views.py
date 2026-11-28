@@ -16,6 +16,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from biwak.accounts.middleware import set_user_name
 from biwak.accounts.models import MailDelivery, NotificationLevel, User
 from biwak.activity import (
     feed as feed_module,
@@ -515,6 +516,8 @@ def unsubscribe(request, token):
     assigned = is_assigned(user, item)
     # Still assigned: the link does nothing and the page says why
     if request.method == "POST" and not assigned:
+        # The audit log names the recipient, not who's signed in here
+        set_user_name(user)
         unsubscribe_from(user, item)
         done = True
     title = ""

@@ -23,10 +23,19 @@ forever.
   organizations, teams, notification levels. New tables people change
   get `audit_tables()` in a migration (AGENTS.md).
 - **Who:** the row's `user_name`. Requests and API tokens set
-  `user-<id>-…` (`set_user_name()`), `user-0-anonymous` without a
+  `user-<id>-…` (`set_user_name()`, the short name without accents:
+  PostgreSQL keeps only ASCII in `application_name`, "Jürg" is "Jurg";
+  the history finds the person by the ID), `user-0-anonymous` without a
   sign-in; jobs name themselves: "Send mails", "Fairy tasks", "Resend"
-  (incoming mail and delivery events), "Basecamp import". Mail replies,
-  forwarded mails and live doc editing run as the person.
+  (incoming mail and delivery events), "Basecamp import". Mail replies
+  and forwarded mails run as the person. Saving what was typed live
+  names who typed it, whoever caused the save (a pause, a viewer
+  opening the page, `fairy_tasks`): one person as usual, several by
+  their short names ("Bob, Ada", decided 2026-11-28); the job's own name
+  comes back afterwards (`user_name_kept()`). Live doc editing otherwise
+  runs as the person, and so do the
+  links signed for one person in mails ("Keep open", unsubscribing),
+  whoever is signed in in that browser (decided 2026-11-28).
 - **Left out on purpose:** timestamps that change all the time
   (`last_login`, `last_used_at`, …), secrets (push
   keys, the calendar token, passkey data), the live doc's working state

@@ -1,3 +1,6 @@
+import unicodedata
+from contextlib import contextmanager
+
 from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.db import connections
 from django.utils.translation import activate, deactivate
@@ -8,9 +11,25 @@ def set_user_name(user):
     name like ``Fairy tasks``"""
     if not isinstance(user, str):
         user = f"user-{user.pk}-{user.get_short_name()}"
+    # PostgreSQL keeps only ASCII in application_name (others become
+    # escapes like \xc3\xbc) and 63 bytes: "Jürg" is written "Jurg"
+    user = unicodedata.normalize("NFKD", user).encode("ascii", "ignore").decode()
     connections["default"].cursor().execute(
         "SET SESSION application_name TO %s", [user]
     )
+
+
+@contextmanager
+def user_name_kept():
+    """Whatever ``set_user_name()`` sets inside goes again afterwards, for
+    a job saving on behalf of others (``files.operations.save_live()``)"""
+    with connections["default"].cursor() as cursor:
+        cursor.execute("SELECT current_setting('application_name')")
+        (before,) = cursor.fetchone()
+    try:
+        yield
+    finally:
+        set_user_name(before)
 
 
 def language_middleware(get_response):

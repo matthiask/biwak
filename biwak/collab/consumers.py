@@ -459,6 +459,6 @@ class DocConsumer(AsyncWebsocketConsumer):
 
         self.dirty_since = None
         try:
-            await database_sync_to_async(operations.save_live)(self.pk, self.user)
+            await database_sync_to_async(operations.save_live)(self.pk)
         except Exception:
             logger.exception("Saving doc %s failed", self.pk)

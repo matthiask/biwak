@@ -17,3 +17,18 @@ class TablesTest(TestCase):
         changes = LoggedAction.objects.filter(table_name="items_messagecategory")
         self.assertEqual([c.action for c in changes], ["I", "U", "D"])
         self.assertEqual(changes[1].changed_fields, {"name": "Updates"})
+
+
+class UserNameTest(TestCase):
+    def test_names_beyond_ascii(self):
+        """PostgreSQL keeps only ASCII in ``application_name``: the name is
+        written without accents instead of as escapes"""
+        from biwak.accounts.middleware import set_user_name
+        from biwak.test_utils import person
+
+        jurg = person("Jürg Müller")
+        set_user_name(jurg)
+        LoggedAction.objects.all().delete()
+        MessageCategory.objects.create(name="News", emoji="📣")
+        (change,) = LoggedAction.objects.filter(table_name="items_messagecategory")
+        self.assertEqual(change.user_name, f"user-{jurg.pk}-Jurg")
