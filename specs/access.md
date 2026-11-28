@@ -98,7 +98,11 @@ through every entry point (`AGENTS.md`).
   People removed from the project who stay assigned to to-dos aren't
   named to clients and externals either: the rows, the to-do's page, the
   API's `assignees` and mails show only the people they may know
-  (2026-11-21, after a review: `{% known_in %}`, `known_ids_for()`). The
+  (2026-11-21, after a review: `{% known_in %}`, `known_ids_for()`), and
+  filtering by such a person's ID (`todos/?assignee=`, a list's
+  `todos/?assignee=`) finds nothing in projects where they may not know
+  them (`due.known_assignee()`, 2026-11-28; the pages' filters offer
+  clients nobody by name, an ID there is refused). The
   feed API's event data (`mentioned`, `assigned`, `people`, `assignees`,
   by ID) lists only those too (`event_out()`).
   Both halves of the rule (after the second visibility review):

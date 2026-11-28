@@ -164,6 +164,7 @@ def todos(
             assignments = assignments.filter(user=user)
         elif assignee is not None:
             assignments = assignments.filter(user=assignee)
+            qs = known_assignee(qs, user, assignee)
         else:
             # To anybody else (specs/todos.md): giving oneself a to-do isn't
             # waiting on others
@@ -193,8 +194,27 @@ def assigned_to(qs, user, assignee):
             )
         )
     if assignee is not None:
-        return qs.filter(todo__assignees=assignee)
+        return known_assignee(qs.filter(todo__assignees=assignee), user, assignee)
     return qs
+
+
+def known_assignee(qs, user, assignee):
+    """The to-dos of ``qs`` in projects where ``user`` may know the person
+    ``assignee`` (an ID; ``Project.people_known_to()``): clients and
+    externals filtering by somebody they may not know find nothing there,
+    as ``assignees`` doesn't name them (2026-11-28, specs/access.md)"""
+    from biwak.accounts.models import User, own_staff
+    from biwak.projects.models import Membership, knows_everybody
+
+    if knows_everybody(user):
+        return qs
+    known = Q(
+        Exists(Membership.objects.filter(project=OuterRef("project"), user=assignee))
+    )
+    if not user.is_client and User.objects.filter(own_staff(), pk=assignee).exists():
+        # Externals know the own staff of their all-access projects
+        known |= Q(project__is_all_access=True)
+    return qs.filter(known)
 
 
 def _in_group(qs, group, today):
