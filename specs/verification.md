@@ -126,15 +126,13 @@ and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 throwaway test that was run again and failed before it was listed.
 Fixed: the import's later runs leave recordings unchanged in Basecamp
 alone (Biwak's changes stay); a dry run writes nothing for projects
-imported before; moves in Basecamp are followed.
+imported before; moves in Basecamp are followed; a
+project archived in Basecamp is archived only at its first import.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
 
 - **Import, later runs** (`import-basecamp.md`):
-  - A project archived in Basecamp is archived in Biwak only at its
-    first import (decided); today a rerun after `--archive` archives the
-    project people work in, ending its public links.
   - Trashed in Basecamp means trashed in Biwak; something deleted in
     Biwak isn't imported again (decided; today both are ignored or come
     back).

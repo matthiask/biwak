@@ -1006,6 +1006,32 @@ class BiwakChangesStayTest(ImportCase):
         self.assertEqual(list(item.todo.assignees.all()), [])
 
 
+class ArchivedProjectTest(ImportCase):
+    """A project archived in Basecamp is archived in Biwak only at its first
+    import (decided 2026-11-28): after ``--archive`` people work in it"""
+
+    def archived_in_basecamp(self):
+        self.client_.data[f"/projects/{support.PROJECT}.json"] |= {
+            "status": "archived",
+            "updated_at": "2026-03-05T08:00:00.000Z",
+        }
+
+    def test_at_the_first_import(self):
+        self.archived_in_basecamp()
+        self.run_import()
+        self.assertIsNotNone(self.project.archived_at)
+
+    def test_not_after_it(self):
+        self.run_import(archive=True)
+        self.assertEqual(self.client_.archived_projects, [support.PROJECT])
+        # What Basecamp says from now on
+        self.archived_in_basecamp()
+        self.run_import()
+        self.assertIsNone(self.project.archived_at)
+        self.run_import(full=True)
+        self.assertIsNone(self.project.archived_at)
+
+
 class MovesTest(ImportCase):
     """Moves in Basecamp are followed for changed recordings, with the new
     place's visibility (decided 2026-11-28), as Basecamp's change: at its

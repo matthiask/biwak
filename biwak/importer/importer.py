@@ -1116,13 +1116,17 @@ class Importer(Resolver):
 
         project = self._upsert(PROJECT, rec, create=create, update=update)
         if project is not None and self._touch(PROJECT, rec):
-            self._archived(project, rec)
+            # Archived only at the first import (decided 2026-11-28): after
+            # ``--archive`` Basecamp says so of the project people work in
+            first = (PROJECT, rec["id"]) in self._created
+            self._archived(project, rec, archive=first)
         return project
 
-    def _archived(self, project, rec):
-        """A project or template archived as in Basecamp"""
+    def _archived(self, project, rec, *, archive=True):
+        """A project or template archived as in Basecamp; ``archive``:
+        whether Basecamp's archiving is taken over"""
         if rec.get("status") == "archived":
-            if project.archived_at is None:
+            if archive and project.archived_at is None:
                 project_ops.archive_project(project, actor=self.actor)
         elif project.archived_at is not None:
             project_ops.unarchive_project(project, actor=self.actor)

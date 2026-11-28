@@ -45,7 +45,10 @@ were written on what was imported before).
 - **Idempotent:** `ImportedObject(basecamp_id, basecamp_type,
   content_type, object_id)` maps what was imported, so a second run
   updates titles, texts, due dates, assignees, completion, archived
-  lists, categories and visibility, and adds new comments; it doesn't
+  lists, categories and visibility, and adds new comments (a project
+  archived in Basecamp is archived only at its first import, decided
+  2026-11-28 by the user: after `--archive` Basecamp says so of the
+  project people work in, and archiving it ended its public links); it doesn't
   change imported comments, positions or files. **Moves are followed**
   (decided 2026-11-28 by the user, found in verification round 1: a to-do
   moved into an internal list stayed visible to clients): a changed to-do
