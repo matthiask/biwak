@@ -238,13 +238,14 @@ def tell_admins(rows):
             f"{len(rows)} mails not sent",
             "These mails couldn't be sent for a day, the outbox gave up on"
             f" them:\n\n{'\n'.join(lines)}\n\nTheir content is kept in the"
-            f" outbox for 30 days: {url}?state=given_up\n",
+            f" outbox for {RETENTION.days} days: {url}?state=given_up\n",
         )
     except Exception:
         logger.exception("Telling the admins about mails not sent failed")
 
 
 def prune(*, now=None):
-    """Deletes rows older than 30 days (``fairy_tasks``); returns how many"""
+    """Deletes rows older than ``RETENTION`` (``fairy_tasks``); returns how
+    many"""
     cutoff = (now or timezone.now()) - RETENTION
     return OutgoingMail.objects.filter(created_at__lt=cutoff).delete()[0]

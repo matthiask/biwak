@@ -135,7 +135,8 @@ marked unread is mailed and pushed; unsubscribing from a to-do stops
 its column moves, also through the mail's link; notifications of an
 item trashed or hidden when their mail is due are kept unmailed; one
 "Assign…" across projects is one entry in the digest; the outbox gives
-up retries to deactivated people and undeliverable addresses.
+up retries to deactivated people and undeliverable addresses; the
+admins' notice names the outbox's retention (`RETENTION`, 90 days).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -192,7 +193,6 @@ part's spec with the fix):
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
 - **Notifications:**
-  - The admins' notice says the outbox keeps mails 30 days; it's 90.
   - A held summary still goes out after the person chose "No mails",
     unsubscribed, or every answer was trashed (`send_held_summaries()`).
 - **Visibility:**

@@ -136,6 +136,8 @@ class OutboxTest(TestCase):
             "https://biwak.example.org/admin/outbox/outgoingmail/?state=given_up",
             notice.body,
         )
+        # As long as they're kept (RETENTION)
+        self.assertIn("kept in the outbox for 90 days", notice.body)
         self.assertEqual(OutgoingMail.objects.count(), 2)
         self.assertEqual(outbox.retry(now=later), {})
 
