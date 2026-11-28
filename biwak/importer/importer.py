@@ -1317,22 +1317,30 @@ class Importer(Resolver):
             updated_at=parse_time(rec.get("updated_at") or rec["created_at"]),
         )
 
+    def _from_basecamp(self, rec):
+        """A change brought over from Basecamp: at its time, without a
+        person, noted as the import's (``importing(noted=)``). Basecamp says
+        when a recording changed, never who changed it; in the creator's
+        name, a to-do's creator who had left months before "edited" it
+        (decided 2026-11-28)."""
+        return importing(at=parse_time(rec.get("updated_at")), noted="basecamp")
+
     def _top_visibility(self, item, visible, rec):
         """What the operations created is visible as the creator is a
         client (messages); the importer sets what Basecamp had"""
         item.refresh_from_db()
         if item.has_switch and item.visible_to_clients != visible:
-            with importing(at=parse_time(rec.get("updated_at"))):
-                ops.set_visibility(item, visible=visible, actor=item.creator)
+            with self._from_basecamp(rec):
+                ops.set_visibility(item, visible=visible, actor=None)
 
     def _status(self, item, rec):
         """Lists stay archived (to-dos are completed, not archived)"""
         archived = rec.get("status") == "archived"
-        with importing(at=parse_time(rec.get("updated_at"))):
+        with self._from_basecamp(rec):
             if archived and item.status == Status.ACTIVE:
-                ops.archive(item, actor=item.creator)
+                ops.archive(item, actor=None)
             elif not archived and item.status == Status.ARCHIVED:
-                ops.unarchive(item, actor=item.creator)
+                ops.unarchive(item, actor=None)
 
     def _comments(self, rec, item, *, path=None, bc_type="Comment"):
         """``path`` and ``bc_type``: an email forward's replies"""
@@ -1435,10 +1443,10 @@ class Importer(Resolver):
                 )
 
         def update(item):
-            with importing(at=parse_time(rec.get("updated_at"))):
+            with self._from_basecamp(rec):
                 ops.update_list(
                     item,
-                    actor=item.creator,
+                    actor=None,
                     title=rec["title"],
                     description=self._md(
                         rec.get("description"),
@@ -1552,10 +1560,10 @@ class Importer(Resolver):
                 )
 
         def update(todo):
-            with importing(at=parse_time(rec.get("updated_at"))):
+            with self._from_basecamp(rec):
                 ops.update_todo(
                     todo,
-                    actor=todo.creator,
+                    actor=None,
                     title=title,
                     notes=notes(),
                     **dates(),
@@ -1569,9 +1577,14 @@ class Importer(Resolver):
             # Basecamp doesn't say when somebody was assigned: a new to-do's
             # assignees at its creation, before its comments; those added
             # since the last run when Basecamp last changed it
-            assigned_at = rec["created_at"] if created else rec.get("updated_at")
-            with importing(at=parse_time(assigned_at)):
-                self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
+            # (in the creator's name, at Basecamp's time, without a person
+            # later: Basecamp doesn't say who assigned)
+            if created:
+                with importing(at=parse_time(rec["created_at"])):
+                    self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
+            else:
+                with self._from_basecamp(rec):
+                    self._sync_assignees(todo, rec.get("assignees", []), None)
             self._completion(todo, rec, new=bool(created))
             self._restamp(bc_type, todo, rec)
         self._follow(bc_type, rec, todo)
@@ -1617,8 +1630,8 @@ class Importer(Resolver):
         )
         if self.dry:
             return
-        with importing(at=parse_time(rec.get("updated_at"))):
-            ops.update_todo(item, actor=item.creator, **repeat)
+        with self._from_basecamp(rec):
+            ops.update_todo(item, actor=None, **repeat)
 
     def _completion(self, todo, rec, *, new=False):
         """Archived to-dos come in completed (specs/archiving.md), at the
@@ -1636,8 +1649,9 @@ class Importer(Resolver):
                 with importing(at=timezone.now(), noted="basecamp"):
                     ops.complete(todo, actor=None)
                 return
+            # Nobody when Basecamp doesn't say (decided 2026-11-28)
             by = self._user(completion.get("creator")) or (
-                self.actor if archived and not rec.get("completed") else todo.creator
+                self.actor if archived and not rec.get("completed") else None
             )
             with importing(at=when):
                 ops.complete(todo, actor=by)
@@ -1651,8 +1665,8 @@ class Importer(Resolver):
                 with importing(at=timezone.now(), noted="basecamp"):
                     ops.reopen(todo, actor=None)
                 return
-            with importing(at=when):
-                ops.reopen(todo, actor=todo.creator)
+            with self._from_basecamp(rec):
+                ops.reopen(todo, actor=None)
 
     def _undoes_biwak(self, todo, actions, when):
         """Whether the to-do's last ``actions`` event (reopening, or
@@ -1687,8 +1701,8 @@ class Importer(Resolver):
             return item
 
         def update(item):
-            with importing(at=parse_time(rec.get("updated_at"))):
-                ops.update_list(item, actor=item.creator, title=rec["title"])
+            with self._from_basecamp(rec):
+                ops.update_list(item, actor=None, title=rec["title"])
 
         item = self._upsert(
             "Kanban::Board", rec, create=create, update=update, follow=True
@@ -1771,10 +1785,10 @@ class Importer(Resolver):
                 )
 
         def update(item):
-            with importing(at=parse_time(rec.get("updated_at"))):
+            with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
-                    actor=item.creator,
+                    actor=None,
                     title=rec.get("subject") or rec["title"],
                     content=content(),
                     category=self._category(rec),
@@ -1844,10 +1858,10 @@ class Importer(Resolver):
                 )
 
         def update(item):
-            with importing(at=parse_time(rec.get("updated_at"))):
+            with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
-                    actor=item.creator,
+                    actor=None,
                     title=title,
                     content=content(item.creator),
                     category=self._category_named(*FORWARDS_CATEGORY),
@@ -1948,6 +1962,8 @@ class Importer(Resolver):
                 )
 
         def update(item):
+            # In the creator's name: a doc's versions need an author, its
+            # edits are credited to who wrote them (collab.live.merge())
             with importing(at=parse_time(rec.get("updated_at"))):
                 file_ops.update_doc(
                     item,
@@ -2003,10 +2019,8 @@ class Importer(Resolver):
                 raise _Skip from exc
 
         def update(item):
-            with importing(at=parse_time(rec.get("updated_at"))):
-                file_ops.update_upload(
-                    item, actor=item.creator, description=description()
-                )
+            with self._from_basecamp(rec):
+                file_ops.update_upload(item, actor=None, description=description())
 
         try:
             item = self._upsert(
@@ -2069,7 +2083,7 @@ class Importer(Resolver):
             who = [u for u in asked if u.is_active]
             allowed = who_can_see(item).filter(pk__in=[u.pk for u in who])
             if allowed:
-                with importing():
+                with importing(noted="basecamp"):
                     checkin_ops.set_people(
                         item,
                         # Those asked before who can't see it anymore
@@ -2083,7 +2097,8 @@ class Importer(Resolver):
                             ),
                             key=lambda u: u.pk,
                         ),
-                        actor=item.creator,
+                        # Basecamp doesn't say who asked them
+                        actor=None,
                     )
         self._follow("Question", rec, item, comments=False)
 
@@ -2155,7 +2170,8 @@ class Importer(Resolver):
     def _fix_item_links(self, item):
         detail = item.detail
         original = item.updated_at
-        with importing(at=original):
+        # The import's own change, without a person (decided 2026-11-28)
+        with importing(at=original, noted="basecamp"):
             self._rewrite_item(item, detail)
         Item.objects.filter(pk=item.pk).update(updated_at=original)
 
@@ -2164,15 +2180,15 @@ class Importer(Resolver):
             case Kind.TODO:
                 fixed = self._rewrite(detail.notes)
                 if fixed != detail.notes:
-                    ops.update_todo(item, actor=item.creator, notes=fixed)
+                    ops.update_todo(item, actor=None, notes=fixed)
             case Kind.LIST:
                 fixed = self._rewrite(detail.description)
                 if fixed != detail.description:
-                    ops.update_list(item, actor=item.creator, description=fixed)
+                    ops.update_list(item, actor=None, description=fixed)
             case Kind.MESSAGE:
                 fixed = self._rewrite(detail.content)
                 if fixed != detail.content:
-                    file_ops.update_message(item, actor=item.creator, content=fixed)
+                    file_ops.update_message(item, actor=None, content=fixed)
             case Kind.DOC:
                 fixed = self._rewrite(detail.content)
                 if fixed != detail.content:
@@ -2180,11 +2196,11 @@ class Importer(Resolver):
             case Kind.FILE:
                 fixed = self._rewrite(detail.description)
                 if fixed != detail.description:
-                    file_ops.update_upload(item, actor=item.creator, description=fixed)
+                    file_ops.update_upload(item, actor=None, description=fixed)
             case Kind.ANSWER:
                 fixed = self._rewrite(detail.content)
                 if fixed != detail.content:
-                    checkin_ops.update_answer(detail, fixed, actor=item.creator)
+                    checkin_ops.update_answer(detail, fixed, actor=None)
 
     def _bookmarks(self, project):
         """The bookmarks of the person whose token it is"""
