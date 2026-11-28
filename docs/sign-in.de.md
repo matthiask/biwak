@@ -34,8 +34,8 @@ Fingerabdruck.
 
 **Handy oder Laptop verloren, oder hatte vielleicht jemand anderes
 Zugriff?** Bitte um ein Zurücksetzen: Auf deiner Seite entfernt
-„Anmeldung zurücksetzen…“ deine Authenticator-App, deine Passkeys und
-deine API-Tokens, meldet dich überall ab und mailt dir, was entfernt
+„Anmeldung zurücksetzen…“ deine Authenticator-App, deine Passkeys,
+deine API-Tokens und deine Geräte für Push-Benachrichtigungen, meldet dich überall ab und mailt dir, was entfernt
 wurde und von wem. Du meldest dich dann mit einem Code oder über die
 Anmeldung deiner Organisation an und richtest alles neu ein; wo deine
 Organisation einen zweiten Faktor verlangt, führt dich Biwak zuerst

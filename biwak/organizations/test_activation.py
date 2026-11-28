@@ -10,7 +10,7 @@ from django.test import Client, TestCase
 from django.utils import timezone
 
 from biwak.accounts import sso
-from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.accounts.models import APIToken, CalendarToken, PushSubscription, User
 from biwak.organizations import activation
 from biwak.outbox.models import OutgoingMail
 from biwak.palette.test_actions import palette_data
@@ -153,6 +153,24 @@ class DeactivateTest(Base):
         self.assertFalse(sso.session_alive(self.key, self.cleo))
         self.assertTrue(self.site.is_member(self.cleo))
         self.assertEqual(self.client.get("/").status_code, 302)
+
+    def test_removes_push_devices(self):
+        # Decided 2026-11-28: nothing is pushed to the devices of somebody
+        # who left
+        PushSubscription.objects.create(
+            user=self.cleo,
+            endpoint="https://push.example.org/cleo",
+            p256dh="k",
+            auth="a",
+        )
+        PushSubscription.objects.create(
+            user=self.ada, endpoint="https://push.example.org/ada", p256dh="k", auth="a"
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            activation.deactivate([self.cleo], actor=self.ada)
+        self.assertEqual(
+            set(PushSubscription.objects.values_list("user", flat=True)), {self.ada.pk}
+        )
 
     def test_ends_access_again_after_the_commit(self):
         """What another request made meanwhile (it didn't see the change

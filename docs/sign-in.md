@@ -30,7 +30,8 @@ is enough alone: it already needs your device and its PIN or fingerprint.
 
 **Lost your phone or laptop, or someone else may have had access?** Ask
 for a reset: on your page, "Reset sign-in…" removes your authenticator
-app, your passkeys and your API tokens, signs you out everywhere and
+app, your passkeys, your API tokens and your devices for push
+notifications, signs you out everywhere and
 mails you what was removed and by whom. You sign in with a code or
 through your organization's sign-in then and set things up again; where
 your organization requires a second factor, Biwak leads you to adding

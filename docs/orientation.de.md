@@ -285,7 +285,8 @@ aktiviert. „Inaktiv“ auf der Seite Personen zeigt sie; „Aktivieren…“
 um die Einladungsmail zu senden (nicht an Adressen, deren Mails
 zurückkamen); sonst ändert sich nichts. „Deaktivieren…“ ist für
 jemanden, der nicht mehr dabei ist: Die Person wird überall abgemeldet,
-ihre API-Tokens und ihr Kalenderlink werden gelöscht, und sie kann sich
+ihre API-Tokens, ihr Kalenderlink und ihre Geräte für
+Push-Benachrichtigungen werden gelöscht, und sie kann sich
 nicht mehr anmelden, während bleibt, was sie getan hat. Ihre To-dos
 bleiben ihr zugewiesen, als inaktiv markiert, bis jemand sie übergibt.
 Die Frage vor dem Deaktivieren sagt, wie viele offene To-dos sie hat

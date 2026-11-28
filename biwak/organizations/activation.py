@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _, ngettext
 
 from biwak.accounts.languages import language_for
-from biwak.accounts.models import APIToken, CalendarToken, User
+from biwak.accounts.models import APIToken, CalendarToken, PushSubscription, User
 from biwak.projects import operations as project_ops
 
 
@@ -208,8 +208,9 @@ def what_is_left(user, *, viewer):
 
 
 def end_access(users):
-    """Ends the access of these (inactive) people: sessions, API tokens and
-    calendar links go, open websockets check again (``sso.session_alive()``)"""
+    """Ends the access of these (inactive) people: sessions, API tokens,
+    calendar links and push devices (decided 2026-11-28) go, open
+    websockets check again (``sso.session_alive()``)"""
     from biwak.collab import live
 
     for user in users:
@@ -217,6 +218,7 @@ def end_access(users):
             session.end()
         APIToken.objects.filter(user=user).delete()
         CalendarToken.objects.filter(user=user).delete()
+        PushSubscription.objects.filter(user=user).delete()
         live.check_access(user=user.pk)
 
 
@@ -270,7 +272,7 @@ def can_reset_sign_in(actor, user):
 def reset_sign_in(user, *, actor):
     """One recovery and incident action (decided 2026-11-21: "lost my phone
     or laptop", "someone else may have had access"): deletes the person's
-    authenticator app, passkeys and API tokens, ends their sessions and
+    authenticator app, passkeys, API tokens and push devices, ends their sessions and
     mails them what was removed and by whom (through the outbox, after the
     commit); the audit log has the deleted rows. They sign in by code or
     through their organization's identity provider then. ``PermissionError``
@@ -288,6 +290,8 @@ def reset_sign_in(user, *, actor):
         return removed
     Authenticator.objects.filter(user=user).delete()
     APIToken.objects.filter(user=user).delete()
+    # Pushes go to devices somebody else may have (decided 2026-11-28)
+    PushSubscription.objects.filter(user=user).delete()
     for session in UserSession.objects.filter(user=user):
         session.end()
     live.check_access(user=user.pk)

@@ -120,8 +120,9 @@ below is what prevents that.
 - **Resets:** `activation.can_reset_sign_in()` (`can_change()`, not
   oneself), `activation.sign_in()` (what the person has: `SignIn(app,
   passkeys, api_tokens)`) and `activation.reset_sign_in()` in
-  `biwak/organizations/activation.py`: deletes the app, the passkeys and
-  the API tokens, ends the sessions
+  `biwak/organizations/activation.py`: deletes the app, the passkeys,
+  the API tokens and the push devices (decided 2026-11-28; not counted
+  in `SignIn` nor named in the mail), ends the sessions
   (`UserSession.end()`, `live.check_access()`), mails through the outbox
   (`accounts/sign_in_reset.txt`, `Kind.ACCOUNT`, from the actor, not
   to inactive people or bounced addresses). The page

@@ -127,7 +127,8 @@ throwaway test that was run again and failed before it was listed.
 Fixed: the API keeps deactivated assignees (one to-do and "Assign…"
 with `--replace`) and check-ins' people asked who were deactivated
 (the form too); the Django admin drops subscriptions when access is lost
-and activates through `activate()`.
+and activates through `activate()`; deactivating and "Reset sign-in…"
+remove push devices.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -183,8 +184,6 @@ part's spec with the fix):
   - Copying a list, a project from a template, or a template's check-in
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
-  - Deactivating and "Reset sign-in…" remove the person's push devices
-    (decided).
 - **Notifications:**
   - A first mention merged into an edit whose notification was marked
     unread is mailed and pushed (decided; today neither).

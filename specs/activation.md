@@ -177,8 +177,8 @@ against a real account 2026-11-22) and whoever was imported from it
   their IDs (`lock_with_admins()`), so two requests can't each deactivate
   an admin the other counted on. Already inactive people are skipped
   quietly.
-- **Ends access at once:** sessions (`UserSession.end()`), API tokens
-  and calendar links are deleted; open websockets close through
+- **Ends access at once:** sessions (`UserSession.end()`), API tokens,
+  calendar links and push devices (decided 2026-11-28) are deleted; open websockets close through
   `sso.session_alive()` after `live.check_access(user=…)` told them to
   check. Again after the commit (`end_access_now_and_after_commit()`, as
   `sso.enforce_required_now_and_after_commit()`), so what other requests
