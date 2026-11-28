@@ -124,7 +124,8 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: stale to-dos marked obsolete on the promised day.
+Fixed: stale to-dos marked obsolete on the promised day; copies keep
+a group's "Keep untouched to-dos for a year".
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -163,8 +164,6 @@ part's spec with the fix):
   - Check-in questions and answers changed in Basecamp aren't updated
     (`_upsert` without `update=`).
 - **To-dos:**
-  - Copying a list or a template keeps a group's "Keep untouched to-dos
-    for a year" (decided; today 90 days).
   - Archived lists and lists in archived projects refuse new and moved
     to-dos at every entry point, like `may_add_to()`: the inline form,
     the API's create and move, dragging; a repeating to-do in an

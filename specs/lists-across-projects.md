@@ -15,7 +15,8 @@ Templates copy lists the same way (`templates.md`).
   project already has a list of that name (ignoring case) it gets
   " (copy)", then " (copy 2)" and so on (decided 2026-11-22).
 - **The open work** (decided 2026-11-22): title, description, groups
-  (in order), open to-dos in order with their notes and checklists
+  (in order, with their color and "Keep untouched to-dos for a year",
+  decided 2026-11-28), open to-dos in order with their notes and checklists
   (unticked as they are). Not completed to-dos, comments, history,
   events, subscribers, reactions, public links.
 - **Assignees stay** (decided 2026-11-22):

@@ -94,7 +94,8 @@ a checkbox "Keep untouched to-dos for a year" (`update_group()`,
 values (`stale_after`, 400 for others, 403 for clients; `biwak groups
 create|update … --keep-for-a-year/--no-keep-for-a-year`, the existing
 commands, decided by the building agent 2026-11-26).
-Ungrouped to-dos: 90 days. Not on lists (a list of ideas gets a group),
+Copying a list and a new project from a template keep it (decided
+2026-11-28, verification round 1). Ungrouped to-dos: 90 days. Not on lists (a list of ideas gets a group),
 no "never". The board's column header and the list's group heading show
 nothing.
 

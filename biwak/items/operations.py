@@ -1645,7 +1645,8 @@ def copy_list(
     quiet=False,
 ):
     """A copy of the list's open work in ``project`` (the same or another):
-    its description, groups in order and open to-dos in order with their
+    its description, groups in order (with their color and how long they
+    keep untouched to-dos) and open to-dos in order with their
     notes, checklists, recurrence and the assignees who are members of
     ``project`` or added to it (``copy_people()``; clients who aren't are
     left out). Not completed to-dos,
@@ -1680,6 +1681,7 @@ def copy_list(
             title=group.title,
             color=group.color,
             position=group.position,
+            stale_after=group.stale_after,
         )
         for group in source.groups.all()
     }

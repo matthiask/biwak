@@ -204,7 +204,7 @@ Who follows it hears about it being marked; "Reopen" brings it back.
 
 A group can keep its to-dos for a year instead, for a backlog or a list
 of ideas: "Keep untouched to-dos for a year" in the group's form (staff
-only).
+only). Copies of the list and projects from a template keep it.
 
 ## Repeating
 

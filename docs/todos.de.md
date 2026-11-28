@@ -245,7 +245,8 @@ ihm folgt, hört davon; „Wieder öffnen“ holt es zurück.
 
 Eine Gruppe kann ihre To-dos stattdessen ein Jahr behalten, für einen
 Backlog oder eine Liste von Ideen: „Unberührte To-dos ein Jahr behalten“
-im Formular der Gruppe (nur das Team).
+im Formular der Gruppe (nur das Team). Kopien der Liste und Projekte aus
+einer Vorlage behalten das.
 
 ## Wiederholen
 
