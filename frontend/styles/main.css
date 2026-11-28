@@ -2695,6 +2695,35 @@ button.wb-signal:hover {
   font-weight: normal;
 }
 
+/* Items with a dot between them only on the same line
+   (projects/project_detail.html, the lists' counts): <span
+   class="wb-separated"><span class="d-flex flex-wrap justify-content-end">
+   and the items. Each item ends in a space of 1em, the last one's empty;
+   the inner box is 1em wider than the outer one, which cuts it off, so
+   the space ending each line (and its dot) is out of sight. Right-aligned
+   lines only. */
+.wb-separated {
+  display: block;
+  min-width: min-content;
+  overflow: hidden;
+}
+
+.wb-separated > * {
+  margin-inline-end: -1em;
+}
+
+.wb-separated > * > *::after {
+  content: "·";
+  display: inline-block;
+  width: 1em;
+  color: var(--bs-secondary-color);
+  text-align: center;
+}
+
+.wb-separated > * > :last-child::after {
+  content: "";
+}
+
 /* Live updates (specs/lantern.md): what's new slides in, quietly marked */
 @keyframes wb-live-new {
   from {
