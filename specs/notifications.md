@@ -342,8 +342,14 @@ large).
   lantern shows neither, by design (the inbox ends up right, the lantern
   shows what's left to see).
 - **Checked again when sending:** inactive people and people who can't
-  see the item any more get nothing (their notifications are deleted),
-  and read ones are left out (`lantern.md`); the level decided who was
+  see the item any more get nothing, and read ones are left out
+  (`lantern.md`). Inactive people's notifications are deleted, and so
+  are clients' of events internal when they happened. Those of an item
+  trashed or hidden from the person for now are kept, marked sent
+  without a mail (decided 2026-11-28, `mails._unseen()`): restoring
+  the item (or showing it again) brings them back unread in the lantern,
+  not mailed late. The lantern, its counts and digests leave them out
+  while the item is trashed or hidden (`visible_to()`); the level decided who was
   told, it doesn't hold mails back later. Nothing left to say, no mail.
 - **Once:** notifications are marked sent in the transaction that puts
   their mail into the outbox (`mail-sending.md`); a mail failing to be

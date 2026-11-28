@@ -133,7 +133,10 @@ In den Einstellungen unter „Mails“:
 
 Was du in der Laterne gelesen hast, bevor die Mail hinausgeht, wird
 nicht gemailt, und eine Mail, in der nichts übrig bleibt, wird nicht
-gesendet. Mails enthalten den ganzen Text; die erste Zeile sagt, wenn
+gesendet. Was an einem Eintrag passiert ist, der im Papierkorb ist
+(oder den du nicht sehen kannst), wenn seine Mail fällig ist, wird
+nicht gemailt, auch nicht, nachdem er wiederhergestellt ist; die
+Laterne hat es dann wieder, ungelesen. Mails enthalten den ganzen Text; die erste Zeile sagt, wenn
 Kund:innen den Eintrag sehen können.
 
 **Die tägliche Zusammenfassung** beginnt mit deinen To-dos:

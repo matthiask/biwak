@@ -117,7 +117,10 @@ class MailsTest(MailsBase):
         self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
         self.send(timezone.now() + dt.timedelta(minutes=11))
         self.assertEqual([m.to for m in mail.outbox], [[self.bob.email]])
-        self.assertFalse(Notification.objects.filter(user=self.cleo).exists())
+        # Kept for when it's visible again, never mailed (decided 2026-11-28)
+        self.assertFalse(
+            Notification.objects.filter(user=self.cleo, sent_at=None).exists()
+        )
         self.assertNotIn("Clients can see this", mail.outbox[0].body)
 
     def test_internal_event_not_mailed_to_clients_after_the_item_became_visible(self):
@@ -188,6 +191,46 @@ class MailsTest(MailsBase):
         self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 0)
         self.assertEqual(mail.outbox, [])
         self.assertFalse(Notification.objects.filter(user=self.bob).exists())
+
+    def test_trashed_before_sending_and_restored(self):
+        """Not mailed while the item is trashed, but kept (decided
+        2026-11-28): restoring brings them back unread in the lantern, not
+        mailed late"""
+        self.act(lambda: ops.add_comment(self.todo, author=self.ada, content="Hi"))
+        self.act(lambda: ops.trash(self.todo, actor=self.ada))
+        self.assertEqual(lantern.unread_count(self.bob), 0)
+        self.assertEqual(self.send(timezone.now() + dt.timedelta(minutes=11)), 0)
+        self.act(lambda: ops.restore(self.todo, actor=self.ada))
+        self.assertEqual(
+            sorted(
+                n.event.action for n in lantern.notifications_for(self.bob, unread=True)
+            ),
+            [Action.COMMENTED, Action.RESTORED],
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=22))
+        (message,) = mail.outbox
+        self.assertIn("restored", message.body)
+        self.assertNotIn("Hi", message.body)
+
+    def test_invisible_for_now_in_no_digest(self):
+        """Hidden from clients before the digest: in no digest, then or
+        later; made visible again, unread in the lantern"""
+        self.cleo.mail_delivery = MailDelivery.DIGEST
+        self.cleo.save()
+        subscribe(self.cleo, self.todo)
+        self.act(
+            lambda: ops.add_comment(self.todo, author=self.ada, content="Tent poles")
+        )
+        self.act(lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada))
+        self.assertEqual(lantern.unread_count(self.cleo), 0)
+        tomorrow = timezone.localtime() + dt.timedelta(days=1)
+        self.send(tomorrow.replace(hour=7, minute=11))
+        self.act(lambda: ops.set_visibility(self.shared, visible=True, actor=self.ada))
+        self.assertEqual(lantern.unread_count(self.cleo), 1)
+        self.send(tomorrow.replace(hour=7, minute=11) + dt.timedelta(days=1))
+        self.assertFalse([
+            m for m in mail.outbox if self.cleo.email in m.to and "Tent poles" in m.body
+        ])
 
     def test_failed_sending_retries(self):
         """The outbox has the mail (specs/mail-sending.md): the notifications

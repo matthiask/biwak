@@ -113,8 +113,11 @@ Under Settings, "Mails":
   (except what you marked as unread) with the next mail or digest.
 
 What you have read in the lantern before the mail goes out isn't mailed,
-and a mail with nothing left isn't sent. Mails carry the full text; the
-first line says when clients can see the item.
+and a mail with nothing left isn't sent. What happened on an item that
+is trashed (or that you can't see) when its mail is due isn't mailed,
+also not after it's restored; the lantern has it again then, unread.
+Mails carry the full text; the first line says when clients can see the
+item.
 
 **The daily digest** starts with your to-dos:
 

@@ -386,6 +386,27 @@ def _deliverable(notifications, user, *, others=()):
     ]
 
 
+def _unseen(notifications, user):
+    """The IDs of those about items the active person can't see now
+    (trashed, hidden from clients, not a member any more) but may see
+    again; not events internal when clients' notifications were written,
+    which they never see"""
+    if not user.is_active:
+        return set()
+    visible = set(
+        Item.objects
+        .visible_to(user)
+        .filter(pk__in={n.event.item_id for n in notifications})
+        .values_list("pk", flat=True)
+    )
+    return {
+        n.pk
+        for n in notifications
+        if n.event.item_id not in visible
+        and (n.event.is_client_visible or not user.is_client)
+    }
+
+
 # Notifications still to mail: not sent, not read in the lantern, not
 # marked unread by hand there (specs/lantern.md)
 MAILABLE = {
@@ -650,8 +671,13 @@ def _prepare(user, pks, now, build, kind):
         ):
             message = build(deliverable)
     sent = [n.pk for n in deliverable] if message else []
-    # Never sent: gone
-    Notification.objects.filter(pk__in={n.pk for n in claimed} - set(sent)).delete()
+    # About an item trashed or hidden from them for now: kept, marked sent
+    # without a mail, so restoring brings them back unread in the lantern,
+    # not mailed late (decided 2026-11-28). The rest never sent: gone.
+    unseen = _unseen(claimed, user)
+    Notification.objects.filter(
+        pk__in={n.pk for n in claimed} - set(sent) - unseen
+    ).delete()
     if message is None:
         return False
     outbox.send(message, kind)
