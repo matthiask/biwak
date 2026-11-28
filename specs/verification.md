@@ -126,16 +126,12 @@ and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 throwaway test that was run again and failed before it was listed.
 Fixed: the import's later runs leave recordings unchanged in Basecamp
 alone (Biwak's changes stay); a dry run writes nothing for projects
-imported before.
+imported before; moves in Basecamp are followed.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
 
 - **Import, later runs** (`import-basecamp.md`):
-  - Moves in Basecamp are followed (decided): to-dos between lists,
-    cards between columns, docs and files between folders, with the new
-    place's visibility. Today nothing moves, so a to-do or doc moved
-    into an internal place stays visible to clients.
   - A project archived in Basecamp is archived in Biwak only at its
     first import (decided); today a rerun after `--archive` archives the
     project people work in, ending its public links.

@@ -1571,11 +1571,30 @@ class Importer(Resolver):
                 with importing(at=parse_time(rec["created_at"])):
                     self._sync_assignees(todo, rec.get("assignees", []), todo.creator)
             else:
+                self._move_todo(todo, item, group, rec)
                 with self._from_basecamp(rec):
                     self._sync_assignees(todo, rec.get("assignees", []), None)
             self._completion(todo, rec, new=bool(created))
             self._stamp(todo, rec)
         self._follow(bc_type, rec, todo)
+
+    def _move_todo(self, todo, todolist, group, rec):
+        """Moved in Basecamp to another list, group or card table column
+        (decided 2026-11-28), with the new place's visibility"""
+        todo.refresh_from_db()
+        group_id = Todo.objects.get(item=todo).group_id
+        if (todo.parent_id, group_id) != (todolist.pk, group.pk if group else None):
+            with self._from_basecamp(rec):
+                ops.move_todo(todo, todolist=todolist, group=group, actor=None)
+
+    def _move_item(self, bc_type, item, parent, rec):
+        """A folder, doc or file moved in Basecamp to another folder (decided
+        2026-11-28), with the new place's visibility"""
+        if (bc_type, rec["id"]) not in self._created and item.parent_id != (
+            parent.pk if parent else None
+        ):
+            with self._from_basecamp(rec):
+                ops.move_item(item, parent=parent, actor=None)
 
     def _repeat(self, rec, title):
         """Basecamp's schedule (``repetition_schedule``), which only the
@@ -1910,6 +1929,7 @@ class Importer(Resolver):
 
         item = self._upsert("Vault", rec, create=create, follow=True)
         if item is not None and self._touch("Vault", rec):
+            self._move_item("Vault", item, parent, rec)
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
         self._follow("Vault", rec, item, comments=False)
@@ -1961,6 +1981,7 @@ class Importer(Resolver):
 
         item = self._upsert("Document", rec, create=create, update=update, follow=True)
         if item is not None and self._touch("Document", rec):
+            self._move_item("Document", item, parent, rec)
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
         self._follow("Document", rec, item)
@@ -2017,6 +2038,7 @@ class Importer(Resolver):
         except _Skip:
             return
         if item is not None and self._touch("Upload", rec):
+            self._move_item("Upload", item, parent, rec)
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
         self._follow("Upload", rec, item)

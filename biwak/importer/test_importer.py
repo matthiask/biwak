@@ -1006,6 +1006,114 @@ class BiwakChangesStayTest(ImportCase):
         self.assertEqual(list(item.todo.assignees.all()), [])
 
 
+class MovesTest(ImportCase):
+    """Moves in Basecamp are followed for changed recordings, with the new
+    place's visibility (decided 2026-11-28), as Basecamp's change: at its
+    time, without a person"""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def setUp(self):
+        super().setUp()
+        self.run_import()
+
+    def move(self, source, target, index=0, **changes):
+        data = self.client_.data
+        rec = data[source].pop(index)
+        rec |= {"updated_at": self.LATER} | changes
+        data.setdefault(target, []).append(rec)
+        return rec
+
+    def assertMoved(self, item):
+        event = Event.objects.filter(item=item, action=Action.MOVED).get()
+        self.assertEqual(
+            (event.actor, event.created_at, event.data["imported"]),
+            (None, at("2026-03-01T08:00:00+00:00"), "basecamp"),
+        )
+        self.client.force_login(self.ada)
+        self.assertEqual(self.client.get(item.get_absolute_url()).status_code, 200)
+
+    def test_a_todo_into_an_internal_list(self):
+        self.move(
+            "/todolists/301/todos.json",
+            "/todolists/302/todos.json",
+            visible_to_clients=False,
+        )
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        self.assertEqual(food.parent, self.item("Budget"))
+        self.assertFalse(food.is_client_visible)
+        self.assertMoved(food)
+        self.assertEqual(visibility.check(), [])
+
+    def test_a_todo_into_a_group(self):
+        self.move("/todolists/301/todos.json", "/todolists/3014/todos.json")
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        self.assertEqual(
+            (food.parent, food.todo.group.title), (self.item("Kitchen plan"), "Week 1")
+        )
+        self.assertMoved(food)
+
+    def test_a_todo_turned_internal_in_a_visible_list(self):
+        self.client_.data["/todolists/301/todos.json"][0] |= {
+            "visible_to_clients": False,
+            "updated_at": self.LATER,
+        }
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        self.assertEqual(food.parent.title, "Kitchen plan (internal)")
+        self.assertFalse(food.is_client_visible)
+
+    def test_a_card_into_another_column(self):
+        self.move(
+            "/card_tables/lists/6001/cards.json", "/card_tables/lists/6002/cards.json"
+        )
+        self.run_import()
+        card = self.item("New menu")
+        self.assertEqual(card.todo.group.title, "Cooking")
+        self.assertMoved(card)
+
+    def test_a_doc_into_an_internal_folder(self):
+        self.move(
+            "/vaults/410/documents.json",
+            "/vaults/420/documents.json",
+            visible_to_clients=False,
+        )
+        self.run_import()
+        doc = self.item("Public doc")
+        self.assertEqual(doc.parent, self.item("Private"))
+        self.assertFalse(doc.is_client_visible)
+        self.assertMoved(doc)
+        self.assertEqual(visibility.check(), [])
+
+    def test_a_file_out_of_a_folder(self):
+        self.move(
+            "/vaults/420/uploads.json",
+            "/vaults/400/uploads.json",
+            visible_to_clients=False,
+        )
+        self.run_import()
+        upload = self.item("salaries.png")
+        self.assertIsNone(upload.parent)
+        self.assertFalse(upload.is_client_visible)
+        self.assertMoved(upload)
+
+    def test_not_for_unchanged_ones_nor_in_a_dry_run(self):
+        food = self.item("Buy giraffe food")
+        self.move("/todolists/301/todos.json", "/todolists/302/todos.json")
+        self.run_import(dry_run=True)
+        food.refresh_from_db()
+        self.assertEqual(food.parent, self.item("Kitchen plan"))
+        # Moved in Biwak, unchanged in Basecamp: stays
+        self.client_.data["/todolists/302/todos.json"][-1]["updated_at"] = (
+            "2026-01-09T08:00:00.000Z"
+        )
+        self.run_import()
+        food.refresh_from_db()
+        self.assertEqual(food.parent, self.item("Kitchen plan"))
+
+
 class UnchangedTest(ImportCase):
     """A later run skips recordings whose ``updated_at`` and comment count
     are as stored: no update, no requests for comments and subscribers"""

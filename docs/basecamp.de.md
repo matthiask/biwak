@@ -95,7 +95,7 @@ sie kennst.
   ihren Personen, Kommentaren und Dateien. Personen bekommen die
   Organisation ihrer Firma in Basecamp, ohne Firma die Organisation der
   Domain ihrer Adresse. Erneut importiert übernimmt ein Projekt, was sich
-  in Basecamp seither geändert hat; was du in Biwak an etwas geändert
+  in Basecamp seither geändert hat, auch Verschobenes; was du in Biwak an etwas geändert
   hast, das in Basecamp gleich geblieben ist, bleibt.
 
 ## Was Biwak nicht tut

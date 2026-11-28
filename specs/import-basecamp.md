@@ -46,7 +46,12 @@ were written on what was imported before).
   content_type, object_id)` maps what was imported, so a second run
   updates titles, texts, due dates, assignees, completion, archived
   lists, categories and visibility, and adds new comments; it doesn't
-  change imported comments, positions or files. **Basecamp wins**
+  change imported comments, positions or files. **Moves are followed**
+  (decided 2026-11-28 by the user, found in verification round 1: a to-do
+  moved into an internal list stayed visible to clients): a changed to-do
+  moved to another list or group, a card to another column, a doc, file
+  or folder to another folder is moved through the items' move
+  operations, with the new place's visibility, as Basecamp's change. **Basecamp wins**
   (decided 2026-11-22, for now): a recording changed in Basecamp since
   the last run (every one with `--full`) gets Basecamp's state, also
   where it was changed in Biwak meanwhile (a to-do completed in Biwak
