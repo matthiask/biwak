@@ -504,3 +504,24 @@ class KeepingTest(StaleBase):
         response = self.call(self.cleo, f"todos/{secret.pk}/keep/")
         self.assertEqual(response.status_code, 404)
         self.assertEqual(json.loads(response.content).get("stale_warned_at"), None)
+
+    def test_completed_ones_arent_kept(self):
+        """Like the mail's link (verification round 1, consistent): keeping
+        a completed or obsolete to-do records nothing"""
+        done = self.make("Done")
+        ops.complete(done, actor=self.ada)
+        obsolete = self.make("Obsolete")
+        ops.mark_obsolete(obsolete, actor=self.ada)
+        self.client.force_login(self.ada)
+        for item in [done, obsolete]:
+            with self.subTest(item=item.title):
+                response = self.client.post(f"/todos/{item.pk}/keep/")
+                self.assertEqual(response.status_code, 404)
+                response = self.call(self.ada, f"todos/{item.pk}/keep/")
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.json()["detail"], "Completed to-dos can't be kept open."
+                )
+                self.assertFalse(
+                    Event.objects.filter(item=item, action=Action.KEPT).exists()
+                )

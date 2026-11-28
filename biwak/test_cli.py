@@ -272,6 +272,10 @@ class CLICommandsTest(CLITest):
         output = self.biwak("todos", "keep", first.pk).output
         self.assertIn(f"Kept #{first.pk} Tent open.", output)
         self.assertIsNone(Todo.objects.get(item=first).stale_warned_at)
+        # Not a completed one
+        result = self.biwak("todos", "keep", second.pk)
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("Completed to-dos can't be kept open.", result.output)
 
     def test_a_list_by_assignee(self):
         """``--mine`` and ``--assignee`` with ``--list``, as the list's

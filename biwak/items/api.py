@@ -1037,8 +1037,11 @@ def todo_obsolete(request, todo_id: int):
 @router.post("todos/{todo_id}/keep/", response=TodoOut)
 def todo_keep(request, todo_id: int):
     """ "Keep open": starts the clock of a stale to-do again and ends its
-    warning (specs/stale-todos.md); an internal event telling nobody"""
+    warning (specs/stale-todos.md); an internal event telling nobody. 400
+    for a completed (or obsolete) one."""
     item = item_for(request, todo_id, Kind.TODO)
+    if item.todo.is_completed:
+        bad_request(_("Completed to-dos can't be kept open."))
     stale.keep(item, actor=request.user)
     return todo_out(item_for(request, todo_id, Kind.TODO), request.user)
 

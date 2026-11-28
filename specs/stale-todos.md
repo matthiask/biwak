@@ -185,7 +185,10 @@ gets a pointer here.
   the mail's link work for whoever sees the to-do, since a comment would
   keep it all the same. The link acts as the mail's recipient, without
   logging in (`/keep/<token>/`, signed like the unsubscribe link); 404
-  for a bad token or a to-do they don't see.
+  for a bad token or a to-do they don't see. A completed (or obsolete)
+  to-do isn't kept anywhere: the link says it's completed, the page's
+  `keep/` answers 404, the API 400 "Completed to-dos can't be kept open."
+  and so the CLI fails (verification round 1, 2026-11-28, consistent).
 - **Who gets the mail** is decided at the warning: `StaleWarning` rows
   (`biwak/items/stale.py`) for the subscribers then. When sending, rows
   of people without mail (none, inactive, bounced, away) and of to-dos

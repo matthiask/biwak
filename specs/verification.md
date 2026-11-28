@@ -141,7 +141,8 @@ Fixed (each in its part's spec):
   lists and lists in archived projects take no new or moved to-dos; the
   next to-do of a repeating one keeps deactivated assignees and
   subscribes the list's watchers; trashing the next to-do ends the
-  series; the next to-do shares the files its notes show.
+  series; the next to-do shares the files its notes show; `keep/`
+  refuses completed and obsolete to-dos (page, API, CLI).
 - **People:** the API keeps deactivated assignees (one to-do and
   "Assign…" with `--replace`) and check-ins' people asked who were
   deactivated (the form too); the Django admin drops subscriptions when
@@ -177,8 +178,6 @@ decided by the user on 2026-11-28 (or following a rule already
 decided, marked "consistent"):
 
 - **To-dos:**
-  - `keep/` refuses completed and obsolete to-dos (page, API, CLI) like
-    the mail's link (consistent).
   - The warning mail leaves out to-dos no longer stale since the run
     (commented on, archived; consistent with `_still_warned()`).
   - `POST todos/{id}/move/` refuses completed to-dos like the page
