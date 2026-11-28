@@ -382,9 +382,10 @@ def _ask(question, date, now):
     )
     if not was_created:
         return None
-    # People away aren't asked: no mail, not missing (specs/quiet-hours.md)
-    today = timezone.localdate(now)
-    people = [person for person in _recipients(question) if not is_away(person, today)]
+    # People away aren't asked: no mail, not missing (specs/quiet-hours.md);
+    # away on the occurrence's date, which after downtime or a gap before
+    # midnight is a day before the run's
+    people = [person for person in _recipients(question) if not is_away(person, date)]
     occurrence.asked.set(people)
     mails.after_commit(mails.question_mail, occurrence, people)
     return occurrence

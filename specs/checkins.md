@@ -124,8 +124,9 @@ Traps the tests cover (`schedule.py`):
 - **People** added are asked from the next occurrence; removing keeps
   their answers.
 - **People away aren't asked** (decided 2026-11-22,
-  `quiet-hours.md`): away on the day the question is asked (the
-  installation's time zone), they get no question mail and aren't
+  `quiet-hours.md`): away on the occurrence's date (the installation's
+  time zone; after downtime or a gap before midnight the day before the
+  run, decided 2026-11-28), they get no question mail and aren't
   among the occurrence's people asked, so they aren't missing; the next
   occurrence asks them again. Their summaries wait while their mails
   wait (`HeldSummary`), checked again when they go (`quiet-hours.md`).

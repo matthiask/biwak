@@ -43,8 +43,9 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
   question any more, not when every answer was trashed meanwhile.
 - **People away aren't asked check-in questions** (decided 2026-11-22):
   no question mail, not among the occurrence's people asked, so not
-  missing in it (`_ask()`; away on the day it's asked, in the
-  installation's time zone). Quiet hours don't keep questions back.
+  missing in it (`_ask()`; away on the occurrence's date, in the
+  installation's time zone, not the run's: decided 2026-11-28). Quiet
+  hours don't keep questions back.
 - **Delivery "daily digest"** sends the digest at the start of the
   first working time of the day instead of its fixed time when quiet
   hours are on. "None" stays none.

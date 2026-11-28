@@ -178,7 +178,8 @@ Fixed (each in its part's spec):
 - **Check-ins:** a held summary is checked again when it goes; a stored
   rule that isn't valid any more skips its question only; "People
   asked" marks who isn't asked, inactive or not seeing the question
-  (page, API's `asked`, CLI 0.79.0).
+  (page, API's `asked`, CLI 0.79.0); "away" is judged by the
+  occurrence's date, not the run's.
 - **Visibility:** a client's open list page is told when a to-do leaves
   it for an internal list; moving internal to-dos into a list clients
   see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0).
@@ -221,8 +222,6 @@ decided, marked "consistent"):
     (the pages hide the switch); a client's `todos/?assignee=` with
     somebody they may not know finds nothing (consistent).
   - Help: dragging stays within a list (`docs/todos.md`).
-- **Check-ins:** "away" is judged by the occurrence's date
-  (consistent).
 - **Import:** links to a list's group lead to the list in Biwak;
   archived to-dos without a completion are completed by nobody, at
   Basecamp's time; the same Basecamp attachment in two texts gets an
