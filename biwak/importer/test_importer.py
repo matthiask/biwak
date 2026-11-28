@@ -701,6 +701,80 @@ class SecondRunTest(ImportCase):
         self.run_import()
         self.assertTrue(Todo.objects.get(item=food).is_completed)
 
+    def test_changes_from_basecamp_name_nobody(self):
+        """Basecamp says when a recording changed, never who changed it: what
+        a later run brings over is recorded without a person, at Basecamp's
+        time, noted as the import's (decided 2026-11-28: a to-do's creator
+        who had left months before "edited" it)"""
+        self.run_import()
+        data = self.client_.data
+        changed = {"updated_at": "2026-03-01T08:00:00.000Z"}
+        todo = data["/todolists/301/todos.json"][0]
+        todo |= {"title": "Buy zebra food", "content": "Buy zebra food"} | changed
+        todo["assignees"] = [support.ADA]
+        done = data["/todolists/301/todos.json?completed=true"][0]
+        data["/todolists/301/todos.json"].append(done | {"completed": False} | changed)
+        data["/todolists/301/todos.json?completed=true"] = []
+        data["/message_boards/200/messages.json"][1] |= {"subject": "Camp!"} | changed
+        self.run_import()
+        events = Event.objects.filter(created_at=at("2026-03-01T08:00:00+00:00"))
+        self.assertEqual(
+            set(events.values_list("action", flat=True)),
+            {Action.EDITED, Action.REOPENED, Action.ASSIGNED, Action.UNASSIGNED},
+        )
+        for event in events:
+            with self.subTest(event.action):
+                self.assertIsNone(event.actor)
+                self.assertEqual(event.data.get("imported"), "basecamp")
+
+    def test_the_backfill_of_earlier_runs(self):
+        """activity 0025: what earlier runs recorded in the creator's name"""
+        import importlib
+
+        from django.apps import apps
+
+        self.run_import()
+        food = self.item("Buy giraffe food")
+        rules = self.item("Camp rules")
+        ms = at("2026-03-01T08:00:00.123000+00:00")
+
+        def event(item, action, when, actor=None):
+            return Event.objects.create(
+                project=item.project,
+                item=item,
+                action=action,
+                actor=actor or item.creator,
+                created_at=when,
+            )
+
+        edited = event(food, Action.EDITED, ms)
+        reopened = event(food, Action.REOPENED, ms)
+        assigned_later = event(food, Action.ASSIGNED, ms)
+        # Stay: at the creation, in Biwak, by somebody else, a doc
+        assigned = event(food, Action.ASSIGNED, food.created_at)
+        in_biwak = event(food, Action.EDITED, at("2026-03-01T08:00:00.123456+00:00"))
+        somebody = User.objects.exclude(pk=food.creator_id).first()
+        other = event(food, Action.EDITED, ms, actor=somebody)
+        doc = event(rules, Action.EDITED, ms)
+        migration = importlib.import_module(
+            "biwak.activity.migrations.0025_imported_changes_without_actor"
+        )
+        migration.forget_actors(apps, None)
+        for e in (edited, reopened, assigned_later):
+            e.refresh_from_db()
+            self.assertIsNone(e.actor)
+            self.assertEqual(e.data["imported"], "basecamp")
+        for name, e in {
+            "assigned": assigned,
+            "in Biwak": in_biwak,
+            "other": other,
+            "doc": doc,
+        }.items():
+            actor = e.actor_id
+            e.refresh_from_db()
+            self.assertEqual(e.actor_id, actor, name)
+            self.assertNotIn("imported", e.data)
+
     def test_documents_get_their_title_as_a_heading_once(self):
         self.run_import()
         rules = self.item("Camp rules")

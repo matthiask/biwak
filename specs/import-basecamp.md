@@ -57,6 +57,17 @@ goes into internal containers, archived recordings skipped.
   reopened this (Basecamp import)" in the timeline and the feed, after
   what it undid. At Basecamp's time it sorted before the change it
   undid, in a line of the creator's, and the timeline left it out.
+  **Basecamp's changes name nobody** (decided 2026-11-28 by the user,
+  after a to-do's creator who had left months before "edited" it):
+  Basecamp says when a recording changed, never who changed it, so what a
+  later run brings over (edits, renames, visibility, archiving,
+  reopening, assignments changed since) is recorded at Basecamp's time
+  without a person, noted as the import's ("Biwak edited this (Basecamp
+  import)", `Importer._from_basecamp()`); a completion without its
+  person in Basecamp too. Assignments at a to-do's creation stay the
+  creator's, and so do docs, whose versions need an author. The events
+  earlier runs recorded in the creator's name were changed the same way
+  (`activity` 0025: their times are Basecamp's, in milliseconds).
   Unchanged recordings aren't touched. `--since` skips leaves
   (to-dos, cards, messages, docs, files, answers, comments) last updated
   before the date; containers are always read.
