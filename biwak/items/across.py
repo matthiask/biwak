@@ -269,7 +269,9 @@ def list_copy(request, pk):
     notes = NO_NOTES
     if form.is_valid():
         data = form.cleaned_data
-        project, visible = data["project"], data["visible"]
+        project = data["project"]
+        # No clients, no switch: like what's created there (specs/access.md)
+        visible = data["visible"] and project.offers_client_switch()
         notes = copy_notes(item, project, visible, request.user)
         if not any(notes) or form.asked(f"{project.pk}:{int(visible)}"):
             try:

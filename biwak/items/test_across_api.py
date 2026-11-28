@@ -10,6 +10,7 @@ from biwak.items import operations as ops
 from biwak.items.models import Item, Kind
 from biwak.items.test_across_views import Fixture
 from biwak.projects.models import Membership
+from biwak.test_utils import project
 
 
 class APITest(Fixture, TestCase):
@@ -55,6 +56,13 @@ class APITest(Fixture, TestCase):
         self.assertTrue(data["visible_to_clients"])
         self.assertIsNone(Item.objects.get(parent=data["id"]).todo.due_on)
         self.assertEqual(self.copy(self.ada, dates="shift").status_code, 400)
+
+    def test_copy_without_clients_is_internal(self):
+        # The API refuses the switch where there are no clients
+        intranet = project("Intranet", members=[self.ada])
+        response = self.copy(self.ada, project_id=intranet.pk, visible_to_clients=True)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("no clients", response.json()["detail"])
 
     def test_copy_refused(self):
         self.assertEqual(self.copy(self.cleo).status_code, 403)

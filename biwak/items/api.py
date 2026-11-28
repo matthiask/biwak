@@ -221,6 +221,7 @@ def list_copy(request, list_id: int, data: ListCopyIn):
     if not ops.can_create(request.user, Kind.LIST):
         raise HttpError(403, _("Only staff create lists."))
     project = project_for(request, data.project_id)
+    refuse_client_switch(project, data.visible_to_clients)
     if data.dates == "shift" and not data.days:
         bad_request(_("Send the days to move the due dates by."))
     try:

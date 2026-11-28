@@ -164,11 +164,18 @@ class Project(models.Model):
 
     def offers_client_switch(self):
         """Whether the forms creating things offer "Visible to clients"
-        (decided 2026-11-23, specs/access.md): in projects with clients,
-        invited ones too, and in templates, whose visibility is copied.
-        The "More" menu's "Show to clients…" stays everywhere."""
-        return (
-            self.is_template or self.memberships.filter(user__is_client=True).exists()
+        (decided 2026-11-23, specs/access.md): in projects with clients who
+        haven't left (``client_members()``), and in templates, whose
+        visibility is copied. The "More" menu's "Show to clients…" stays
+        everywhere."""
+        return self.is_template or self.client_members().exists()
+
+    def client_members(self):
+        """The clients who see or will see what's visible in the project:
+        members active, invited or waiting to be activated, not those who
+        left (decided 2026-11-28)"""
+        return User.objects.filter(
+            pk__in=self.memberships.values("user"), is_client=True, left_at=None
         )
 
     def people_q(self):

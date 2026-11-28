@@ -40,15 +40,8 @@ def set_switch(item, *, visible):
 
 def clients_of(project):
     """How many clients the "visible to N clients" of the questions counts:
-    the project's active client members, invited ones included,
-    deactivated ones not (decided 2026-11-28)"""
-    return (
-        project.memberships
-        .filter(user__is_client=True, user__is_active=True)
-        .values("user")
-        .distinct()
-        .count()
-    )
+    those who haven't left (``Project.client_members()``)"""
+    return project.client_members().count()
 
 
 def affected(item):
