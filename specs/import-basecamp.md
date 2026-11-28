@@ -477,8 +477,10 @@ cleanup deleted them a day later). **Links to
   removed). The report lists them ("Schedules added to to-dos imported
   before", a dry run "to add").
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
-  come in completed at the recording's `updated_at`, by the importing
-  person unless Basecamp names who completed it, with their comments;
+  come in completed at the recording's `updated_at`, by who completed
+  them when Basecamp names them, else by nobody as Basecamp's change
+  (`_from_basecamp()`; found 2026-11-28 in verification round 1: the
+  importing person completed them), with their comments;
   archived lists and projects stay archived; archived messages, docs,
   files and questions are skipped and listed in the report.
 - **Templates** (decided 2026-11-22, `templates.md`): `--templates`

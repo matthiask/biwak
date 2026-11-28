@@ -1758,9 +1758,9 @@ class Importer(Resolver):
 
     def _completion(self, todo, rec, *, new=False):
         """Archived to-dos come in completed (specs/archiving.md), at the
-        time Basecamp last changed them (the archiving), by the importing
-        person: the API doesn't say who archived. A ``new`` to-do has
-        nothing done in Biwak to undo."""
+        time Basecamp last changed them (the archiving), by nobody as
+        Basecamp's change: the API doesn't say who archived (decided
+        2026-11-28). A ``new`` to-do has nothing done in Biwak to undo."""
         done = Todo.objects.get(item=todo).is_completed
         archived = rec.get("status") == "archived"
         if (rec.get("completed") or archived) and not done:
@@ -1772,11 +1772,16 @@ class Importer(Resolver):
                 with importing(at=timezone.now(), noted="basecamp"):
                     ops.complete(todo, actor=None)
                 return
-            # Nobody when Basecamp doesn't say (decided 2026-11-28)
-            by = self._user(completion.get("creator")) or (
-                self.actor if archived and not rec.get("completed") else None
-            )
-            with importing(at=when):
+            if archived and not rec.get("completed"):
+                # Archiving is Basecamp's change, which names nobody
+                # (decided 2026-11-28)
+                completing = self._from_basecamp(rec)
+                by = None
+            else:
+                # Nobody when Basecamp doesn't say (decided 2026-11-28)
+                completing = importing(at=when)
+                by = self._user(completion.get("creator"))
+            with completing:
                 ops.complete(todo, actor=by)
             Todo.objects.filter(pk=todo.pk).update(completed_at=when)
         elif not (rec.get("completed") or archived) and done:

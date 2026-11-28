@@ -159,7 +159,8 @@ class ImportEveryKindTest(ImportCase):
         whale = self.item("Whale watching")
         self.assertEqual(whale.status, Status.ACTIVE)
         self.assertEqual(whale.todo.completed_at, at("2026-01-08T09:00:00+00:00"))
-        self.assertEqual(whale.todo.completed_by, self.ada)
+        # Basecamp doesn't say who archived: by nobody (decided 2026-11-28)
+        self.assertIsNone(whale.todo.completed_by)
 
         # Messages
         announcement = self.item("We have a camp")
@@ -1704,6 +1705,21 @@ class ArchivedTest(ImportCase):
         self.assertEqual(
             Event.objects.filter(item=whale, action="completed").count(), 1
         )
+
+    def test_archived_to_dos_are_completed_by_nobody(self):
+        """Basecamp doesn't say who archived: its change, at its time (found
+        2026-11-28 in verification round 1: the importing person completed
+        them)"""
+        listing = self.client_.data["/todolists/303/todos.json?status=archived"]
+        listing[0]["updated_at"] = "2026-01-20T10:00:00.000Z"
+        self.run_import()
+        whale = self.item("Whale watching")
+        self.assertIsNone(whale.todo.completed_by)
+        self.assertEqual(whale.todo.completed_at, at("2026-01-20T10:00:00+00:00"))
+        event = Event.objects.get(item=whale, action=Action.COMPLETED)
+        self.assertIsNone(event.actor)
+        self.assertEqual(event.created_at, at("2026-01-20T10:00:00+00:00"))
+        self.assertEqual(event.data.get("imported"), "basecamp")
 
     def test_archived_lists_stay_archived(self):
         self.run_import()
