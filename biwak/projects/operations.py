@@ -536,8 +536,10 @@ def update_project(
     """Changes what's given and differs (staff only); raises
     ``ValidationError`` for what the model refuses. Making the project
     limited takes access from staff who aren't members: their subscriptions
-    in the project go, as in ``remove_member()``."""
-    if not can_manage_project(actor):
+    in the project go, as in ``remove_member()``. ``actor`` None: nobody,
+    only for the importer (a change brought over from Basecamp, which never
+    says who made it, specs/import-basecamp.md)."""
+    if not (actor is None and is_importing()) and not can_manage_project(actor):
         raise PermissionError("Only staff change projects.")
     given = {
         "name": name if name is _UNCHANGED else name.strip(),

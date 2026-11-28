@@ -1060,12 +1060,13 @@ class Importer(Resolver):
             return template
 
         def update(template):
-            project_ops.update_project(
-                template,
-                actor=self.actor,
-                name=rec["name"],
-                description=rec.get("description") or "",
-            )
+            with self._from_basecamp(rec):
+                project_ops.update_project(
+                    template,
+                    actor=None,
+                    name=rec["name"],
+                    description=rec.get("description") or "",
+                )
 
         template = self._upsert(TEMPLATE, rec, create=create, update=update)
         if template is not None and self._touch(TEMPLATE, rec):
@@ -1106,13 +1107,14 @@ class Importer(Resolver):
             return project
 
         def update(project):
-            project_ops.update_project(
-                project,
-                actor=self.actor,
-                name=rec["name"],
-                description=rec.get("description") or "",
-                is_all_access=bool(rec.get("all_access", True)),
-            )
+            with self._from_basecamp(rec):
+                project_ops.update_project(
+                    project,
+                    actor=None,
+                    name=rec["name"],
+                    description=rec.get("description") or "",
+                    is_all_access=bool(rec.get("all_access", True)),
+                )
 
         project = self._upsert(PROJECT, rec, create=create, update=update)
         if project is not None and self._touch(PROJECT, rec):
@@ -1123,13 +1125,14 @@ class Importer(Resolver):
         return project
 
     def _archived(self, project, rec, *, archive=True):
-        """A project or template archived as in Basecamp; ``archive``:
-        whether Basecamp's archiving is taken over"""
-        if rec.get("status") == "archived":
-            if archive and project.archived_at is None:
-                project_ops.archive_project(project, actor=self.actor)
-        elif project.archived_at is not None:
-            project_ops.unarchive_project(project, actor=self.actor)
+        """A project or template archived as in Basecamp, by nobody at its
+        time; ``archive``: whether Basecamp's archiving is taken over"""
+        with self._from_basecamp(rec):
+            if rec.get("status") == "archived":
+                if archive and project.archived_at is None:
+                    project_ops.archive_project(project, actor=None)
+            elif project.archived_at is not None:
+                project_ops.unarchive_project(project, actor=None)
 
     def _dock(self, rec, project):
         """The tools we import (the schedule, chat and pings aren't); switched-off ones only with ``include_disabled``, otherwise

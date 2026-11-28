@@ -75,7 +75,10 @@ were written on what was imported before).
   reopening, assignments changed since) is recorded at Basecamp's time
   without a person, noted as the import's ("Biwak edited this (Basecamp
   import)", `Importer._from_basecamp()`); a completion without its
-  person in Basecamp too. Assignments at a to-do's creation stay the
+  person in Basecamp too, and renames and archiving of projects and
+  templates (found 2026-11-28 in verification round 1: they named the
+  importing person, now; `update_project()` takes `actor=None` only inside
+  `importing()`). Assignments at a to-do's creation stay the
   creator's, and so do docs, whose versions need an author. The events
   earlier runs recorded in the creator's name were changed the same way
   (`activity` 0025: their times are Basecamp's, in milliseconds).

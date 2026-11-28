@@ -127,7 +127,8 @@ throwaway test that was run again and failed before it was listed.
 Fixed: the import's later runs leave recordings unchanged in Basecamp
 alone (Biwak's changes stay); a dry run writes nothing for projects
 imported before; moves in Basecamp are followed; a
-project archived in Basecamp is archived only at its first import.
+project archived in Basecamp is archived only at its first import; renames and archiving of projects
+and templates name nobody, at Basecamp's time.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -136,9 +137,6 @@ part's spec with the fix):
   - Trashed in Basecamp means trashed in Biwak; something deleted in
     Biwak isn't imported again (decided; today both are ignored or come
     back).
-  - Renames of projects and templates, and their archiving, name nobody
-    at Basecamp's time (today the importing person, now; `update_project`
-    refuses `actor=None`).
   - A new attachment in a text changed in Basecamp is never linked
     (`attachments.link(actor=None)` links only the actor's uploads), so
     the cleanup deletes it a day later; to-dos, messages, files.

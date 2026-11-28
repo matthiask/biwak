@@ -1021,6 +1021,37 @@ class ArchivedProjectTest(ImportCase):
         self.run_import()
         self.assertIsNotNone(self.project.archived_at)
 
+    def test_renames_and_archiving_name_nobody(self):
+        """At Basecamp's time, without a person (decided 2026-11-28)"""
+        self.archived_in_basecamp()
+        self.run_import()
+        self.client_.data[f"/projects/{support.PROJECT}.json"] |= {
+            "name": "Camp kitchen 2",
+            "updated_at": "2026-03-06T08:00:00.000Z",
+        }
+        self.run_import()
+        events = Event.objects.filter(
+            action__in=[Action.EDITED_PROJECT, Action.ARCHIVED], item=None
+        )
+        self.assertEqual(
+            sorted(
+                (
+                    (
+                        e.action,
+                        e.actor,
+                        e.created_at.isoformat(),
+                        e.data.get("imported"),
+                    )
+                    for e in events
+                ),
+                key=lambda event: event[0],
+            ),
+            [
+                (Action.ARCHIVED, None, "2026-03-05T08:00:00+00:00", "basecamp"),
+                (Action.EDITED_PROJECT, None, "2026-03-06T08:00:00+00:00", "basecamp"),
+            ],
+        )
+
     def test_not_after_it(self):
         self.run_import(archive=True)
         self.assertEqual(self.client_.archived_projects, [support.PROJECT])
