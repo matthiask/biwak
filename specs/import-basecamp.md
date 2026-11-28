@@ -373,12 +373,16 @@ same way.
   project's people become `[@Name](person:ID)`, others stay `@Name`;
   files in texts are downloaded once and attached. **Links to
   recordings** (on `3.basecamp.com` and `app.basecamp.com`) keep
-  Basecamp's address in the stored text and lead to what was imported
-  from them when the text is shown (`render_markdown()`,
-  `biwak/importer/links.py`; decided 2026-11-28 by the user): whatever
-  was imported first, links pasted later too, a comment's anchor
-  (`#__recording_ID`) to the imported comment. One query per text with
-  such links; links to what wasn't imported lead to Basecamp. Before,
+  Basecamp's address in the stored text and are shown as links to a
+  trampoline, `/basecamp/?to=<address>` (`render_markdown()`,
+  `biwak/importer/links.py`; decided 2026-11-28 by the user): it leads
+  to what was imported from the recording when the person may see it (a
+  comment's anchor, `#__recording_ID`, to the imported comment), else to
+  Basecamp. Nothing is looked up to show a text; whatever was imported
+  first, links pasted later work too, and a link doesn't tell whether
+  its target is in Biwak ("not imported" and "not visible" both lead to
+  Basecamp). Only Basecamp's addresses of recordings (else 404: no open
+  redirect), signed in only; public pages keep Basecamp's link. Before,
   the importer rewrote the stored texts at the end of each project,
   which missed targets imported in later runs.
 - **Check-ins:** the schedule becomes a rule through

@@ -3,7 +3,9 @@
 
 import datetime as dt
 import io
+import re
 from unittest import mock
+from urllib.parse import unquote
 
 from django.core import mail
 from django.core.management import CommandError, call_command
@@ -143,16 +145,13 @@ class ImportEveryKindTest(ImportCase):
             [None, None],
         )
         self.assertIn("[@Bob](person:", food.todo.notes)
-        # Links to recordings keep Basecamp's address, shown leading to the
-        # import (biwak/importer/links.py, decided 2026-11-28)
+        # Links to recordings keep Basecamp's address, shown through the
+        # trampoline to the import (biwak/importer/links.py)
         self.assertIn(
             f"[the announcement]({support.APP}/buckets/{support.PROJECT}/messages/2001)",
             food.todo.notes,
         )
-        self.assertIn(
-            f'href="{self.item("We have a camp").get_absolute_url()}"',
-            render_markdown(food.todo.notes),
-        )
+        self.assertIn('href="/basecamp/?to=', render_markdown(food.todo.notes))
         done = self.item("Pick a camp date")
         self.assertEqual(done.todo.completed_at, at("2026-01-08T16:30:00+00:00"))
         self.assertEqual(done.todo.completed_by, self.ada)
@@ -169,9 +168,15 @@ class ImportEveryKindTest(ImportCase):
             f"[@Cleo](person:{User.objects.get(email='cleo@example.org').pk})",
             announcement.message.content,
         )
-        self.assertIn(
-            f'href="{food.get_absolute_url()}"',
+        link = re.search(
+            r'href="/basecamp/\?to=([^"]+)"',
             render_markdown(announcement.message.content),
+        )
+        self.client.force_login(self.ada)
+        self.assertRedirects(
+            self.client.get("/basecamp/", {"to": unquote(link[1])}),
+            food.get_absolute_url(),
+            fetch_redirect_response=False,
         )
         # Announcement and the email forwards' category
         self.assertEqual(MessageCategory.objects.count(), 2)
