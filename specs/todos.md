@@ -230,9 +230,12 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   (`archiving.md`).
 - **API:** `recurrence` (preset or RRULE; `null` or `""` removes it),
   `recurrence_description`, `recurrence_ends_on`, `recurrence_count`,
-  `previous_id` on `TodoOut`. `previous_id` is hidden when the to-do is
-  visible to clients and the previous one isn't (moved since), for staff
-  too. The CLI has `--repeat RULE` only.
+  `previous_id` on `TodoOut`. `previous_id` only names a previous
+  to-do the reader sees (`visible_to()`: not trashed, not internal for
+  clients), like the page's link (verification round 1, 2026-11-28,
+  consistent; it used to hide it for staff too when the to-do was
+  visible and the previous one wasn't). The CLI has `--repeat RULE`
+  only.
 
 ## The to-dos page
 

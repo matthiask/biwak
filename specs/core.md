@@ -87,7 +87,10 @@ own (`notifications.md`); checklists, the toolbar and pasting are
   Lists of other projects are refused (web and API answer 400); a
   repeated to-do counts once (`/lists/ID/todos/move/` and its API, as
   `todos/move/`; decided 2026-11-23). "Move to…" in the "More" menu is
-  the keyboard's way.
+  the keyboard's way, for open to-dos (404 for completed ones); the
+  API's `todos/{id}/move/` refuses completed ones too (400, verification
+  round 1, 2026-11-28, consistent), the selection's "Move…" and its
+  `todos/move/` move them on purpose (`handover.md`).
 - Moves are one request and safe against concurrent moves (the list's
   row is locked).
 - **Moving a group without dragging** (decided 2026-11-23 by the user):

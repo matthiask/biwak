@@ -143,7 +143,9 @@ Fixed (each in its part's spec):
   subscribes the list's watchers; trashing the next to-do ends the
   series; the next to-do shares the files its notes show; `keep/`
   refuses completed and obsolete to-dos (page, API, CLI); the warning
-  mail leaves out to-dos no longer stale since the run.
+  mail leaves out to-dos no longer stale since the run; `POST
+  todos/{id}/move/` refuses completed to-dos and `previous_id` only
+  names a to-do the reader sees.
 - **People:** the API keeps deactivated assignees (one to-do and
   "Assign…" with `--replace`) and check-ins' people asked who were
   deactivated (the form too); the Django admin drops subscriptions when
@@ -178,10 +180,6 @@ Fixed (each in its part's spec):
 decided by the user on 2026-11-28 (or following a rule already
 decided, marked "consistent"):
 
-- **To-dos:**
-  - `POST todos/{id}/move/` refuses completed to-dos like the page
-    (consistent); the API's `previous_id` only names a to-do the reader
-    sees (consistent).
 - **Notifications:**
   - People watching a list ("Everything") are subscribed to to-dos moved
     in or added from text, and told about them like new to-dos (decided).

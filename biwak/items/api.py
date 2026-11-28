@@ -364,13 +364,12 @@ class TodoOut(ItemOut):
     reactions: list[ReactionOut]
 
 
-def _previous_id(item, todo):
-    """The to-do this one was created from; not when it's internal and this
-    one visible (it was moved, clients mustn't learn its ID)"""
+def _previous_id(todo, user):
+    """The to-do this one was created from, if the reader sees it (not
+    trashed, not internal for clients), like the page's link"""
     if todo.previous_id is None:
         return None
-    previous = todo.previous
-    if item.is_client_visible and not previous.is_client_visible:
+    if not Item.objects.visible_to(user).filter(pk=todo.previous_id).exists():
         return None
     return todo.previous_id
 
@@ -397,7 +396,7 @@ def todo_out(item, user):
         "recurrence_description": todo.recurrence_description,
         "recurrence_ends_on": todo.recurrence_ends_on,
         "recurrence_count": todo.recurrence_count,
-        "previous_id": _previous_id(item, todo),
+        "previous_id": _previous_id(todo, user),
         "reactions": reactions_out(item, None, user),
     }
 
@@ -425,12 +424,11 @@ ASSIGNMENTS = Prefetch(
 
 
 def _for_todo_out(qs):
-    """What ``todo_out()`` reads, without a query per to-do"""
+    """What ``todo_out()`` reads, without a query per to-do (but one for
+    each with a previous one, ``_previous_id()``)"""
     return (
         qs
-        .select_related(
-            "creator", "todo__group", "todo__completed_by", "todo__previous"
-        )
+        .select_related("creator", "todo__group", "todo__completed_by")
         .prefetch_related(ASSIGNMENTS)
         .prefetch_related(
             Prefetch("reactions", queryset=Reaction.objects.select_related("user"))
@@ -1064,8 +1062,11 @@ class MoveIn(Schema):
 def todo_move(request, todo_id: int, data: MoveIn):
     """Into a list (default: its own) and group (default: ungrouped), at an
     index (default: the end). Clients can't move to-dos into lists they
-    don't see."""
+    don't see; completed ones don't move (400)."""
     item = item_for(request, todo_id, Kind.TODO)
+    if item.todo.is_completed:
+        # Like the page's "Move to…"; todos/move/ takes them on purpose
+        bad_request(_("Completed to-dos can't be moved."))
     target = item_for(request, data.list_id or item.parent_id, Kind.LIST)
     if target.project_id != item.project_id:
         bad_request(_("To-dos can't move to another project."))

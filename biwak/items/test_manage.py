@@ -131,6 +131,27 @@ class ManageTest(TestCase):
             with self.subTest(url=url, data=data):
                 self.assertEqual(self.client.post(url, data).status_code, 400)
 
+    def test_completed_todos_dont_move_one_by_one(self):
+        """The API's todos/{id}/move/ like the page's "Move to…"
+        (verification round 1, consistent); the bulk move takes them on
+        purpose"""
+        ops.complete(self.todo, actor=self.ada)
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        response = self.client.post(
+            f"/api/v1/todos/{self.todo.pk}/move/",
+            {"list_id": self.internal.pk, "show_to_clients": False},
+            content_type="application/json",
+            headers={"authorization": f"Bearer {secret}"},
+        )
+        self.assertContains(
+            response, "Completed to-dos can't be moved.", status_code=400
+        )
+        self.todo.refresh_from_db()
+        self.assertEqual(self.todo.parent_id, self.shared.pk)
+        self.client.force_login(self.ada)
+        response = self.client.get(f"/todos/{self.todo.pk}/move-to/")
+        self.assertEqual(response.status_code, 404)
+
     def test_negative_index_and_the_same_todo_twice(self):
         """The API took index -1 as one from the end; [a, a] left a gap"""
         b = ops.create_todo(todolist=self.shared, title="B", creator=self.ada)

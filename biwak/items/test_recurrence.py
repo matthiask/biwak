@@ -775,12 +775,21 @@ class APITest(RecurrenceTestCase):
         self.assertIsNone(
             self.send("get", f"todos/{new.pk}/", self.cleo).json()["previous_id"]
         )
-        # Staff don't get it either (the API doesn't know who is asking)
-        self.assertIsNone(
-            self.send("get", f"todos/{new.pk}/", self.ada).json()["previous_id"]
-        )
         self.assertEqual(
             self.send("get", f"todos/{item.pk}/", self.cleo).status_code, 404
+        )
+        # Whoever sees it gets it, like the page's link (verification
+        # round 1, consistent), also in lists
+        self.assertEqual(
+            self.send("get", f"todos/{new.pk}/", self.ada).json()["previous_id"],
+            item.pk,
+        )
+        listed = self.send("get", f"lists/{self.list.pk}/todos/", self.ada).json()
+        self.assertEqual({t["id"]: t["previous_id"] for t in listed}[new.pk], item.pk)
+        # Not once it's in the trash
+        ops.trash(item, actor=self.ada)
+        self.assertIsNone(
+            self.send("get", f"todos/{new.pk}/", self.ada).json()["previous_id"]
         )
 
 
