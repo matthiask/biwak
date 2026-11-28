@@ -229,7 +229,9 @@ def update_question(
         # Answers carry the question as their title (feed, search, events)
         Item.objects.filter(parent=item, kind=Kind.ANSWER).update(title=title)
         changed.append("title")
-    if rule is not _UNCHANGED:
+    if rule is not _UNCHANGED and rule != question.rule:
+        # The stored one as it is: it may not be valid any more, and
+        # saving something else keeps it (specs/rule-widget.md)
         rule = schedules.validate(rule)
     given = {
         "rule": rule,
