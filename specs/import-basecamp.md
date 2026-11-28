@@ -90,7 +90,10 @@ were written on what was imported before).
   before the date; containers are always read. A recording whose older
   comments `--since` skipped isn't stored as read completely, so the next
   run reads it again (found 2026-11-28 in verification round 1: the
-  comments came only with `--full`).
+  comments came only with `--full`). Skipped comments which are in Biwak
+  as they are in Basecamp don't count (round 2: they kept the recording
+  unread, so the next run took it for changed and reopened a to-do
+  completed in Biwak).
 - **`--archive`** (decided 2026-11-22): archives each project in
   Basecamp (`PUT /projects/ID/status/archived.json`) once its import went
   through; a failed import archives nothing, projects already archived
@@ -129,7 +132,9 @@ were written on what was imported before).
   `--full`; undoing a switch made in Biwak after Basecamp's `updated_at`
   happens now, noted as the import's, like reopening above. A check-in question asks those who answered since the last
   run; who answered before was asked then, and may have been taken off
-  in Biwak. `--since` skips older leaves before any of this.
+  in Biwak. An answer's state is stored once its author is asked, so a
+  run stopped among the answers asks them the next time (round 2: they
+  were never asked). `--since` skips older leaves before any of this.
 - **Several tools of a kind** (two to-do sets, several message boards
   or Docs & Files) are merged as they come (decided 2026-11-22): their
   lists, messages and files land together in the project. The report
@@ -499,7 +504,8 @@ text reused the first item's row and showed a plain "attachment"). **Links to
   adds it, without a request and without `--full`, to an open to-do
   without a rule which never had one in Biwak (no edit event of its
   repeat, by anybody or an import: a rule removed on purpose stays
-  removed). The report lists them ("Schedules added to to-dos imported
+  removed). Not one completed in Biwak, whose rule went on to the
+  next to-do, and reopened (round 2 of the verification, 2026-11-28). The report lists them ("Schedules added to to-dos imported
   before", a dry run "to add").
 - **Archived** (decided 2026-11-21, `archiving.md`): archived to-dos
   come in completed at the recording's `updated_at`, by who completed

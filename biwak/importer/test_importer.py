@@ -962,6 +962,36 @@ class SinceLaterTest(ImportCase):
         self.run_import()
         self.assertEqual(Comment.objects.filter(item=food).count(), 2)
 
+    def test_comments_imported_before_dont_keep_it_unread(self):
+        """Older comments ``--since`` skips are in Biwak already: the
+        recording is read completely, and the next run leaves it alone
+        (found 2026-11-28, round 2: it reopened a to-do completed in Biwak)"""
+        self.run_import()
+        data = self.client_.data
+        later = "2026-03-01T08:00:00.000Z"
+        data["/todolists/301/todos.json"][0] |= {
+            "comments_count": 3,
+            "updated_at": later,
+        }
+        data["/recordings/3011/comments.json"].append(
+            support.recording(
+                8003,
+                "Comment",
+                "Re: Buy giraffe food",
+                support.BOB,
+                later,
+                content="<div>One more</div>",
+                content_attachments=[],
+            )
+        )
+        self.run_import(since=at("2026-02-05T00:00:00+00:00"))
+        food = self.item("Buy giraffe food")
+        self.assertEqual(Comment.objects.filter(item=food).count(), 3)
+        ops.complete(food, actor=self.ada)
+        report = self.run_import()
+        self.assertEqual(report.counts["to-dos"]["updated"], 0)
+        self.assertTrue(Todo.objects.get(item=food).is_completed)
+
 
 class BiwakChangesStayTest(ImportCase):
     """A recording unchanged in Basecamp isn't touched at all: what was
@@ -1036,6 +1066,43 @@ class BiwakChangesStayTest(ImportCase):
         )
         self.run_import()
         self.assertEqual(set(item.question.people.all()), {self.ada, bob})
+
+    def test_an_interrupted_run_asks_who_answered_all_the_same(self):
+        """Stopped among a question's answers: the next run asks the
+        authors of those imported already too (found 2026-11-28, round 2)"""
+
+        def people():
+            item = self.item("What did you cook today?", Kind.QUESTION)
+            return set(item.question.people.all())
+
+        self.run_import()
+        expected = people()
+        self.assertGreater(len(expected), 1)
+        Item.objects.all().delete()
+        Project.objects.all().delete()
+        ImportedObject.objects.exclude(basecamp_type="Person").delete()
+
+        last = self.client_.data["/questions/5001/answers.json"][-1]
+        last["comments_count"] = 1
+        self.client_.data[f"/recordings/{last['id']}/comments.json"] = []
+
+        def fail(path):
+            if path == f"/recordings/{last['id']}/comments.json":
+                raise ConnectionError("down")
+
+        self.client_.on_request = fail
+        with self.assertRaises(ConnectionError):
+            self.run_import()
+        self.client_.on_request = None
+        self.run_import()
+        self.assertEqual(people(), expected)
+        # Asked once: taken off in Biwak later, they stay off
+        from biwak.checkins import operations as checkin_ops
+
+        item = self.item("What did you cook today?", Kind.QUESTION)
+        checkin_ops.set_people(item, [self.ada], actor=self.ada)
+        self.run_import()
+        self.assertEqual(people(), {self.ada})
 
     def test_full_undoes_a_switch_now(self):
         """After what it undoes, as for completions (decided 2026-11-27)"""
@@ -3123,6 +3190,22 @@ class RepeatTest(ImportCase):
         self.assertEqual(
             Todo.objects.get(item__title="Buy giraffe food").recurrence, ""
         )
+
+
+class ScheduleMovedOnTest(ImportCase):
+    def test_no_schedule_again_for_one_reopened(self):
+        """Completed in Biwak, the rule went to the next to-do; reopened,
+        it has none and gets none again (found 2026-11-28, round 2: two
+        to-dos of one series had the rule)"""
+        todos = self.client_.data["/todolists/301/todos.json"]
+        todos[0]["repetition_schedule"] = repetition("every_week", [1])
+        self.run_import()
+        item = self.item("Buy giraffe food")
+        self.assertEqual(item.todo.recurrence, "FREQ=WEEKLY;BYDAY=MO")
+        ops.complete(item, actor=self.ada)
+        ops.reopen(item, actor=self.ada)
+        self.assertEqual(self.run_import().schedules, [])
+        self.assertEqual(Todo.objects.get(item=item).recurrence, "")
 
 
 class FillScheduleTest(ImportCase):

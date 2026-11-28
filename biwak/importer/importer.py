@@ -604,15 +604,24 @@ class Importer(Resolver):
                 setattr(mapped, name, value)
 
     def _follow(
-        self, bc_type, rec, item, *, comments=True, subscriptions=True, replies=None
+        self,
+        bc_type,
+        rec,
+        item,
+        *,
+        comments=True,
+        subscriptions=True,
+        replies=None,
+        settle=True,
     ):
         """The comments and subscribers of a recording (two requests), not
         for one unchanged since the last run; then its state is stored,
         unless ``--since`` skipped older comments (found 2026-11-28: they
         came only with ``--full``). ``replies``: where an email forward's
-        replies are, its comments"""
+        replies are, its comments. Whether it was read completely;
+        ``settle=False`` leaves storing that to the caller."""
         if (bc_type, rec["id"]) in self._skipped | self._gone:
-            return
+            return False
         complete = True
         if replies:
             complete = self._comments(rec, item, path=replies, bc_type="Inbox::Reply")
@@ -620,8 +629,10 @@ class Importer(Resolver):
             complete = self._comments(rec, item)
         if subscriptions and item is not None:
             self._subscriptions(rec, item)
-        if item is not None and complete:
+        done = item is not None and complete
+        if done and settle:
             self._settle(bc_type, rec)
+        return done
 
     def _skip(self, rec):
         """``--since``: what wasn't changed since isn't looked at again"""
@@ -1562,7 +1573,15 @@ class Importer(Resolver):
         complete = True
         for comment in comments:
             if self._skip(comment):
-                complete = False
+                # Only one that isn't in Biwak as it is in Basecamp leaves
+                # the recording unread (found 2026-11-28, round 2: those
+                # imported before did too, so every later run took the
+                # recording for changed and undid Biwak's work)
+                mapped, _found = self._mapping(bc_type, comment["id"])
+                if mapped is None or mapped.basecamp_updated_at != parse_time(
+                    comment.get("updated_at")
+                ):
+                    complete = False
                 continue
             author = self._user(comment.get("creator"))
             when = parse_time(comment["created_at"])
@@ -1850,6 +1869,10 @@ class Importer(Resolver):
             return
         todo = Todo.objects.get(item=item)
         if todo.recurrence or todo.is_completed:
+            return
+        if item.following.exists():
+            # Completed in Biwak, its rule went on to the next to-do;
+            # reopened, it has none (found 2026-11-28, round 2)
             return
         if Event.objects.filter(
             item=item, action=Action.EDITED, data__fields__contains=["recurrence"]
@@ -2356,14 +2379,22 @@ class Importer(Resolver):
             self._restamp("Question", item, rec)
         # Those who answered since the last run are asked; who answered
         # before was asked then, and may have been taken off in Biwak since
-        # (decided 2026-11-28: Biwak's change stays)
+        # (decided 2026-11-28: Biwak's change stays). An answer's state is
+        # stored after its author is asked, so a run stopped in between
+        # asks them the next time (found 2026-11-28, round 2: only answers
+        # created in the same run counted, the others' authors were lost)
         asked = []
+        read = []
         for answer in answers:
             if self._skip(answer):
                 continue
-            user = self._answer(answer, rec, item, visible)
-            new = ("Question::Answer", answer["id"]) in self._created
-            if user is not None and new and user not in asked:
+            mapped, _found = self._mapping("Question::Answer", answer["id"])
+            new = mapped is None or mapped.basecamp_updated_at is None
+            user, done = self._answer(answer, rec, item, visible)
+            if done:
+                read.append(answer)
+            gone = ("Question::Answer", answer["id"]) in self._gone
+            if user is not None and new and not gone and user not in asked:
                 asked.append(user)
         if item is not None and asked and not self.dry:
             who = [u for u in asked if u.is_active]
@@ -2386,16 +2417,20 @@ class Importer(Resolver):
                         # Basecamp doesn't say who asked them
                         actor=None,
                     )
+        for answer in read:
+            self._settle("Question::Answer", answer)
         self._follow("Question", rec, item, comments=False)
 
     def _answer(self, rec, question_rec, question, visible):
+        """(The author, whether the answer was read completely: its state
+        is stored by ``_question()``)"""
         if not self._inherits(rec, visible, "check-in answer"):
             # Answers can't be moved elsewhere
             self.problem(
                 f"Skipped check-in answer {rec['id']}: internal in Basecamp,"
                 " inside a question visible to clients"
             )
-            return None
+            return None, False
         user = self._user(rec.get("creator"))
         day = dt.date.fromisoformat(rec.get("group_on") or rec["created_at"][:10])
 
@@ -2444,11 +2479,13 @@ class Importer(Resolver):
                 "Question::Answer", rec, create=create, update=update, follow=True
             )
         except _Skip:
-            return user
+            return user, False
         if item is not None:
             self._restamp("Question::Answer", item, rec)
-        self._follow("Question::Answer", rec, item, subscriptions=False)
-        return user
+        done = self._follow(
+            "Question::Answer", rec, item, subscriptions=False, settle=False
+        )
+        return user, done
 
     # After the project --------------------------------------------------------------------
 
