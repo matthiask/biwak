@@ -68,8 +68,10 @@ def read_unsubscribe_token(token):
 
 def unsubscribe_url(user, item):
     """For the item the person follows: the item, or for a new item the
-    container they're subscribed to"""
-    if not is_subscribed(user, item) and item.parent_id:
+    container they're subscribed to. A to-do always: its list's watchers
+    hear about its moves between the list's groups, unsubscribing from
+    the to-do stops that, the list stays (decided 2026-11-28)"""
+    if not is_subscribed(user, item) and item.parent_id and item.kind != Kind.TODO:
         parent = item.parent
         if is_subscribed(user, parent):
             item = parent

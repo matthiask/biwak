@@ -73,7 +73,9 @@ Gruppe kommt (eine Spalte des Boards): So taugt ein Board für Kanban.
 Ein To-do in eine andere Gruppe zu verschieben, benachrichtigt auch
 alle, die es abonniert haben; innerhalb seiner Gruppe, in eine andere
 Liste oder in ein anderes Projekt verschoben, benachrichtigt es
-niemanden. Die Liste nicht mehr zu abonnieren, beendet das Beobachten.
+niemanden. Die Liste nicht mehr zu abonnieren, beendet das Beobachten;
+ein To-do nicht mehr zu abonnieren (auch mit dem Link in seinem Mail),
+beendet, dass du davon hörst, auch von seinem Verschieben.
 Andere Einträge haben keine Stufe: abonnieren oder nicht mehr
 abonnieren. Auf der Personenseite eines Projekts sehen Mitarbeitende,
 wer „Nur wenn markiert“ benachrichtigt wird und wer über „Alles Neue“,

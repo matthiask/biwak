@@ -18,6 +18,7 @@ from biwak.activity.models import (
     Mention,
     Notification,
     Subscription,
+    Unsubscription,
 )
 from biwak.activity.operations import subscribe
 from biwak.items.models import Comment, Item, Kind, Status
@@ -242,8 +243,11 @@ def candidates(event):
         Subscription.objects.filter(item__in=items).values_list("user", flat=True)
     )
     if column_move(event):
-        # Its list's watchers, also of to-dos older than their watching
-        ids |= {user.pk for user in watchers(item.parent)}
+        # Its list's watchers, also of to-dos older than their watching,
+        # unless they unsubscribed from the to-do (decided 2026-11-28)
+        ids |= {user.pk for user in watchers(item.parent)} - set(
+            Unsubscription.objects.filter(item=item).values_list("user", flat=True)
+        )
     ids |= set(event.data.get("mentioned", ()))
     if event.action == Action.ASSIGNED:
         ids |= set(event.data.get("assignees", ()))

@@ -201,6 +201,12 @@ subscribed to a list with "everything" as their level for it
   to-do, since they're subscribed to it (`unsubscribe_url()`), like a
   post in a followed folder; the list stays subscribed (confirmed by
   the user 2026-11-26).
+- **Unsubscribing from a to-do also stops its moves** (decided
+  2026-11-28): a watcher who unsubscribed from a to-do
+  (`Unsubscription`) isn't told when it moves between the list's
+  groups (`notify.candidates()`). The link of a mail about a to-do
+  always unsubscribes from the to-do, also when the person heard of
+  its move only as the list's watcher; the list stays.
 
 **Why "only what concerns me" is the default** (decided 2026-11-22, it
 was "everything"): being told about a new post subscribes, so on
@@ -318,7 +324,7 @@ large).
   signed `/unsubscribe/<token>/` (no login). A `GET` of it only asks
   (link checkers), the `POST` unsubscribes; only who still sees the item
   is shown its title. Through a container, it unsubscribes from the
-  container. Digests: the settings page, no one-click.
+  container, except for to-dos (always the to-do, "Watching a list"). Digests: the settings page, no one-click.
 - **Completing and reopening back and forth** (decided 2026-11-21):
   every one is
   recorded and notifies as usual. Of a person's unsent notifications,

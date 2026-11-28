@@ -533,6 +533,32 @@ class MailsTest(MailsBase):
             Subscription.objects.filter(user=self.bob, item=self.shared).exists()
         )
 
+    def test_unsubscribe_link_of_a_column_move(self):
+        """Told about a move between its list's groups as the list's
+        watcher, not subscribed to the to-do: the link unsubscribes from
+        the to-do only (decided 2026-11-28), the list stays"""
+        doing = ops.create_group(todolist=self.shared.todolist, title="Doing")
+        subscribe(self.cleo, self.shared)
+        self.assertFalse(
+            Subscription.objects.filter(user=self.cleo, item=self.todo).exists()
+        )
+        self.act(
+            lambda: ops.move_todo(
+                self.todo, todolist=self.shared, group=doing, actor=self.ada
+            )
+        )
+        self.send(timezone.now() + dt.timedelta(minutes=11))
+        (message,) = [m for m in mail.outbox if m.to == [self.cleo.email]]
+        url = message.extra_headers["List-Unsubscribe"].strip("<>")
+        self.client.post(url.removeprefix("https://biwak.example.org"))
+        self.assertTrue(
+            Subscription.objects.filter(user=self.cleo, item=self.shared).exists()
+        )
+        mail.outbox.clear()
+        self.act(lambda: ops.move_todo(self.todo, todolist=self.shared, actor=self.ada))
+        self.send(timezone.now() + dt.timedelta(minutes=22))
+        self.assertEqual([m for m in mail.outbox if m.to == [self.cleo.email]], [])
+
 
 class BackAndForthTest(MailsBase):
     """Completing and reopening back and forth (decided 2026-11-21): what

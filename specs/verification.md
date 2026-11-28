@@ -131,7 +131,8 @@ and activates through `activate()`; deactivating and "Reset sign-in…"
 remove push devices; single sign-on's 24-hour end keeps the push device
 (nothing audited is written then, so the connection's previous name
 doesn't matter there anymore); a first mention merged into an edit
-marked unread is mailed and pushed.
+marked unread is mailed and pushed; unsubscribing from a to-do stops
+its column moves, also through the mail's link.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -188,9 +189,6 @@ part's spec with the fix):
     with a deactivated assignee or person asked fails (`subscribe()`
     raises; the copy page shows the untranslated error, the API 500).
 - **Notifications:**
-  - Unsubscribing from a to-do also stops hearing about its column moves
-    as a list's watcher; the mail's unsubscribe link unsubscribes from
-    the to-do only (decided).
   - Notifications of a trashed item (or one the person can't see for
     now) are kept unmailed, not deleted, so restoring brings them back
     unread (decided; `mails._prepare()` deletes them).
