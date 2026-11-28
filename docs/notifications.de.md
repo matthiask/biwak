@@ -134,7 +134,10 @@ In den Einstellungen unter „Mails“:
   etwa zehn Minuten nach seiner letzten Änderung gesendet, damit
   schnelle Änderungen und mehrere Kommentare zusammen ankommen;
 - **Eine tägliche Zusammenfassung** um 07:00, mit dem, was am Vortag
-  passiert ist (siehe unten);
+  passiert ist (siehe unten). Wechselst du zu „Eine Mail pro
+  Änderung“, wird gesendet, was auf die nächste Zusammenfassung
+  gewartet hat, sofort als eine Mail wie die Zusammenfassung (oder die
+  übliche Mail, wenn es nur um einen Eintrag geht);
 - **Keine Mails:** nur die Laterne, auch keine Check-in-Fragen und
   -Zusammenfassungen. Wechselst du zurück zu Mails, wird gesendet, was
   dann noch ungelesen ist (ausser was du als ungelesen markiert hast):

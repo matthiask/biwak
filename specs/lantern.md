@@ -132,6 +132,10 @@ and pages that update while they're open.
   one mail's worth, like what waited for quiet hours
   (`mails._send_held()`, `quiet-hours.md`); mails per change from then
   on.
+- **Switching from the daily digest to a mail per change** (decided
+  2026-11-28, it was a mail per item): what waited for the next digest
+  is held the same way and goes at once as one mail in the digest's
+  form (or the usual mail when it's one mail's worth).
 - A merged edit moving an unsent notification forward makes it unread
   again: the change is new.
 

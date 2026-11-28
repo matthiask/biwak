@@ -114,7 +114,9 @@ Under Settings, "Mails":
   about ten minutes after its last change, so quick edits and several
   comments arrive together;
 - **A daily digest** at 07:00, with what happened the day before (see
-  below);
+  below). Switching to "A mail for each change" sends what waited for
+  the next digest at once, as one mail like the digest (or the usual
+  mail when it's about one item only);
 - **No mails:** the lantern only, also no check-in questions and
   summaries. Switching back to mails sends what is still unread then
   (except what you marked as unread): with "A mail for each change" as

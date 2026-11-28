@@ -324,7 +324,9 @@ large).
 ## Mails
 
 - **Delivery** per person (`User.mail_delivery`): each change (the
-  default), a daily digest, or none (`lantern.md`). None means no mails
+  default), a daily digest, or none (`lantern.md`). Switching from
+  none or the digest to a mail per change sends what waited as one
+  digest-form mail (decided 2026-11-28, `lantern.md`). None means no mails
   at all, check-in questions and summaries included (decided
   2026-11-21, `checkins.md`); digests leave check-in mails alone.
 - **Each change:** `send_mails`, every minute by cron, sends one mail

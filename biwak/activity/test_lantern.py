@@ -197,6 +197,20 @@ class ReadNotMailedTest(LanternTestCase):
             ["[Website] Budget", "[Website] Order the tent"],
         )
 
+    def test_switching_from_the_digest_sends_one_mail_of_what_waited(self):
+        """What waited for the next digest goes as one mail in the digest's
+        form at the switch, like switching from "No mails" (decided
+        2026-11-28)"""
+        set_notification_settings(self.bob, delivery=MailDelivery.DIGEST)
+        self.comment(self.todo, "One")
+        self.comment(self.secret, "Two")
+        set_notification_settings(self.bob, delivery=MailDelivery.EACH)
+        self.send(timezone.now() + dt.timedelta(minutes=11))
+        (sent,) = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertIn("Order the tent", sent.body)
+        self.assertIn("Budget", sent.body)
+        self.assertIn("Two", sent.body)
+
     def test_a_change_after_reading_is_unread_again(self):
         """A merged edit moves the unsent notification forward: unread"""
         self.act(lambda: ops.update_todo(self.todo, actor=self.ada, title="One"))
