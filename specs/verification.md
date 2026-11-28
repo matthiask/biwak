@@ -166,7 +166,7 @@ Fixed (each in its part's spec):
   to…" of one to-do says when it hides; the API refuses
   `visible_to_clients` when creating in projects without clients; a
   client's `todos/?assignee=` with somebody they may not know finds
-  nothing.
+  nothing; the help says dragging stays within a list.
 - **Docs and files:** a whole-text save from an old `base_version` is
   refused over the saver's own version with somebody else's typing
   merged into it (versions remember their co-authors); a form left open
@@ -217,8 +217,6 @@ decided, marked "consistent"):
   - Withdrawing an invitation unassigns before choosing between
     deleting and deactivating; "Reset sign-in…" counts push devices
     (consistent).
-- **Visibility:**
-  - Help: dragging stays within a list (`docs/todos.md`).
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).

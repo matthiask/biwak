@@ -31,9 +31,9 @@ auf der Seite des Projekts.
   oder entfernt sie; beim Entfernen bleiben ihre To-dos. Ziehe eine
   Gruppe an ihrem Griff, um sie mit ihren To-dos zu verschieben.
 - **Reihenfolge:** Ziehe ein To-do an seinem Griff, um es innerhalb der
-  Liste, in eine andere Gruppe oder in eine andere Liste zu verschieben.
-  Klicke mehrere Griffe an, um mehrere To-dos zu wählen und sie
-  zusammen zu ziehen. Ohne Maus nimmst du „Verschieben nach…“ im Menü
+  Liste oder in eine andere ihrer Gruppen zu verschieben. Klicke mehrere
+  Griffe an, um mehrere To-dos zu wählen und sie zusammen zu ziehen. In
+  eine andere Liste und ohne Maus nimmst du „Verschieben nach…“ im Menü
   „Mehr“ des To-dos.
 - **Board:** „Board“ zeigt die Gruppen als Spalten, „Liste“ geht
   zurück, für diesen Besuch. Wie sich eine Liste öffnet, ist ihr
