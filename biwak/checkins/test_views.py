@@ -368,6 +368,29 @@ class FormsTest(ViewsTestCase):
             "people": [self.ada.pk, self.bob.pk],
         } | kwargs
 
+    def test_a_stored_rule_not_valid_any_more_is_kept(self):
+        """Saving without "Replace" keeps the rule (specs/rule-widget.md),
+        also one validation doesn't take any more (found 2026-11-28,
+        verification round 2: a 500)"""
+        Question.objects.filter(item=self.item).update(rule="FREQ=DAILY;INTERVAL=0")
+        self.client.force_login(self.ada)
+        url = reverse("question_edit", args=[self.item.pk])
+        self.assertContains(self.client.get(url), 'name="rule_keep"')
+        response = self.client.post(
+            url,
+            {
+                "title": "How are you today?",
+                "rule_keep": "1",
+                "starts_on": "2027-03-15",
+                "time_of_day": "09:00",
+                "people": [self.ada.pk, self.bob.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, "How are you today?")
+        self.assertEqual(self.item.question.rule, "FREQ=DAILY;INTERVAL=0")
+
     def test_creating_a_question(self):
         url = reverse("question_new", args=[self.project.pk])
         response = self.get(self.ada, url)

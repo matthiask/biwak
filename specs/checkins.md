@@ -117,7 +117,9 @@ Traps the tests cover (`schedule.py`):
   (`todos.md`): that question isn't asked and its `next_at` is cleared,
   the others and the summaries go on (`schedule.latest_due()` returns
   None; decided 2026-11-28 after one such rule stopped asking every
-  question every minute).
+  question every minute). Its edit form saves title and people and keeps
+  the rule (`update_question()` validates a rule only when it changes;
+  verification round 2, 2026-11-28: a 500).
 - **A first date that doesn't match the rule:** the first date the rule
   gives on or after it; "every two weeks" counts its phase from the
   first date's week (fine as it is, 2026-11-20).
