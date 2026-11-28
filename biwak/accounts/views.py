@@ -631,8 +631,9 @@ def signed_out(request, user):
     """Signing out explicitly ends pushes on this browser: its device (the
     cookie, or the endpoint ``frontend/push.js`` adds to the sign-out
     form) is removed, and a message says so. Sessions that expire don't
-    get here (``user_logged_out``)."""
-    if user is None:
+    get here (``user_logged_out``), nor those single sign-on ends after 24
+    hours (``sso.session_middleware()``, ``request.session_ended``)."""
+    if user is None or getattr(request, "session_ended", False):
         return False
     removed = False
     pk = request.get_signed_cookie(DEVICE_COOKIE, default=None, salt=DEVICE_COOKIE)

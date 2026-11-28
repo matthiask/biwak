@@ -511,6 +511,9 @@ def session_middleware(get_response):
         user = request.user
         if user.is_authenticated and not session_counts(request, user):
             org = required_organization(user)
+            # The session ends, nobody signs out: the push device stays
+            # (``views.signed_out()``, specs/web-push.md)
+            request.session_ended = True
             logout(request)
             messages.info(
                 request,

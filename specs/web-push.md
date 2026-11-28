@@ -199,7 +199,10 @@ In this order, each step with its tests:
   page's `data-sign-out` names the URL) after unsubscribing the browser.
   Without JavaScript the cookie alone does it; the browser's own
   subscription then stays, unused. Only Django's `logout()` sends the
-  signal, so expired sessions keep the device.
+  signal, so expired sessions keep the device; single sign-on's 24-hour
+  end (`sso.session_middleware()`) calls `logout()` but marks the
+  request (`session_ended`), so it keeps the device too (decided
+  2026-11-28).
 - **The settings' section** (`#devices`, only with the keys):
   `frontend/push.js` looks without registering anything; it shows the
   button, marks this device in the list ("This one", its "Remove" also
