@@ -26,6 +26,14 @@ API first: everything the web interface does is possible through the API
   `biwak/api_conventions.py`, stripped, 1 to 500 characters), what the
   models refuse (`ValidationError`) a 400 from one handler in
   `biwak/api.py`, 404 where an object's existence mustn't leak.
+  A refused request changes nothing: every error answered rolls the
+  request's transaction back (`API.on_exception()`; ninja answers inside
+  the view, where `ATOMIC_REQUESTS` alone commits). A NUL character in a
+  text is a 400, `"archived": null` too (verification round 2,
+  2026-11-28: a 409 lifted a doc's read-only option, a 500, an
+  "unarchived" event on a project never archived). The CLI repeating a
+  request after logging in again sends its files from their start (they
+  were uploaded empty).
 - Projects and members as on the web (`create_project()`,
   `joinable_projects()` in `biwak/projects/operations.py`): staff create
   projects (the creator becomes a member, no event); admins list

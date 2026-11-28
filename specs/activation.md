@@ -241,7 +241,9 @@ pages `biwak/organizations/people.py`, the API
 - **API:** `GET|POST /api/v1/invitations/` (per-row errors as `{"detail",
   "errors": [{"index", "detail"}]}`, 400), `POST
   /api/v1/invitations/{id}/resend/`, `DELETE /api/v1/invitations/{id}/`
-  (403 for clients and externals, 404 for people who aren't invitations);
+  (403 for clients and externals, 404 for people who aren't invitations;
+  `project_ids` only of projects the reader can open, verification round
+  2, 2026-11-28);
   `GET /api/v1/people/` (active people, `?inactive=true` the inactive
   ones waiting, `?left=true` those who left, with `left_at`; own staff),
   `POST /api/v1/people/{id}/activate/` and

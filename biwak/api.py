@@ -3,6 +3,8 @@ does. Conventions in biwak/api_conventions.py."""
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import BadRequest, PermissionDenied, ValidationError
+from django.core.validators import ProhibitNullCharactersValidator
+from django.db import DataError, connection, transaction
 from ninja import NinjaAPI
 
 from biwak.accounts.api import router as accounts_router
@@ -24,7 +26,18 @@ from biwak.search.api import router as search_router
 from biwak.teams.api import router as teams_router
 
 
-api = NinjaAPI(
+class API(NinjaAPI):
+    def on_exception(self, request, exc):
+        """A refused request changes nothing: the errors are answered
+        inside the view, so ``ATOMIC_REQUESTS`` alone committed what was
+        done before the refusal (found 2026-11-28, verification round 2: a
+        doc's read-only option lifted by a save answered with 409)"""
+        if connection.in_atomic_block:
+            transaction.set_rollback(True)
+        return super().on_exception(request, exc)
+
+
+api = API(
     title="Biwak",
     version="1",
     auth=user_auth(),
@@ -37,6 +50,16 @@ api = NinjaAPI(
 def validation_error(request, exc):
     """What the models refuse (``full_clean()``) is the request's mistake"""
     return api.create_response(request, {"detail": " ".join(exc.messages)}, status=400)
+
+
+@api.exception_handler(DataError)
+def data_error(request, exc):
+    """A NUL character in a text, which the pages' forms refuse"""
+    if "NUL" not in str(exc):
+        raise exc
+    return api.create_response(
+        request, {"detail": str(ProhibitNullCharactersValidator.message)}, status=400
+    )
 
 
 def _shared_check(status):
