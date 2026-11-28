@@ -59,8 +59,9 @@ auf der Seite des Projekts.
 - **Archivieren:** Fertige Listen kommen mit „Archivieren“ im Menü
   „Mehr“ der Liste oder in der Befehlspalette aus dem Weg; „Archivierung
   aufheben“ holt sie zurück. Eine archivierte Liste bleibt lesbar, fehlt
-  aber bei den Listen des Projekts (sie steht unter „Archivierte
-  Listen“), bei deinen To-dos, im Kalenderlink und bei den Vorschlägen
+  aber bei den Listen des Projekts (unter den Listen führt „3
+  archivierte Listen“ zu ihnen, am Ende der To-dos des Projekts), bei
+  deinen To-dos, im Kalenderlink und bei den Vorschlägen
   der Palette, und ihre wiederkehrenden To-dos wiederholen sich nicht.
   Nichts wird automatisch archiviert. To-dos werden erledigt, nicht
   archiviert.

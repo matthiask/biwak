@@ -79,7 +79,7 @@ class ManageTest(TestCase):
         self.assertEqual(self.shared.todolist.view, "board")
         self.client.post(url + "archive/")
         response = self.client.get(self.project.get_absolute_url())
-        self.assertContains(response, "Archived lists")
+        self.assertContains(response, "1 archived list")
         self.assertContains(self.client.get(url), "This list is archived")
         # Clients only change what they created
         self.client.force_login(self.cleo)
@@ -536,3 +536,66 @@ class ConcurrentMovesTest(TransactionTestCase):
         )
         self.assertEqual(len(positions), 6)
         self.assertEqual(len(set(positions)), 6)
+
+
+OPEN = re.compile(r"<details[^>]*\bopen\b[^>]*>\s*<summary[^>]*>Archived lists")
+
+
+class ArchivedListsTest(TestCase):
+    """Archived lists are at the end of the project's to-dos page; the
+    project page links there (decided 2026-11-28 by the user)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.cleo = person("Cleo", client=True)
+        self.project = project(members=[self.ada, self.cleo])
+        self.old = ops.create_list(
+            project=self.project, title="Kickoff 2025", creator=self.ada, visible=True
+        )
+        self.internal = ops.create_list(
+            project=self.project, title="Old estimates", creator=self.ada
+        )
+        ops.create_list(project=self.project, title="Running", creator=self.ada)
+        for todolist in (self.old, self.internal):
+            ops.archive(todolist, actor=self.ada)
+        self.todos = reverse("project_todos", args=[self.project.pk])
+
+    def test_the_project_page_links_to_them(self):
+        self.client.force_login(self.ada)
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertContains(response, "Running")
+        # Not the section anymore (the activity names them, archived)
+        self.assertNotContains(response, ">Archived lists</summary>")
+        self.assertContains(response, f'href="{self.todos}?archived=1#archived-lists"')
+        self.assertContains(response, ">2 archived lists</a>")
+        # Clients count what they see
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertContains(response, ">1 archived list</a>")
+        # None: no link
+        for todolist in (self.old, self.internal):
+            ops.unarchive(todolist, actor=self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertNotContains(response, "archived list")
+
+    def test_the_todos_page_lists_them_at_the_end(self):
+        self.client.force_login(self.ada)
+        for grouping in ("", "?grouping=due"):
+            response = self.client.get(self.todos + grouping)
+            self.assertContains(response, 'id="archived-lists"')
+            self.assertContains(response, f'href="{self.old.get_absolute_url()}"')
+            self.assertContains(response, "Old estimates")
+            # Closed, unless coming from the project page's link
+            self.assertNotRegex(response.content.decode(), OPEN)
+        # Opened when coming from the project page's link
+        response = self.client.get(self.todos + "?archived=1")
+        self.assertRegex(response.content.decode(), OPEN)
+        # Clients see the visible ones only
+        self.client.force_login(self.cleo)
+        response = self.client.get(self.todos)
+        self.assertContains(response, "Kickoff 2025")
+        self.assertNotContains(response, "Old estimates")
+        # Not on the to-dos page across projects
+        self.client.force_login(self.ada)
+        self.assertNotContains(self.client.get("/todos/"), "archived-lists")
