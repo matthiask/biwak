@@ -303,6 +303,32 @@ class NotifyTest(TestCase):
         ops.update_todo(self.todo, actor=self.bob, title="Five")
         self.assertEqual(Event.objects.filter(action=Action.EDITED).count(), 3)
 
+    def test_a_mention_removed_within_a_merged_edit_doesnt_count(self):
+        """The event's mentions follow the text after its last merged
+        change; who was told already stays told (consistent, 2026-11-28)"""
+        dan = person("Dan")
+        project_ops.add_member(self.project, dan, actor=self.ada)
+        self.told(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=f"Ask {mentions.syntax(self.bob)}"
+            )
+        )
+        event = Event.objects.get(action=Action.EDITED)
+        self.assertEqual(event.data["mentioned"], [self.bob.pk])
+        self.told(
+            lambda: ops.update_todo(
+                self.todo, actor=self.ada, notes=f"Ask {mentions.syntax(dan)}"
+            )
+        )
+        event.refresh_from_db()
+        self.assertEqual(event.data["mentioned"], [dan.pk])
+        self.assertTrue(
+            Notification.objects.filter(user=self.bob, event=event).exists()
+        )
+        self.told(lambda: ops.update_todo(self.todo, actor=self.ada, notes="Ask"))
+        event.refresh_from_db()
+        self.assertNotIn("mentioned", event.data)
+
     def test_one_unsent_notification_per_person_and_event(self):
         """Two notify() at once (two quick edits merged into one event) can't
         tell anybody twice: the database refuses a second unsent one"""

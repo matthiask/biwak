@@ -31,7 +31,10 @@ a list" below.
 within 10 minutes of their last one updates that event's time instead of
 creating a new one, even when others' events came in between; a merged
 edit tells nobody again who was told already, except people mentioned in
-it for the first time. An edit of a batch ("Due date…" of several
+it for the first time. Its `mentioned` follows the text after its last
+change (consistent, 2026-11-28, `mentions.update()`): somebody mentioned
+in an earlier part and removed again isn't "mentioned" (no "mentioned
+you", not in "For you" or pushes); who was told already stays told. An edit of a batch ("Due date…" of several
 to-dos, `handover.md`) and one outside it merge only when the one
 outside changed nothing but fields the batch changed (decided
 2026-11-23).
