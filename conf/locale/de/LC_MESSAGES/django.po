@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 10:51+0100\n"
+"POT-Creation-Date: 2026-11-28 11:01+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3718,6 +3718,10 @@ msgstr "Benachrichtigung ausstehend"
 #: biwak/items/models.py
 msgid "docs"
 msgstr "Dokumente"
+
+#: biwak/items/models.py
+msgid "co-authors"
+msgstr "Mitautor:innen"
 
 #: biwak/items/models.py
 msgid "doc version"

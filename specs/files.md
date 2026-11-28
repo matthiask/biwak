@@ -55,7 +55,10 @@ its item's.
   and inserts `![name](attachment:KEY)` (images) or `[name](attachment:KEY)`.
 - **Linking:** the operation saving a text links the attachments its
   Markdown references (`attachments.link()`): only those without an item
-  yet, in the item's project, uploaded by the person saving. Once linked
+  yet, in the item's project, uploaded by the person saving. Also those
+  in a project the item (or what it's in) moved from, which come along:
+  a form left open across a move uploads into the old project (decided
+  2026-11-28, the moved items' events say where from). Once linked
   an attachment stays with its item. Unlinked ones are visible only to
   their uploader; `fairy_tasks` deletes them after a day. Lists' and
   projects' descriptions take no attachments.
@@ -300,7 +303,9 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   nothing. Restoring saves the old title and content as a new version.
   A whole-text save over somebody else's newer version is refused
   (`base_version`, 409 in the API; also within the other's ten-minute
-  window).
+  window), also over the saver's own version with somebody else's typing
+  merged into it (decided 2026-11-28: versions remember those others as
+  `coauthors`; the version list still names who started it).
 - **New docs are drafts** (decided 2026-11-21): "New doc" is a link
   making a draft and opening the editor with the cursor in its empty
   heading (`# `), which says "Title" in grey: a placeholder, not text,

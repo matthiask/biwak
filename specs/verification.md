@@ -161,6 +161,11 @@ up retries to deactivated people and undeliverable addresses; the
 admins' notice names the outbox's retention (`RETENTION`, 90 days); a
 held check-in summary is checked again when it goes; a stored check-in
 rule that isn't valid any more skips its question only.
+logged as who typed it, not who caused it; a whole-text save from
+an old `base_version` is refused over the saver's own version with
+somebody else's typing merged into it (`files.md`); a form left open
+while its item moves to another project links what it uploaded into
+the old project (`files.md`).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -170,12 +175,6 @@ part's spec with the fix):
     switch; the API and CLI need an explicit flag (decided).
   - A client's open list page isn't told when a to-do leaves it for an
     internal list (`live.changed()` takes the target's visibility).
-- **Docs and files:**
-  - A whole-text save with an old `base_version` overwrites someone
-    else's typing merged into a version credited to the saver (the
-    conflict check skips the saver's own versions).
-  - An editor left open while its doc moves to another project uploads
-    attachments to the old project, never linked, deleted a day later.
 
 **Decided, no change:**
 

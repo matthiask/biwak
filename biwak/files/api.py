@@ -753,7 +753,7 @@ def doc_update(request, doc_id: int, data: DocPatch):
             raise HttpError(
                 409,
                 _("%(name)s saved a newer version.")
-                % {"name": exc.version.created_by.get_short_name()},
+                % {"name": exc.author.get_short_name()},
             ) from exc
     if read_only:
         operations.set_read_only(item, read_only=True, actor=request.user)
