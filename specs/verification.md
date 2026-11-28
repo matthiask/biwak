@@ -142,7 +142,9 @@ list's watchers;
 ordering (`api-cli.md`); the mails' signed links ("Keep open",
 unsubscribing) are logged as their recipient; names in the audit log
 lose their accents instead of turning into escapes; a live save is
-logged as who typed it, not who caused it.
+logged as who typed it, not who caused it; a whole-text save from
+an old `base_version` is refused over the saver's own version with
+somebody else's typing merged into it (`files.md`).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -204,9 +206,6 @@ part's spec with the fix):
 - **Check-ins:** one stored rule that isn't valid any more stops asking
   the rest and the summaries every minute (`latest_due()` on `None`).
 - **Docs and files:**
-  - A whole-text save with an old `base_version` overwrites someone
-    else's typing merged into a version credited to the saver (the
-    conflict check skips the saver's own versions).
   - An editor left open while its doc moves to another project uploads
     attachments to the old project, never linked, deleted a day later.
 

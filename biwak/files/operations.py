@@ -57,11 +57,13 @@ class DocReadOnly(Exception):
 
 
 class DocConflict(Exception):
-    """Somebody else saved a newer version since the form was opened"""
+    """Somebody else saved a newer version since the form was opened:
+    ``author`` typed in ``version``"""
 
-    def __init__(self, version):
-        super().__init__(f"{version.created_by} saved a newer version")
+    def __init__(self, version, author=None):
         self.version = version
+        self.author = author or version.created_by
+        super().__init__(f"{self.author} saved a newer version")
 
 
 # Messages ---------------------------------------------------------------
@@ -157,7 +159,8 @@ def _save_version(doc, *, title, content, authors, force=False):
     """The doc's newest version equals its content: a save by one of its
     authors within ``VERSION_WINDOW`` of its start updates it (and keeps
     its author), anything else (or ``force``) starts a new one by the first
-    author. Returns the version."""
+    author. The other authors are its ``coauthors``. Returns the
+    version."""
     latest = doc.versions.first()
     if (
         force
@@ -165,21 +168,26 @@ def _save_version(doc, *, title, content, authors, force=False):
         or latest.created_by_id not in {a.pk for a in authors}
         or latest.created_at < _now() - VERSION_WINDOW
     ):
-        return DocVersion.objects.create(
+        version = DocVersion.objects.create(
             doc=doc, title=title, content=content, created_by=authors[0]
         )
+        version.coauthors.set(authors[1:])
+        return version
     # Not changed in place: somebody who opened the doc on this version
     # compares primary keys when saving, so a changed text needs a new one
     # (keeping the window's start)
     created_by, created_at = latest.created_by, latest.created_at
+    coauthors = {*latest.coauthors.all(), *authors} - {created_by}
     latest.delete()
-    return DocVersion.objects.create(
+    version = DocVersion.objects.create(
         doc=doc,
         title=title,
         content=content,
         created_by=created_by,
         created_at=created_at,
     )
+    version.coauthors.set(coauthors)
+    return version
 
 
 def _save(item, doc, *, actor=None, new_version=False, name_authors=False):
@@ -300,20 +308,26 @@ def update_doc(
     someone else, or when ``new_version`` asks for one. Raises
     ``DocReadOnly`` for read-only docs, and ``DocConflict`` when
     ``base_version`` (the newest version when the text was read) isn't the
-    newest anymore and somebody else made a newer one."""
+    newest anymore and somebody else made or typed in a newer one."""
     doc = _locked(item)
     if doc.read_only:
         raise DocReadOnly
     if base_version is not None:
-        newer = (
+        # Also a version of the actor's with somebody else's typing merged
+        # into it
+        for newer in (
             doc.versions
             .filter(pk__gt=base_version)
-            .exclude(created_by=actor)
             .select_related("created_by")
-            .first()
-        )
-        if newer is not None:
-            raise DocConflict(newer)
+            .prefetch_related("coauthors")
+        ):
+            others = [
+                user
+                for user in [newer.created_by, *newer.coauthors.all()]
+                if user != actor
+            ]
+            if others:
+                raise DocConflict(newer, others[0])
     changed = content is not _UNCHANGED and live.apply_text(doc, content, user=actor)
     _save(
         item,

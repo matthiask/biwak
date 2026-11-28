@@ -300,7 +300,9 @@ the content in a card (`card`, `card-body`, like the to-do's page, its
   nothing. Restoring saves the old title and content as a new version.
   A whole-text save over somebody else's newer version is refused
   (`base_version`, 409 in the API; also within the other's ten-minute
-  window).
+  window), also over the saver's own version with somebody else's typing
+  merged into it (decided 2026-11-28: versions remember those others as
+  `coauthors`; the version list still names who started it).
 - **New docs are drafts** (decided 2026-11-21): "New doc" is a link
   making a draft and opening the editor with the cursor in its empty
   heading (`# `), which says "Title" in grey: a placeholder, not text,

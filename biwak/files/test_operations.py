@@ -8,6 +8,8 @@ from django.utils import timezone
 
 from biwak.accounts.models import NotificationLevel
 from biwak.activity.models import Action, Event, Notification, Subscription
+from biwak.collab import live, ytext
+from biwak.collab.models import LiveState
 from biwak.files import attachments, operations
 from biwak.files.models import MAX_SIZE, FileVersion
 from biwak.items import operations as ops, visibility
@@ -319,6 +321,44 @@ class DocTest(Fixture, TestCase):
             )
         self.doc.doc.refresh_from_db()
         self.assertEqual(self.doc.doc.content, "Bob's newer")
+
+    def type(self, user, text):
+        doc = self.doc.doc
+        if not LiveState.objects.filter(doc=doc).exists():
+            live.prepare(doc.pk)
+        live.append(doc.pk, ytext.edit(live.load(doc.pk), text), user)
+
+    def test_refusing_to_overwrite_typing_merged_into_ones_own_version(self):
+        """Bob's typing merged with Ada's into her version, within its
+        window or as a new one, is somebody else's newer version for her"""
+        base = self.versions()[0].pk
+        self.type(self.bob, "One\n\nBob's")
+        self.type(self.ada, "One!\n\nBob's")
+        operations.save_live(self.doc.pk)
+        self.assertEqual(self.versions()[0].created_by, self.ada)
+        with self.assertRaises(operations.DocConflict) as raised:
+            operations.update_doc(
+                self.doc, actor=self.ada, content="Ada's", base_version=base
+            )
+        self.assertEqual(raised.exception.author, self.bob)
+        with time_machine.travel(timezone.now() + dt.timedelta(minutes=11)):
+            base = self.versions()[0].pk
+            self.type(self.ada, "One!!\n\nBob's")
+            self.type(self.bob, "One!!\n\nBob's too")
+            operations.save_live(self.doc.pk)
+            self.assertEqual(self.versions()[0].created_by, self.ada)
+            with self.assertRaises(operations.DocConflict):
+                operations.update_doc(
+                    self.doc, actor=self.ada, content="Ada's", base_version=base
+                )
+            self.doc.doc.refresh_from_db()
+            self.assertEqual(self.doc.doc.content, "One!!\n\nBob's too")
+            # The same for Bob: the version has Ada's typing too
+            with self.assertRaises(operations.DocConflict) as raised:
+                operations.update_doc(
+                    self.doc, actor=self.bob, content="Bob's", base_version=base
+                )
+            self.assertEqual(raised.exception.author, self.ada)
 
     def test_a_newer_version_by_the_same_person_is_no_conflict(self):
         base = self.versions()[0].pk

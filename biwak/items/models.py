@@ -613,6 +613,14 @@ class DocVersion(models.Model):
         related_name="+",
         verbose_name=_("created by"),
     )
+    # Others whose typing was merged into it: a whole-text save from an
+    # older version would overwrite their typing too (specs/files.md)
+    coauthors = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="+",
+        verbose_name=_("co-authors"),
+    )
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
 
     class Meta:
