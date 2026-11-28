@@ -176,7 +176,8 @@ Fixed (each in its part's spec):
   in or added from text, told of the latter by the list's one event
   (`notifications.md`), and of to-dos moved in by their moves, one
   entry and mail per "Move…" ("Ada moved 5 to-dos to Launch.",
-  `notifications.md`).
+  `notifications.md`); to-dos added from text tell the list's watchers
+  only (`todos-from-text.md`).
 - **Check-ins:** a held summary is checked again when it goes; a stored
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
@@ -251,9 +252,6 @@ that isn't valid any more (the bug above stops asking for everybody).
 
 **Risks and questions:**
 
-- `added_todos` (from text) tells every subscriber of the list, also on
-  "only what concerns me", unlike new to-dos one by one ("Levels"): keep,
-  or watchers only?
 - Switching from the daily digest to a mail per change: what waited for
   the next digest goes as a mail per item (only "No mails" sends what
   piled up as one mail).

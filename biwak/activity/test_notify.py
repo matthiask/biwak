@@ -491,6 +491,16 @@ class WatchingListsTest(TestCase):
         todo = Item.objects.get(title="Three")
         self.assertEqual(self.subscribers(todo), {self.ada.pk})
 
+    def test_added_from_text_tells_the_watchers_only(self):
+        """Like new to-dos one by one, not list subscribers on "only what
+        concerns me" (decided 2026-11-28)"""
+        self.watch(self.bob)
+        subscribe(self.dan, self.board)
+        told = self.told(
+            lambda: ops.add_from_text(self.board, "- One\n- Two", actor=self.ada)
+        )
+        self.assertEqual(told, {self.bob})
+
     def test_watchers_are_subscribed_to_new_to_dos(self):
         self.watch(self.bob)
         # Subscribed to the list on "only what concerns me": not watching

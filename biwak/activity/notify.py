@@ -158,7 +158,7 @@ def wanting(people, event):
     "Who gets told": subscribing is the switch): everybody subscribed to the
     item, whatever their level, and those this event assigns; the people newly
     mentioned; the subscribers of the container hear about what's new in it
-    (``created``) on "everything". Reactions and sharing tell on every
+    (``created``, to-dos added from text) on "everything". Reactions and sharing tell on every
     level, like a mention."""
     item = event.item
     if event.action in {Action.REACTED, Action.SHARED} or moved_in(event):
@@ -192,6 +192,16 @@ def wanting(people, event):
                 and Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
             )
             or user.pk in mentioned
+        ]
+    if event.action == Action.ADDED_TODOS:
+        # To-dos added from text, one event on the list: its watchers, like
+        # new to-dos one by one (decided 2026-11-28), not its subscribers on
+        # "only what concerns me"
+        levels = effective_levels(people, item)
+        return [
+            user
+            for user in people
+            if levels[user.pk] == NotificationLevel.EVERYTHING or user.pk in mentioned
         ]
     subscribed = set(
         Subscription.objects.filter(item=item, user__in=people).values_list(

@@ -45,7 +45,9 @@ Notifications, "Notify me about" is one of:
 
 - **Only what concerns me** (the default): being mentioned or assigned
   and your own things subscribe you; new messages, docs and files only
-  when you follow their folder or the poster adds you;
+  when you follow their folder or the poster adds you; new to-dos in a
+  list you follow (also added from a text) only when you're assigned
+  or mentioned;
 - **Everything:** every new message, doc or file you can see tells and
   subscribes you, so you hear about its comments too, and you hear about
   everything new in the lists you follow.

@@ -52,7 +52,9 @@ To-do in einer Liste erreicht, der du folgst. In den
 - **Nur was mich betrifft** (der Standard): Erwähnt oder zugewiesen
   werden und deine eigenen Dinge abonnieren dich; neue Mitteilungen,
   Dokumente und Dateien nur, wenn du ihrem Ordner folgst oder wer sie
-  veröffentlicht, dich hinzufügt;
+  veröffentlicht, dich hinzufügt; neue To-dos in einer Liste, der du
+  folgst (auch aus einem Text hinzugefügte), nur, wenn du ihnen
+  zugewiesen oder darin erwähnt wirst;
 - **Alles:** Jede neue Mitteilung, jedes Dokument und jede Datei, die du
   sehen kannst, benachrichtigt dich und abonniert dich, du hörst also
   auch von ihren Kommentaren, und du hörst von allem Neuen in den

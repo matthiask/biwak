@@ -177,7 +177,9 @@ project's** (confirmed 2026-11-21).
   message, doc or file tells them only when they follow its folder or
   the poster adds them; being mentioned or assigned and their own things
   (creating, commenting) subscribe them. New to-dos in a list they
-  follow reach them only when they're mentioned or assigned.
+  follow reach them only when they're mentioned or assigned; so do
+  to-dos added from text (decided 2026-11-28: their `added_todos` event
+  told every list subscriber).
 - **Everything:** a new message, doc or file they see tells and
   subscribes them (`told_by_default()`); subscribed to a list, they
   watch it (below).
@@ -204,7 +206,10 @@ subscribed to a list with "everything" as their level for it
   (`move_todos()`, `move_todos_to()`) and added from text
   (`add_from_text()`), the same way (`ops.subscribe_watchers()`), those
   who see them only. Added from text, they're told by the list's one
-  `added_todos` event ("Bob added 12 to-dos.", `todos-from-text.md`).
+  `added_todos` event ("Bob added 12 to-dos.", `todos-from-text.md`),
+  only they (decided 2026-11-28, like new to-dos one by one: the list's
+  subscribers on "only what concerns me" aren't told; the text assigns
+  and mentions nobody).
 - **To-dos moved in tell them** (decided 2026-11-28 with the user):
   the to-dos' `moved` events into the list (`notify.moved_in()`, from
   another list or project) tell the list's watchers who see them, unless
@@ -304,7 +309,9 @@ unseen, and counts again on coming back).
    `shared` and reactions on every level (decided 2026-11-22); the
    container's
    subscribers about a new item on "everything" (`effective_levels()`,
-   the same number of queries for any number of people). Check-in
+   the same number of queries for any number of people); of the list's
+   subscribers, those on "everything" about to-dos added from text
+   (`added_todos`, decided 2026-11-28). Check-in
    answers: `checkins.md`.
 4. One `Notification(user, event, created_at, sent_at, read_at)` per
    person, at most one unsent per person and event (a database
