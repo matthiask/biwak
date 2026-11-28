@@ -206,7 +206,9 @@ def add_target_lists(events, user):
     current title if it is visible to them, and nothing for events without
     the list's ID (recorded before it was stored); the own organization
     staff fall back to the title at the time for lists they can't find any
-    more, externals (who may not see that project) don't."""
+    more, externals (who may not see that project) don't. Not for a list
+    in a project the viewer can't open (a limited one; found 2026-11-28,
+    verification round 2)."""
     moves = [e for e in events if e.action == Action.MOVED and e.data.get("to")]
     ids = {e.data.get("to_id") for e in moves} - {None}
     lists = dict(
@@ -216,12 +218,20 @@ def add_target_lists(events, user):
         .values_list("pk", "title")
     )
     old_titles = None  # Whether the viewer gets them, asked once if needed
+    closed = None  # The lists in projects the viewer can't open, likewise
     for event in moves:
         title = lists.get(event.data.get("to_id"))
         if title is None:
             if old_titles is None:
                 old_titles = user.sees_all_access
-            if old_titles:
+            if old_titles and closed is None:
+                closed = set(
+                    Item.objects
+                    .filter(pk__in=ids - set(lists))
+                    .exclude(project__in=Project.objects.accessible_to(user))
+                    .values_list("pk", flat=True)
+                )
+            if old_titles and event.data.get("to_id") not in closed:
                 title = event.data["to"]
         event.target_list = title or ""
     for event in events:

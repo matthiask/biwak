@@ -64,6 +64,10 @@ def event_out(event, user):
     if not hasattr(event, "target_list"):
         feed.add_target_lists([event], user)
     data = dict(event.data)
+    # "Tell them now"'s note is for those told (specs/subscribers.md: the
+    # feed doesn't show it; found 2026-11-28, verification round 2)
+    if "note" in data and user.pk not in {event.actor_id, *data.get("people", [])}:
+        del data["note"]
     # People by ID: only those the reader may know (specs/access.md)
     if any(key in data for key in PEOPLE_KEYS):
         known = known_ids_for(user, event)

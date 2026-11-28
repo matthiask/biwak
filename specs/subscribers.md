@@ -38,7 +38,9 @@ not only to hear about its next comment. The rules of subscribing
 - **Clients** may add people they may know to items they can see, like
   subscribing themselves and mentioning.
 - **The feed** shows "Ada shared it with Bob" (not the note), for
-  clients by the event rules (`access.md`). Subscriptions aren't in the
+  clients by the event rules (`access.md`). The API's feed gives the
+  note to the person who wrote it and those told only (verification
+  round 2, 2026-11-28: everybody seeing the event read it there). Subscriptions aren't in the
   item history (the audit log doesn't cover them).
 - Asking once after writing a new doc uses the same picker (`files.md`,
   "Docs").
