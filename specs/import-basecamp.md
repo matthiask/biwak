@@ -394,7 +394,11 @@ same way.
 - **Rich text:** HTML to Markdown with `markdownify`
   (`biwak/richtext/htmlmarkdown.py`, shared with pasting); mentions of the
   project's people become `[@Name](person:ID)`, others stay `@Name`;
-  files in texts are downloaded once and attached. **Links to
+  files in texts are downloaded once and attached, as the text's author;
+new ones in a text changed in Basecamp are linked to its item by the
+importer (found 2026-11-28 in verification round 1: the operations link
+only their actor's uploads, Basecamp's changes name nobody, so the
+cleanup deleted them a day later). **Links to
   recordings** (on `3.basecamp.com` and `app.basecamp.com`) keep
   Basecamp's address in the stored text and are shown as links to a
   trampoline, `/basecamp/?to=<address>` (`render_markdown()`,

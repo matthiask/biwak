@@ -1171,6 +1171,39 @@ class MovesTest(ImportCase):
         self.assertEqual(food.parent, self.item("Kitchen plan"))
 
 
+class NewAttachmentsTest(ImportCase):
+    """Files new in a text changed in Basecamp are linked to its item, so
+    the cleanup of unlinked attachments leaves them (found 2026-11-28)"""
+
+    def change(self, rec, field, eid):
+        entry = support.file_entry(eid, f"new-{eid}.png")
+        self.client_.files[entry["download_url"]] = support.PNG + str(eid).encode()
+        rec |= {
+            field: f"<div>New.{support.image(entry)}</div>",
+            f"{field}_attachments": [entry],
+            "updated_at": "2026-03-01T08:00:00.000Z",
+        }
+
+    def test_todos_messages_forwards_and_files(self):
+        self.run_import()
+        data = self.client_.data
+        self.change(data["/todolists/302/todos.json"][0], "description", 7101)
+        self.change(data["/message_boards/200/messages.json"][1], "content", 7102)
+        forward = data[f"/buckets/{support.PROJECT}/inboxes/900/forwards.json"][0]
+        self.change(forward, "content", 7103)
+        self.change(data["/vaults/410/uploads.json"][0], "description", 7104)
+        self.run_import()
+        for eid, title in [
+            (7101, "Negotiate the price"),
+            (7102, "We have a camp"),
+            (7103, "Delivery on Monday"),
+            (7104, "map.png"),
+        ]:
+            with self.subTest(title):
+                attachment = Attachment.objects.get(name=f"new-{eid}.png")
+                self.assertEqual(attachment.item, self.item(title))
+
+
 class UnchangedTest(ImportCase):
     """A later run skips recordings whose ``updated_at`` and comment count
     are as stored: no update, no requests for comments and subscribers"""

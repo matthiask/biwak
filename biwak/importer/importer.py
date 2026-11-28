@@ -912,6 +912,13 @@ class Importer(Resolver):
         bang = "!" if known.is_image else ""
         return f"{bang}[{known.name}](attachment:{known.key})"
 
+    def _link(self, item, text, author):
+        """Links the files of a text changed in Basecamp: the operations link
+        their actor's uploads, and Basecamp's changes name nobody, while the
+        files were uploaded as ``author`` (``_md()``); unlinked, the cleanup
+        deleted them a day later (found 2026-11-28)"""
+        attachments.link(item, text, actor=author)
+
     def _md(self, html, rec_attachments, *, project, author, plain=False):
         """Markdown of a Basecamp text; files in it are downloaded and
         uploaded as ``author``, who saves the text next. ``plain``: a
@@ -1555,15 +1562,12 @@ class Importer(Resolver):
                 )
 
         def update(todo):
+            text = notes()
             with self._from_basecamp(rec):
                 ops.update_todo(
-                    todo,
-                    actor=None,
-                    title=title,
-                    notes=notes(),
-                    **dates(),
-                    **repeat,
+                    todo, actor=None, title=title, notes=text, **dates(), **repeat
                 )
+            self._link(todo, text, creator)
 
         todo = self._upsert(bc_type, rec, create=create, update=update, follow=True)
         if (bc_type, rec["id"]) in self._skipped:
@@ -1799,14 +1803,16 @@ class Importer(Resolver):
                 )
 
         def update(item):
+            text = content()
             with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
                     actor=None,
                     title=rec.get("subject") or rec["title"],
-                    content=content(),
+                    content=text,
                     category=self._category(rec),
                 )
+            self._link(item, text, creator)
 
         item = self._upsert("Message", rec, create=create, update=update, follow=True)
         if item is not None and self._touch("Message", rec):
@@ -1872,14 +1878,16 @@ class Importer(Resolver):
                 )
 
         def update(item):
+            text = content(item.creator)
             with self._from_basecamp(rec):
                 file_ops.update_message(
                     item,
                     actor=None,
                     title=title,
-                    content=content(item.creator),
+                    content=text,
                     category=self._category_named(*FORWARDS_CATEGORY),
                 )
+            self._link(item, text, item.creator)
 
         item = self._upsert(
             "Inbox::Forward", rec, create=create, update=update, follow=True
@@ -2035,8 +2043,10 @@ class Importer(Resolver):
                 raise _Skip from exc
 
         def update(item):
+            text = description()
             with self._from_basecamp(rec):
-                file_ops.update_upload(item, actor=None, description=description())
+                file_ops.update_upload(item, actor=None, description=text)
+            self._link(item, text, creator)
 
         try:
             item = self._upsert(
