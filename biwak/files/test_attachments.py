@@ -131,6 +131,21 @@ class OperationsTest(Fixture, TestCase):
         )
         self.assertEqual(message.attachments.count(), 1)
 
+    def test_linking_lists_descriptions(self):
+        # A list's description is a Markdown field with the toolbar too
+        a, b = (upload(self.project, self.ada) for _i in range(2))
+        todolist = ops.create_list(
+            project=self.project,
+            title="Launch",
+            creator=self.ada,
+            description=a.markdown,
+        )
+        a.refresh_from_db()
+        self.assertEqual(a.item, todolist)
+        ops.update_list(self.internal, actor=self.ada, description=b.markdown)
+        b.refresh_from_db()
+        self.assertEqual(b.item, self.internal)
+
     def test_linking_only_own_uploads_in_the_project(self):
         other = project("Other", members=[self.ada])
         elsewhere = upload(other, self.ada)

@@ -119,6 +119,7 @@ def create_list(*, project, title, creator, description="", visible=False):
         project=project, kind=Kind.LIST, title=title, creator=creator, visible=visible
     )
     TodoList.objects.create(item=item, description=description)
+    attachments.link(item, description, actor=creator)
     created(item, creator)
     return item
 
@@ -1439,6 +1440,8 @@ def update_list(
         setattr(todolist, name, description if name == "description" else view)
     if fields:
         todolist.save(update_fields=fields)
+    if "description" in fields:
+        attachments.link(item, description, actor=actor)
     if edited or fields:
         record(actor=actor, action=Action.EDITED, project=item.project, item=item)
         read_by_acting(actor, item)

@@ -162,7 +162,9 @@ Fixed (each in its part's spec):
 - **Docs and files:** a whole-text save from an old `base_version` is
   refused over the saver's own version with somebody else's typing
   merged into it (versions remember their co-authors); a form left open
-  while its item moves to another project links what it uploaded.
+  while its item moves to another project links what it uploaded;
+  lists' descriptions link their files (the import's were deleted after
+  a day).
 - **API and CLI:** `biwak feed` and `biwak lantern` name events without
   an actor "Biwak" (CLI 0.76.0); the API's cursors are positions in the
   whole ordering.
@@ -225,9 +227,7 @@ decided, marked "consistent"):
   (consistent).
 - **Docs and files:** `fairy_tasks` saves pending typing before deleting
   unlinked attachments; attachments inserted by someone who lost access
-  are linked when their typing is kept; lists' descriptions link their
-  attachments (`create_list`/`update_list` never call `link()`, to
-  check); read-only takes effect for open editors at once (to check).
+  are linked when their typing is kept; read-only takes effect for open editors at once (to check).
 - **Who did what:** nameless changes show 🧙 in the history, as in
   Workbench; management commands and migrations name themselves;
   allauth's social accounts and sign-in addresses are audited (tokens

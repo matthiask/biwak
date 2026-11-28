@@ -1548,18 +1548,15 @@ class Importer(Resolver):
                 )
 
         def update(item):
+            text = self._md(
+                rec.get("description"),
+                rec.get("description_attachments"),
+                project=project,
+                author=item.creator,
+            )
             with self._from_basecamp(rec):
-                ops.update_list(
-                    item,
-                    actor=None,
-                    title=rec["title"],
-                    description=self._md(
-                        rec.get("description"),
-                        rec.get("description_attachments"),
-                        project=project,
-                        author=item.creator,
-                    ),
-                )
+                ops.update_list(item, actor=None, title=rec["title"], description=text)
+            self._link(item, text, item.creator)
 
         item = self._upsert("Todolist", rec, create=create, update=update, follow=True)
         if item is not None and self._touch("Todolist", rec):
