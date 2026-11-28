@@ -248,6 +248,21 @@ class OperationsTest(RecurrenceTestCase):
         ops.complete(item, actor=self.ada)
         self.assertEqual(Item.objects.filter(todo__previous=item).count(), 1)
 
+    def test_trashing_the_next_one_ends_the_series(self):
+        """Decided 2026-11-28 (verification round 1): the trash too, so
+        completing the previous one again never starts a second series"""
+        item = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.complete(item, actor=self.ada)
+        ops.trash(self.following(item), actor=self.ada)
+        ops.reopen(item, actor=self.ada)
+        ops.complete(item, actor=self.ada)
+        self.assertEqual(Item.objects.filter(todo__previous=item).count(), 1)
+        # Not even when it was given a rule again
+        ops.reopen(item, actor=self.ada)
+        ops.update_todo(item, actor=self.ada, recurrence="FREQ=DAILY")
+        ops.complete(item, actor=self.ada)
+        self.assertEqual(Item.objects.filter(todo__previous=item).count(), 1)
+
     def test_assignees_who_cant_follow_are_left_out(self):
         item = self.todo("FREQ=DAILY", assignees=[self.ada, self.cleo])
         # Hidden from clients since: Cleo can't see the next to-do

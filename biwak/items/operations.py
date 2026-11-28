@@ -1018,7 +1018,7 @@ def _create_next(item, todo, *, actor):
     it, due on the rule's next date after today, or after the due date when
     completed early (specs/todos.md). None when the count or the end date
     is used up, or one was made from this to-do already (reopening and
-    completing again)."""
+    completing again), also one in the trash."""
     if todo.recurrence_count is not None and todo.recurrence_count <= 0:
         return None
     # After the due date when completed early: a weekly to-do due Friday
@@ -1033,7 +1033,9 @@ def _create_next(item, todo, *, actor):
     starts_on = None
     if todo.starts_on and todo.due_on:
         starts_on = due_on - (todo.due_on - todo.starts_on)
-    if item.following.exclude(item__status=Status.TRASHED).exists():
+    # One series: also when the next one is in the trash, trashing it
+    # ended the series (decided 2026-11-28)
+    if item.following.exists():
         return None
     todolist = item.parent
     if not takes_todos(todolist):

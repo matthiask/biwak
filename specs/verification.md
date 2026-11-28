@@ -140,7 +140,8 @@ Fixed (each in its part's spec):
   deactivated assignees and people asked instead of failing; archived
   lists and lists in archived projects take no new or moved to-dos; the
   next to-do of a repeating one keeps deactivated assignees and
-  subscribes the list's watchers.
+  subscribes the list's watchers; trashing the next to-do ends the
+  series.
 - **People:** the API keeps deactivated assignees (one to-do and
   "Assign…" with `--replace`) and check-ins' people asked who were
   deactivated (the form too); the Django admin drops subscriptions when
@@ -176,8 +177,6 @@ decided by the user on 2026-11-28 (or following a rule already
 decided, marked "consistent"):
 
 - **To-dos:**
-  - Trashing the next to-do of a repeating one ends the series (decided):
-    `todos.md`'s "not in the trash" clause goes.
   - The next to-do shares the attachments its notes show: rows of its
     own pointing at the same stored file, which is deleted with its last
     row (decided; moves don't rename stored files).

@@ -231,7 +231,8 @@ copies. Comments and attachments stay with the completed to-do, and the
 new one links back ("Previous: ..."). The repeat moves to the new
 to-do: the completed one doesn't repeat any more, so changing its date
 changes nothing else. Reopening a completed to-do doesn't remove the
-next one.
+next one. Putting the next one in the trash ends the series: completing
+the previous one again creates no new one.
 
 ## The to-dos page
 

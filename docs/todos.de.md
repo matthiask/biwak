@@ -277,7 +277,9 @@ Kommentare und Anhänge bleiben beim erledigten To-do, und das neue
 verlinkt zurück („Vorheriges: …“). Die Wiederholung geht auf das neue
 To-do über: Das erledigte wiederholt sich nicht mehr, sein Datum zu
 ändern ändert also nichts anderes. Ein erledigtes To-do wieder zu
-öffnen entfernt das nächste nicht.
+öffnen entfernt das nächste nicht. Das nächste in den Papierkorb zu
+legen beendet die Serie: Das vorherige noch einmal zu erledigen erstellt
+kein neues.
 
 ## Die To-do-Seite
 

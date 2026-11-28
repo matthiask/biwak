@@ -213,9 +213,12 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   due date (`start-dates.md`). In `complete()`'s transaction, created
   by the original creator with its own `created` event by whoever
   completed it.
-- **One series:** completing a to-do that already has a next one (not
-  in the trash) creates none, so reopening and completing again never
-  branches. Reopening doesn't remove the next one.
+- **One series:** completing a to-do that already has a next one
+  creates none, so reopening and completing again never branches.
+  Reopening doesn't remove the next one. Trashing the next one ends the
+  series: it still counts as the next one (decided 2026-11-28,
+  verification round 1; since the rule moves, the completed one has
+  none left anyway, unless somebody gives it one again).
 - Comments and attachments stay with the completed to-do; the new one
   links to it ("Previous: completed on 3 March by Ada").
 - **Ending:** an end date, a count, or removing the rule (which removes
