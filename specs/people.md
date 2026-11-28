@@ -77,6 +77,12 @@ alone, both through `people.linked_name()`, quiet (`.wb-person-link`).
 Names inside a link (rows, the lantern) and in mails stay text. Mentions
 in mails and in the API's `*_html` aren't links (the text leaves the
 site).
+Mentions of people deactivated later (decided 2026-11-28, verification
+round 1) show their current name, linked, marked "(inactive)" like
+assignees (`handover.md`); who the reader may know stays the rule
+(`mentions.visible_people()` through `people_who_see(…, active=False)`),
+and they can't be mentioned anew (`mentionable_people()` stays active
+people only).
 
 ## Names
 

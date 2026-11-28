@@ -248,7 +248,8 @@ bounced); nothing else changes. "Deactivate…" is for somebody who left:
 they are signed out everywhere, their API tokens, calendar link and
 devices for push notifications are deleted and they can't sign in, while what they did stays. They stay
 assigned to their to-dos, marked as inactive, until someone hands them
-over. The question before deactivating says how many open to-dos they
+over; mentions of them show their name, marked as inactive too, but they
+can't be mentioned anew. The question before deactivating says how many open to-dos they
 have (the link lists them on the to-dos page, where "Assign…" hands
 them over) and which projects they're the only active staff member of,
 counting only projects you can open; it never stops you. Staff change clients, admins also staff and

@@ -288,7 +288,9 @@ jemanden, der nicht mehr dabei ist: Die Person wird überall abgemeldet,
 ihre API-Tokens, ihr Kalenderlink und ihre Geräte für
 Push-Benachrichtigungen werden gelöscht, und sie kann sich
 nicht mehr anmelden, während bleibt, was sie getan hat. Ihre To-dos
-bleiben ihr zugewiesen, als inaktiv markiert, bis jemand sie übergibt.
+bleiben ihr zugewiesen, als inaktiv markiert, bis jemand sie übergibt;
+Erwähnungen zeigen ihren Namen, ebenfalls als inaktiv markiert, neu
+erwähnen kann man sie aber nicht.
 Die Frage vor dem Deaktivieren sagt, wie viele offene To-dos sie hat
 (der Link zeigt sie auf der To-do-Seite, wo „Zuweisen…“ sie übergibt)
 und in welchen Projekten sie die einzige aktive Mitarbeiterin oder der

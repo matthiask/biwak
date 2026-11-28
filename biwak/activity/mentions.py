@@ -87,11 +87,17 @@ def mentionable_people(item):
 
 
 def visible_people(item, ids):
-    """Those people who can see the item and whom the reader may know, by ID"""
+    """Those people who can see the item and whom the reader may know, by
+    ID; also those deactivated since, who are shown as such (decided
+    2026-11-28, specs/people.md), but can't be mentioned anew"""
     if not ids:
         return {}
     people = known_to(
-        mentionable_people(item).filter(pk__in=ids), item.project, reader()
+        people_who_see(item.project, item.is_client_visible, active=False).filter(
+            pk__in=ids
+        ),
+        item.project,
+        reader(),
     )
     return {user.pk: user for user in people}
 
