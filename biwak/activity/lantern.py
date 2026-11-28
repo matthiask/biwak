@@ -198,7 +198,14 @@ def unread_counts(user):
     # ``wanted()`` without looking for neighbours: those of the items
     # completed or reopened are all here
     loaded = group_batches(_deliverable(list(unread.filter(ordered | batched)), user))
-    entries = {entry_key(n) for n in loaded}
+    # A bookmarked item is an entry of its own, also one of a batch (found
+    # 2026-11-28, verification round 2), as ``menu()`` shows it
+    batches = any(getattr(n, "batch_entry", None) for n in loaded)
+    marked = bookmarked_items(user) if batches else set()
+    entries = {
+        ("item", n.event.item_id) if n.event.item_id in marked else entry_key(n)
+        for n in loaded
+    }
     items = [key for kind, key in entries if kind == "item"]
     rest = unread.exclude(ordered | batched).aggregate(
         count=models.Count("pk"),

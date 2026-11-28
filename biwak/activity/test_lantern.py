@@ -5,6 +5,7 @@ import datetime as dt
 import zoneinfo
 from unittest import mock
 
+import time_machine
 from django.core import mail
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -210,6 +211,25 @@ class ReadNotMailedTest(LanternTestCase):
         self.assertIn("Order the tent", sent.body)
         self.assertIn("Budget", sent.body)
         self.assertIn("Two", sent.body)
+
+    def test_switching_to_a_mail_per_change_and_back_waits_for_the_digest(self):
+        """A misclick: what waits goes with the next digest, not at once
+        (found 2026-11-28, verification round 2)"""
+        zurich = zoneinfo.ZoneInfo("Europe/Zurich")
+        set_notification_settings(self.bob, delivery=MailDelivery.DIGEST)
+        afternoon = dt.datetime(2026, 11, 20, 14, 0, tzinfo=zurich)
+        with time_machine.travel(afternoon, tick=False):
+            self.comment(self.todo, "One")
+            set_notification_settings(self.bob, delivery=MailDelivery.EACH)
+            set_notification_settings(self.bob, delivery=MailDelivery.DIGEST)
+        later = afternoon + dt.timedelta(minutes=30)
+        with time_machine.travel(later, tick=False):
+            self.send(later)
+        self.assertEqual([m for m in mail.outbox if m.to == [self.bob.email]], [])
+        morning = dt.datetime(2026, 11, 21, 7, 5, tzinfo=zurich)
+        with time_machine.travel(morning, tick=False):
+            self.send(morning)
+        self.assertEqual(len([m for m in mail.outbox if m.to == [self.bob.email]]), 1)
 
     def test_a_change_after_reading_is_unread_again(self):
         """A merged edit moves the unsent notification forward: unread"""
@@ -940,6 +960,24 @@ class CountByItemsTest(LanternTestCase):
         )
         lantern.read(self.bob, item=self.todo)
         self.assertEqual(lantern.unread_counts(self.bob), (1, 1))
+
+    def test_a_bookmarked_item_of_a_batch_counts_as_the_menu_shows_it(self):
+        """Under "Bookmarked" on its own, the rest of the batch below
+        (found 2026-11-28, verification round 2: counted as one)"""
+        from biwak.bookmarks.operations import add_bookmark
+
+        launch = ops.create_list(project=self.project, title="Launch", creator=self.ada)
+        set_level_override(self.bob, NotificationLevel.EVERYTHING, item=launch)
+        cook = ops.create_todo(todolist=self.internal, title="Cook", creator=self.ada)
+        Notification.objects.all().delete()
+        self.act(
+            lambda: ops.move_todos([self.secret, cook], todolist=launch, actor=self.ada)
+        )
+        self.assertEqual(lantern.unread_counts(self.bob), (2, 1))
+        add_bookmark(self.bob, item=cook)
+        marks, unread, _read, _more = lantern.menu(self.bob)
+        self.assertEqual((len(marks), len(unread)), (1, 1))
+        self.assertEqual(lantern.unread_counts(self.bob), (2, 2))
 
     def test_the_api_has_both_numbers(self):
         for text in ["One", "Two"]:

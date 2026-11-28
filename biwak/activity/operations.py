@@ -342,6 +342,16 @@ def set_notification_settings(
             Notification.objects.filter(
                 user=user, held_at__isnull=True, **MAILABLE
             ).update(held_at=timezone.now())
+        elif user.mail_delivery == MailDelivery.EACH and delivery != MailDelivery.EACH:
+            # Nothing waits to go at once any more: with the next digest
+            # (found 2026-11-28, verification round 2: switching back
+            # sent a digest right away)
+            from biwak.activity.mails import MAILABLE
+            from biwak.activity.models import Notification
+
+            Notification.objects.filter(
+                user=user, held_at__isnull=False, **MAILABLE
+            ).update(held_at=None)
         user.mail_delivery = MailDelivery(delivery)
         fields.append("mail_delivery")
     if quiet_hours is not None:
