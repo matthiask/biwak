@@ -25,11 +25,15 @@
     {% include "_filter_buttons.html" with reset_url=request.path %}
   </form>
   {% if completed %}
-    {% for todo in page %}
-      {% include "items/_due_row.html" %}
-    {% empty %}
+    {% if page %}
+      <div class="card">
+        <div class="card-body py-2">
+          {% for todo in page %}{% include "items/_due_row.html" %}{% endfor %}
+        </div>
+      </div>
+    {% else %}
       <p class="text-body-secondary">{% translate "Nothing completed." %}</p>
-    {% endfor %}
+    {% endif %}
     {% if page.has_other_pages %}
       <nav class="d-flex gap-3 mt-3 small" aria-label="{% translate 'Pages' %}">
         {% if page.has_previous %}<a
@@ -51,8 +55,12 @@
             >{{ entry_project }}</a>
           </h2>
         {% endif %}
+        {% comment %}
+          Each list a card: many projects and lists are easier to tell apart
+          (decided 2026-11-28 by the user, specs/ui.md "Cards")
+        {% endcomment %}
         {% for todolist, groups in lists %}
-          <div class="mb-3" data-list="{{ todolist.pk }}">
+          <div class="card card-body py-2 mb-2" data-list="{{ todolist.pk }}">
             <h3 class="h6 mb-1">
               <a href="{{ todolist.get_absolute_url }}" class="text-reset text-decoration-none">{{ todolist }}</a>
               {% client_badge todolist %}
@@ -73,7 +81,9 @@
     {% for key, label, todos in sections %}
       <section class="mb-4" id="due-{{ key }}" data-section="{{ key }}">
         <h2 class="h6{% if key == 'overdue' %} text-danger{% endif %}">{{ label }}</h2>
-        {% for todo in todos %}{% include "items/_due_row.html" %}{% endfor %}
+        <div class="card card-body py-2">
+          {% for todo in todos %}{% include "items/_due_row.html" %}{% endfor %}
+        </div>
       </section>
     {% empty %}
       <p class="text-body-secondary">{% translate "Nothing to do." %}</p>
