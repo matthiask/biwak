@@ -211,6 +211,11 @@ class DocTest(Fixture, TestCase):
             self.doc, actor=self.ada, content="Three", new_version=True
         )
         self.assertEqual([v.content for v in self.versions()], ["Three", "Two"])
+        # Kept: the same person's next save is a version of its own
+        # (found 2026-11-28, verification round 2: it replaced "Three")
+        operations.update_doc(self.doc, actor=self.ada, content="Four")
+        operations.update_doc(self.doc, actor=self.ada, content="Five")
+        self.assertEqual([v.content for v in self.versions()], ["Five", "Three", "Two"])
 
     def test_unchanged_saves_nothing(self):
         before = Event.objects.count()

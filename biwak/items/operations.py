@@ -373,7 +373,10 @@ def create_draft(*, project, creator, parent=None):
         parent=parent,
         draft=True,
     )
-    Doc.objects.create(item=item, content=DRAFT_TEXT, tell_pending=True)
+    # Nothing in a template tells anybody (specs/templates.md)
+    Doc.objects.create(
+        item=item, content=DRAFT_TEXT, tell_pending=not project.is_template
+    )
     subscribe(creator, item)
     return item
 

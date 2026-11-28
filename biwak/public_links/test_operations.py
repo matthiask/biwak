@@ -131,6 +131,15 @@ class OperationsTest(Fixture, TestCase):
         project_ops.unarchive_project(self.project, actor=self.ada)
         self.assertEqual(list(PublicLink.objects.all()), [kept])
 
+    def test_no_new_link_in_an_archived_project(self):
+        """Its page would be a 404 until the project is unarchived (found
+        2026-11-28, verification round 2)"""
+        from django.core.exceptions import PermissionDenied
+
+        project_ops.archive_project(self.project, actor=self.ada)
+        with self.assertRaises(PermissionDenied):
+            self.share()
+
     def test_moving_to_another_project_ends_them(self):
         """Like trashing (decided 2026-11-28): the item and what's in it;
         moving within the project keeps them"""

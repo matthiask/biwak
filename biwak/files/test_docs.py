@@ -222,6 +222,16 @@ class NewDocTest(Fixture, TestCase):
         item.refresh_from_db()
         return item
 
+    def test_a_templates_doc_asks_nobody(self):
+        """Nothing in a template tells anybody (specs/templates.md; found
+        2026-11-28, verification round 2: "Done" asked whom to tell)"""
+        from biwak.projects import operations as project_ops
+
+        template = project_ops.create_template(name="Kickoff", actor=self.ada)
+        self.client.force_login(self.ada)
+        response = self.client.get(reverse("doc_new", args=[template.pk]))
+        self.assertFalse(response.context["ask_to_tell"])
+
     def test_the_editor_opens_with_a_draft(self):
         response, draft = self.new(folder=self.private)
         self.assertEqual(draft.doc.content, "# ")

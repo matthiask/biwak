@@ -159,17 +159,20 @@ def _save_version(doc, *, title, content, authors, force=False):
     """The doc's newest version equals its content: a save by one of its
     authors within ``VERSION_WINDOW`` of its start updates it (and keeps
     its author), anything else (or ``force``) starts a new one by the first
-    author. The other authors are its ``coauthors``. Returns the
+    author. The other authors are its ``coauthors``. A forced one is
+    ``kept``: the next save starts a new one too (found 2026-11-28,
+    verification round 2: it replaced the version asked for). Returns the
     version."""
     latest = doc.versions.first()
     if (
         force
         or latest is None
+        or latest.kept
         or latest.created_by_id not in {a.pk for a in authors}
         or latest.created_at < _now() - VERSION_WINDOW
     ):
         version = DocVersion.objects.create(
-            doc=doc, title=title, content=content, created_by=authors[0]
+            doc=doc, title=title, content=content, created_by=authors[0], kept=force
         )
         version.coauthors.set(authors[1:])
         return version

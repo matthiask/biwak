@@ -180,11 +180,13 @@ class Item(TreeNode):
     @property
     def is_shareable(self):
         """Whether it can have a public link (specs/public-links.md): not
-        in templates (decided 2026-11-22, specs/templates.md)"""
+        in templates (decided 2026-11-22, specs/templates.md), not in
+        archived projects, where the link's page is closed"""
         return (
             self.kind in SHAREABLE
             and not self.is_draft
             and not self.project.is_template
+            and self.project.archived_at is None
         )
 
     @property
@@ -621,6 +623,8 @@ class DocVersion(models.Model):
         related_name="+",
         verbose_name=_("co-authors"),
     )
+    # "Save as a version": the next save doesn't update it
+    kept = models.BooleanField(_("kept"), default=False)
     created_at = models.DateTimeField(_("created at"), default=timezone.now)
 
     class Meta:
