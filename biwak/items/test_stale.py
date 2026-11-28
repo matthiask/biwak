@@ -465,6 +465,28 @@ class KeepingTest(StaleBase):
         self.item = self.make("Old", age=100)
         self.at(NOW, lambda: stale.run(NOW))
 
+    def test_no_banner_once_touched(self):
+        """Before the daily run clears the warning: the banner's promise
+        isn't true any more (found 2026-11-28, verification round 2)"""
+        with time_machine.travel(NOW + dt.timedelta(days=1), tick=False):
+            ops.add_comment(self.item, author=self.ada, content="Still needed")
+            self.client.force_login(self.ada)
+            response = self.client.get(self.item.get_absolute_url())
+            self.assertNotContains(response, "It will be marked as obsolete")
+            self.assertNotIn(
+                "Keep open",
+                {a["label"] for a in palette_data(response)["actions"]},
+            )
+
+    def test_no_banner_while_off(self):
+        with (
+            time_machine.travel(NOW + dt.timedelta(days=1), tick=False),
+            override_settings(STALE_TODOS=False),
+        ):
+            self.client.force_login(self.ada)
+            response = self.client.get(self.item.get_absolute_url())
+            self.assertNotContains(response, "It will be marked as obsolete")
+
     def test_banner_and_palette(self):
         with time_machine.travel(NOW + dt.timedelta(days=1), tick=False):
             self.client.force_login(self.ada)
