@@ -204,7 +204,8 @@ everything as it happens.
 or marked as spam, Biwak stops sending them notification mails, digests
 and check-in questions; what happens stays in their lantern. Their
 activity page says so (to staff and to themselves), and so does their
-settings page. It starts again once an admin changes the address or
+settings page. Such mails still waiting to be tried again are dropped.
+It starts again once an admin changes the address or
 clears it in the admin (People, "Mail to the selected people works
 again"); what happened in between isn't mailed afterwards, it's in the
 lantern.

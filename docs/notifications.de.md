@@ -237,8 +237,9 @@ alles sofort.
 endgültig abgelehnt oder als Spam markiert, sendet Biwak ihr keine
 Benachrichtigungsmails, Zusammenfassungen und Check-in-Fragen mehr; was
 passiert, bleibt in ihrer Laterne. Ihre Aktivitätsseite sagt es (den
-Mitarbeitenden und ihr selbst), und ihre Einstellungsseite auch. Es
-geht wieder los, sobald ein Admin die Adresse ändert oder es in der
+Mitarbeitenden und ihr selbst), und ihre Einstellungsseite auch.
+Solche Mails, die noch auf einen weiteren Versuch warten, werden
+verworfen. Es geht wieder los, sobald ein Admin die Adresse ändert oder es in der
 Administration zurücksetzt (Personen, „Mails an die ausgewählten
 Personen funktionieren wieder“); was dazwischen passiert ist, wird nicht
 nachträglich gemailt, es ist in der Laterne.

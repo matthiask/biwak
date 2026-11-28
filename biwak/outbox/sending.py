@@ -101,6 +101,37 @@ FAILED = "failed"
 RATE_LIMITED = "rate-limited"
 GIVEN_UP = "given-up"
 EXPIRED = "expired"
+DROPPED = "dropped"
+
+# The kinds an address marked undeliverable stops (specs/mail-sending.md);
+# what somebody asked for (login codes, invitations, refused replies) and
+# sign-in mails still go
+STOPPED_BY_UNDELIVERABLE = {Kind.NOTIFICATION, Kind.DIGEST, Kind.CHECKIN, Kind.STALE}
+
+
+def _undeliverable(row):
+    """Why the row isn't to be tried again, or "": every recipient is a
+    person deactivated since, or one whose address was marked undeliverable
+    (for the kinds that stops; decided 2026-11-28). Addresses which aren't
+    a person's don't stop anything."""
+    from django.db.models.functions import Lower
+
+    from biwak.accounts.models import User
+
+    addresses = {address.lower() for address in row.recipients}
+    people = list(
+        User.objects
+        .annotate(address=Lower("email"))
+        .filter(address__in=addresses)
+        .values_list("address", "is_active", "mail_undeliverable_at")
+    )
+    if not addresses or {address for address, *_rest in people} != addresses:
+        return ""
+    if not any(active for _address, active, _at in people):
+        return "Not sent: the recipient was deactivated."
+    if row.kind in STOPPED_BY_UNDELIVERABLE and all(at for *_rest, at in people):
+        return "Not sent: the address was marked undeliverable."
+    return ""
 
 
 def attempt(row, *, now):
@@ -117,6 +148,11 @@ def attempt(row, *, now):
     if now >= row.created_at + GIVE_UP_AFTER:
         _give_up(row, now, row.last_error)
         return GIVEN_UP
+    # Retries only: the first attempt follows the sender's own checks
+    if row.attempts and (reason := _undeliverable(row)):
+        # Quietly, like expired login codes: nothing for the admins to do
+        _give_up(row, now, " ".join(part for part in [reason, row.last_error] if part))
+        return DROPPED
     message = row.email_message()
     # For the Resend backend (biwak.outbox.resend), ignored by the others
     message.outbox_kind = row.kind

@@ -42,6 +42,16 @@ coming in are `notifications.md`.
   through the plain mailer, and logs an error (Sentry). That notice goes
   through Resend too, so it may fail while Resend is down (accepted
   2026-11-21). Login codes past their ten minutes are given up quietly, the last error kept after "Not sent before the login code expired." (decided 2026-11-23: it was lost, and with it why the code never came).
+- **Retries to people who can't get them any more** (decided
+  2026-11-28, `_undeliverable()`) are given up quietly the same way
+  (result `dropped`, the reason before the last error): every
+  recipient a person deactivated since ("Not sent: the recipient was
+  deactivated."), whatever the kind, sign-in mails (invitations, "Reset
+  sign-in…") too; or, for the kinds the mark stops (notifications,
+  digests, check-ins, stale to-dos), every recipient's address marked
+  undeliverable ("Not sent: the address was marked undeliverable.").
+  Addresses that aren't a person's never stop a mail. The first attempt
+  after the commit doesn't check: its sender just did.
 - **Only bookkeeping is kept** (decided 2026-11-21): once the transport
   accepted a mail its content is deleted; recipients, kind, Resend's ID,
   attempts and delivery state stay. Mails given up keep their content.
@@ -65,7 +75,7 @@ coming in are `notifications.md`.
   `EmailAddress`: a person has one address, and the queries choosing who
   gets mail are on `User`); a temporary bounce is only noted on the row.
 - **What it stops:** notification mails, digests and check-in
-  mails.
+  mails, also those waiting for a retry (above).
   Their notifications stay in the lantern and are dropped (marked sent)
   when the mark clears. Login codes, invitations and answers to refused
   replies still go out: someone asked for them.
