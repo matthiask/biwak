@@ -167,8 +167,14 @@ def _invitee(email, *, actor, full_name, is_client, organization):
     and whether they were created."""
     user = User.objects.filter(email__iexact=email).first()
     if user is not None:
-        if not user.is_active:
-            raise InvitationError(_("This person has been deactivated."))
+        if user.left_at is not None:
+            raise InvitationError(
+                _("This person has been deactivated: activate them first.")
+            )
+        if not user.is_active and not user.is_client and not actor.is_admin:
+            # Waiting to be activated: who may activate them (decided
+            # 2026-11-28, ``activation.can_change()``)
+            raise InvitationError(_("Only admins can invite staff."))
         return user, False
     if not is_client and not actor.is_admin:
         raise InvitationError(_("Only admins can invite staff."))
@@ -206,13 +212,17 @@ def invite_people(projects, people, *, actor, notify=NOTIFY_TAGGED):
     Only admins create staff (specs/access.md: staff or client is set by
     admins). New people belong to their ``organization``, else to the one
     their address's domain belongs to (specs/organizations.md); only admins
-    put people into the own. People who exist keep theirs."""
+    put people into the own. People who exist keep theirs. People waiting
+    to be activated are activated and mailed the invitation like
+    activating with the mail; people who left are refused."""
     if not can_manage_members(actor):
         raise PermissionError("Only staff invite people.")
     if notify not in NOTIFY_CHOICES:
         raise ValueError(f"Unknown choice {notify!r}")
+    from biwak.organizations import activation
+
     projects = list(projects)
-    errors, done, seen = {}, [], set()
+    errors, done, seen, waiting = {}, [], set(), []
     for index, row in enumerate(people):
         email = User.objects.normalize_email(row["email"].strip())
         if email.lower() in seen:
@@ -230,6 +240,12 @@ def invite_people(projects, people, *, actor, notify=NOTIFY_TAGGED):
         except InvitationError as exc:
             errors[index] = str(exc)
             continue
+        if not user.is_active:
+            # Waiting to be activated (an import's): activated, and sent the
+            # invitation below (decided 2026-11-28)
+            activation.activate([user], actor=actor)
+            user.refresh_from_db()
+            waiting.append(user)
         added = [
             project
             for project in projects
@@ -243,6 +259,9 @@ def invite_people(projects, people, *, actor, notify=NOTIFY_TAGGED):
         if invited.created:
             # Through the outbox: sent once this commits, not on a rollback
             send_invitation(projects, invited.user, actor=actor)
+    for user in waiting:
+        # As activating with the mail: the projects they're in now
+        activation.mail_invitation(user, actor=actor)
     return done
 
 
@@ -307,11 +326,14 @@ def resend_invitation(user, *, actor):
     send_invitation(list(invitation_projects(user)), user, actor=actor)
 
 
-def _referred_to(user):
+def _referred_to(user, *, leaving=()):
     """Whether something keeps the person: what can't be deleted with
     them (comments, items, events, files, links: ``PROTECT``), what others
-    gave them (assignments, check-ins asking them), mentions and reactions"""
+    gave them (assignments, check-ins asking them), mentions and reactions.
+    Not the assignments on open to-dos of the projects they're ``leaving``,
+    which ``remove_member()`` takes away (decided 2026-11-28)."""
     from biwak.activity.models import Mention
+    from biwak.items.models import Todo
     from biwak.reactions.models import Reaction
 
     for relation in User._meta.get_fields(include_hidden=True):
@@ -319,7 +341,12 @@ def _referred_to(user):
             continue
         if relation.many_to_many or relation.on_delete is models.PROTECT:
             manager = relation.related_model._base_manager
-            if manager.filter(**{relation.field.name: user}).exists():
+            rows = manager.filter(**{relation.field.name: user})
+            if relation.related_model is Todo:
+                rows = rows.exclude(
+                    completed_at__isnull=True, item__project__in=list(leaving)
+                )
+            if rows.exists():
                 return True
     return (
         Mention.objects.filter(user=user).exists()
@@ -360,7 +387,7 @@ def withdrawal(user, *, actor):
     projects = list(
         Project.objects.filter(memberships__user=user).order_by(Lower("name"))
     )
-    referred_to = _referred_to(user)
+    referred_to = _referred_to(user, leaving=projects)
     return Withdrawn(projects, deleted=not referred_to, deactivated=referred_to)
 
 
@@ -379,14 +406,17 @@ def withdraw_invitation(user, *, actor):
             "Only staff withdraw invitations of clients not signed in, admins"
             " everybody's."
         )
-    withdrawn = withdrawal(user, actor=actor)
-    for project in withdrawn.projects:
+    projects = withdrawal(user, actor=actor).projects
+    for project in projects:
+        # Unassigns them from the open to-dos before deciding (decided
+        # 2026-11-28)
         remove_member(project, user, actor=actor)
-    if withdrawn.deleted:
-        user.delete()
-    elif withdrawn.deactivated:
+    referred_to = _referred_to(user)
+    if referred_to:
         activation.deactivate([user], actor=actor)
-    return withdrawn
+    else:
+        user.delete()
+    return Withdrawn(projects, deleted=not referred_to, deactivated=referred_to)
 
 
 def send_invitation(projects, user, *, actor):

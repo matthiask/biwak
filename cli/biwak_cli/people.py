@@ -91,10 +91,11 @@ def people_deactivate(ids, as_json):
 @click.argument("person_id", type=int)
 @json_option
 def people_reset_sign_in(person_id, as_json):
-    """Remove the person's authenticator app, passkeys and API tokens, sign
-    them out everywhere and mail them what was removed; for a lost device or
-    when someone else may have had access. Staff reset clients, admins also
-    staff and externals, not yourself (change your own in the settings)"""
+    """Remove the person's authenticator app, passkeys, API tokens and push
+    devices, sign them out everywhere and mail them what was removed; for a
+    lost device or when someone else may have had access. Staff reset
+    clients, admins also staff and externals, not yourself (change your own
+    in the settings)"""
     data = request("POST", f"people/{person_id}/reset-sign-in/")
     if as_json:
         return echo_json(data)
@@ -108,6 +109,11 @@ def people_reset_sign_in(person_id, as_json):
                 if removed["api_tokens"]
                 else []
             ),
+            *(
+                [f"{removed['push_devices']} push device(s)"]
+                if removed.get("push_devices")
+                else []
+            ),
         ]
         click.echo(
             f"Reset: {data['name']} ({data['id']}), removed {', '.join(what)},"
@@ -115,8 +121,8 @@ def people_reset_sign_in(person_id, as_json):
         )
     else:
         click.echo(
-            f"{data['name']} ({data['id']}) has no authenticator app, passkeys"
-            " or API tokens."
+            f"{data['name']} ({data['id']}) has no authenticator app, passkeys,"
+            " API tokens or push devices."
         )
     return None
 

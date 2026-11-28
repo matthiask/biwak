@@ -50,28 +50,58 @@ def activate(users, *, actor, mail=False):
     """Sets ``is_active`` and clears ``left_at``; nothing else changes. With ``mail`` the
     invitation mail (naming the projects the person is in) goes out through
     the outbox and the person counts as invited until they sign in, except
-    to addresses that bounced. People who are active already stay as they
+    to addresses that bounced; refused (``ActivationError``) for people in
+    no project that isn't archived (who would be mailed). People who are active already stay as they
     are. All or nothing (``PermissionError``). Returns ``[(user, mailed)]``
     of the people activated."""
     users = list(User.objects.select_for_update().filter(pk__in=[u.pk for u in users]))
     _check(actor, users)
+    if mail:
+        # The mail would name nothing (decided 2026-11-28); bounced
+        # addresses get none anyway
+        nowhere = [
+            user
+            for user in users
+            if not user.is_active
+            and user.mail_undeliverable_at is None
+            and not project_ops.invitation_projects(user).exists()
+        ]
+        if nowhere:
+            raise ActivationError(
+                ngettext(
+                    "%(names)s isn't in any project, so the invitation mail"
+                    " would name none: add them to a project first, or"
+                    " activate them without the mail.",
+                    "%(names)s aren't in any project, so the invitation mail"
+                    " would name none: add them to a project first, or"
+                    " activate them without the mail.",
+                    len(nowhere),
+                )
+                % {"names": ", ".join(sorted(str(user) for user in nowhere))}
+            )
     done = []
     for user in users:
         if user.is_active:
             continue
         user.is_active, user.left_at, user.left_in_basecamp = True, None, False
-        fields = ["is_active", "left_at", "left_in_basecamp"]
-        mailed = mail and user.mail_undeliverable_at is None
-        if mailed:
-            user.invited_by, user.invited_at = actor, timezone.now()
-            fields += ["invited_by", "invited_at"]
-        user.save(update_fields=fields)
-        if mailed:
-            project_ops.send_invitation(
-                list(project_ops.invitation_projects(user)), user, actor=actor
-            )
+        user.save(update_fields=["is_active", "left_at", "left_in_basecamp"])
+        mailed = mail and mail_invitation(user, actor=actor)
         done.append((user, mailed))
     return done
+
+
+def mail_invitation(user, *, actor):
+    """The invitation mail to somebody just activated, naming the projects
+    they're in, through the outbox; they count as invited until they sign
+    in. Not to addresses that bounced: returns whether it was sent."""
+    if user.mail_undeliverable_at is not None:
+        return False
+    user.invited_by, user.invited_at = actor, timezone.now()
+    user.save(update_fields=["invited_by", "invited_at"])
+    project_ops.send_invitation(
+        list(project_ops.invitation_projects(user)), user, actor=actor
+    )
+    return True
 
 
 def lock_with_admins(user_ids):
@@ -247,9 +277,16 @@ class SignIn(NamedTuple):
     app: bool  # An authenticator app
     passkeys: int
     api_tokens: int
+    # Devices getting push notifications (counted since 2026-11-28)
+    push_devices: int = 0
 
     def __bool__(self):
-        return self.app or bool(self.passkeys) or bool(self.api_tokens)
+        return (
+            self.app
+            or bool(self.passkeys)
+            or bool(self.api_tokens)
+            or bool(self.push_devices)
+        )
 
 
 def sign_in(user):
@@ -259,6 +296,7 @@ def sign_in(user):
         app=Authenticator.Type.TOTP in types,
         passkeys=types.count(Authenticator.Type.WEBAUTHN),
         api_tokens=APIToken.objects.filter(user=user).count(),
+        push_devices=PushSubscription.objects.filter(user=user).count(),
     )
 
 
@@ -290,7 +328,8 @@ def reset_sign_in(user, *, actor):
         return removed
     Authenticator.objects.filter(user=user).delete()
     APIToken.objects.filter(user=user).delete()
-    # Pushes go to devices somebody else may have (decided 2026-11-28)
+    # Pushes go to devices somebody else may have (decided 2026-11-28),
+    # counted like the rest
     PushSubscription.objects.filter(user=user).delete()
     for session in UserSession.objects.filter(user=user):
         session.end()
@@ -324,6 +363,15 @@ def removed_list(removed, *, theirs=False):
         words.append(
             ngettext("%(count)s API token", "%(count)s API tokens", removed.api_tokens)
             % {"count": removed.api_tokens}
+        )
+    if removed.push_devices:
+        words.append(
+            ngettext(
+                "%(count)s device for push notifications",
+                "%(count)s devices for push notifications",
+                removed.push_devices,
+            )
+            % {"count": removed.push_devices}
         )
     return words
 

@@ -22,7 +22,9 @@ Named "team" because "group" is a list's heading (`core.md`).
 - **Only staff see teams** (own staff and externals): their names and
   members never show to clients, in pages, the API or mails.
 - Deactivating someone keeps them in their teams (they're skipped when
-  expanding, below); deleting a person's account removes them.
+  expanding, below); deleting a person's account removes them, and so
+  does making staff a client in the Django admin (decided 2026-11-28,
+  `organizations.md`).
 - `Team(name)`, `TeamMember(team, user)` (`biwak/teams/`), through
   operations (`operations.py`), audited
   (`audit_tables()`). Names up to 100 characters (confirmed by the user

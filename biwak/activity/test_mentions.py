@@ -152,6 +152,30 @@ class MentionsTest(TestCase):
             self.assertEqual(mentions.plain(text, self.todo), "Hi @Old Name")
         self.assertEqual(mentions.plain(text, self.todo), "Hi @Old Name")
 
+    def test_people_deactivated_later(self):
+        """A mention of somebody deactivated since shows their current name,
+        linked to their page and marked inactive like assignees; clients
+        still only learn about members (Bob isn't one); mentioning them
+        anew doesn't count"""
+        text = f"Hi [@Old Name](person:{self.bob.pk})"
+        self.bob.short_name = "Bobby"
+        self.bob.is_active = False
+        self.bob.save()
+        with mentions.reading_as(self.ada):
+            rendered = markdown(text, self.todo)
+            self.assertIn(
+                f'<a class="wb-mention wb-person-link" href="/people/{self.bob.pk}/"'
+                ' title="Bob Example (inactive)">@Bobby</a>'
+                ' <span class="text-body-secondary">(inactive)</span>',
+                rendered,
+            )
+            self.assertIn("@Bobby", html(text, self.todo))
+            self.assertEqual(mentions.plain(text, self.todo), "Hi @Bobby")
+        with mentions.reading_as(self.cleo):
+            self.assertEqual(mentions.plain(text, self.todo), "Hi @Old Name")
+        ops.add_comment(self.todo, author=self.ada, content=text)
+        self.assertFalse(Mention.objects.filter(user=self.bob).exists())
+
     def test_old_and_new_labels_show_the_short_name(self):
         """A stored label is only a fallback: the full name or the short
         one, as written, make no difference; the short name (else the first

@@ -366,6 +366,7 @@ class SignInOut(Schema):
     app: bool
     passkeys: int
     api_tokens: int
+    push_devices: int
 
 
 class SignInResetOut(AccessOut):
@@ -384,8 +385,8 @@ class SignInResetOut(AccessOut):
     include_in_schema=False,
 )
 def person_reset_sign_in(request, person_id: int):
-    """Removes the person's authenticator app, passkeys and API tokens, ends
-    their sessions and mails them what was removed (specs/two-factor.md);
+    """Removes the person's authenticator app, passkeys, API tokens and push
+    devices, ends their sessions and mails them what was removed (specs/two-factor.md);
     staff reset clients, admins everybody, not oneself. With none of them
     nothing happens (``reset`` false). ``reset-two-factor/`` is the old
     URL, kept as an alias."""

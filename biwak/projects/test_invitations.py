@@ -2,6 +2,7 @@
 (specs/activation.md, "Inviting"): the operation, both entry points of the form,
 the marks, resending, the filter, withdrawing, the API"""
 
+import datetime as dt
 import json
 
 from django.core import mail
@@ -92,7 +93,7 @@ class OperationTest(TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_all_or_nothing_with_each_rows_error(self):
-        gone = person("Gone", client=True, is_active=False)
+        gone = person("Gone", client=True, is_active=False, left_at=dt.date(2026, 3, 1))
         with self.assertRaises(project_ops.InvitationErrors) as cm:
             self.invite([
                 row("dora@example.net"),
@@ -104,7 +105,7 @@ class OperationTest(TestCase):
         self.assertEqual(
             cm.exception.errors,
             {
-                1: "This person has been deactivated.",
+                1: "This person has been deactivated: activate them first.",
                 2: "Only admins can invite staff.",
                 3: "Only admins add people to your own organization or an external"
                 " organization.",
@@ -114,6 +115,32 @@ class OperationTest(TestCase):
         self.assertFalse(User.objects.filter(email="dora@example.net").exists())
         self.assertFalse(Event.objects.filter(action=Action.ADDED).exists())
         self.assertEqual(mail.outbox, [])
+
+    def test_people_waiting_to_be_activated(self):
+        """Decided 2026-11-28: inviting somebody an import created inactive
+        activates them and sends the invitation, naming the projects
+        they're in; waiting staff only by admins, like activating"""
+        dora = person("Dora", client=True, is_active=False)
+        archive = project("Archive", members=[])
+        Membership.objects.create(project=archive, user=dora)
+        [invited] = self.invite([row(dora.email)], projects=[self.website])
+        dora.refresh_from_db()
+        self.assertTrue(dora.is_active)
+        self.assertFalse(invited.created)
+        self.assertEqual(invited.added_to, [self.website])
+        self.assertEqual(dora.invited_by, self.ada)
+        self.assertTrue(dora.is_invited)
+        [message] = mail.outbox
+        self.assertEqual(message.to, [dora.email])
+        self.assertIn("Website", message.body)
+        self.assertIn("Archive", message.body)
+        finn = person("Finn", is_active=False)
+        with self.assertRaises(project_ops.InvitationErrors) as cm:
+            self.invite([row(finn.email)])
+        self.assertEqual(cm.exception.errors, {0: "Only admins can invite staff."})
+        self.invite([row(finn.email)], actor=self.root)
+        finn.refresh_from_db()
+        self.assertTrue(finn.is_active)
 
     def test_admins_invite_staff(self):
         [invited] = self.invite(
@@ -547,6 +574,8 @@ class InvitationsVisibleTest(TestCase):
         )
         todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
         ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        # Completed to-dos keep their assignees
+        ops.complete(todo, actor=self.ada)
         url = reverse("invitation_withdraw", args=[self.dora.pk])
         self.client.force_login(self.bob)
         self.assertContains(self.client.get(url), "the account is deactivated")
@@ -554,6 +583,22 @@ class InvitationsVisibleTest(TestCase):
         self.assertRedirects(response, "/people/")
         self.dora.refresh_from_db()
         self.assertFalse(self.website.is_member(self.dora))
+
+    def test_withdraw_unassigns_before_deciding(self):
+        """Consistent (2026-11-28): open assignments go with withdrawing
+        (``remove_member()``), so they don't keep the account, in the
+        question either"""
+        todolist = ops.create_list(
+            project=self.website, title="Launch", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
+        ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        url = reverse("invitation_withdraw", args=[self.dora.pk])
+        self.client.force_login(self.bob)
+        self.assertContains(self.client.get(url), "the account is deleted")
+        self.client.post(url)
+        self.assertFalse(User.objects.filter(pk=self.dora.pk).exists())
+        self.assertEqual(list(todo.todo.assignees.all()), [])
 
     def test_withdraw_removes_from_projects_the_actor_cant_open(self):
         """Decided 2026-11-21: withdrawing is withdrawing, also from projects
@@ -584,6 +629,7 @@ class InvitationsVisibleTest(TestCase):
         )
         todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
         ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        ops.complete(todo, actor=self.ada)
         self.client.force_login(self.bob)
         url = reverse("invitation_withdraw", args=[self.dora.pk])
         self.assertContains(self.client.get(url), "the account is deactivated")
@@ -658,6 +704,7 @@ class InvitationsVisibleTest(TestCase):
         )
         todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
         ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        ops.complete(todo, actor=self.ada)
         APIToken.create_for(user=self.dora, title="T", access="write")
         CalendarToken.objects.create(user=self.dora)
         url = reverse("invitation_withdraw", args=[self.dora.pk])

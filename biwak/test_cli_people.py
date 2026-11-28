@@ -7,7 +7,8 @@ from django.utils import timezone
 
 from biwak import test_cli
 from biwak.accounts.models import User
-from biwak.test_utils import external, person
+from biwak.projects.models import Membership
+from biwak.test_utils import external, person, project
 
 
 class PeopleCLITest(test_cli.CLITest):
@@ -50,6 +51,9 @@ class PeopleCLITest(test_cli.CLITest):
         self.assertIn("not both", result.output)
 
     def test_activate_with_the_mail(self):
+        site = project("Site")
+        for user in [self.cleo, self.dora]:
+            Membership.objects.create(project=site, user=user)
         with self.captureOnCommitCallbacks(execute=True):
             output = self.biwak(
                 "people", "activate", self.cleo.pk, self.dora.pk, "--mail"
@@ -57,6 +61,12 @@ class PeopleCLITest(test_cli.CLITest):
         self.assertIn(f"Activated: Cleo Example ({self.cleo.pk}) (mailed)", output)
         self.assertTrue(self.active(self.dora))
         self.assertEqual(len(mail.outbox), 2)
+
+    def test_with_the_mail_not_in_any_project(self):
+        result = self.biwak("people", "activate", self.cleo.pk, "--mail")
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("isn't in any project", result.output)
+        self.assertFalse(self.active(self.cleo))
 
     def test_activate_without_the_mail(self):
         self.biwak("people", "activate", self.cleo.pk)
@@ -93,16 +103,20 @@ class PeopleCLITest(test_cli.CLITest):
         """specs/two-factor.md"""
         from allauth.mfa.models import Authenticator
 
+        from biwak.accounts.models import PushSubscription
         from biwak.accounts.test_two_factor import app, passkey
 
         User.objects.filter(pk=self.cleo.pk).update(is_active=True)
         app(self.cleo)
         passkey(self.cleo)
+        PushSubscription.objects.create(
+            user=self.cleo, endpoint="https://push.example.org/1", p256dh="k", auth="a"
+        )
         with self.captureOnCommitCallbacks(execute=True):
             output = self.biwak("people", "reset-sign-in", self.cleo.pk).output
         self.assertIn(
             f"Reset: Cleo Example ({self.cleo.pk}), removed authenticator app,"
-            " 1 passkey(s), signed out everywhere",
+            " 1 passkey(s), 1 push device(s), signed out everywhere",
             output,
         )
         self.assertFalse(Authenticator.objects.filter(user=self.cleo).exists())

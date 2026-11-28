@@ -17,6 +17,7 @@ from django.utils.translation import gettext_lazy as _
 
 from biwak import admin
 from biwak.accounts.models import User
+from biwak.organizations.operations import is_external_organization
 
 
 class UndeliverableFilter(admin.SimpleListFilter):
@@ -34,7 +35,10 @@ class UndeliverableFilter(admin.SimpleListFilter):
 
 class UserAdminForm(forms.ModelForm):
     """The rules of deactivating (specs/activation.md): not oneself, and an
-    active admin stays (``is_active`` and ``is_admin``)"""
+    active admin stays (``is_active`` and ``is_admin``); a client becomes
+    staff only in the own or an external organization (or none: an
+    individual), not in a client organization, which would become external
+    by the way (decided 2026-11-28, specs/organizations.md)"""
 
     class Meta:
         model = User
@@ -46,6 +50,24 @@ class UserAdminForm(forms.ModelForm):
         user = self.instance
         if user.pk is None:
             return data
+        org = data.get("organization")
+        if (
+            user.is_client
+            and "is_client" in data
+            and not data["is_client"]
+            and org is not None
+            and not org.is_own
+            and not is_external_organization(org)
+        ):
+            self.add_error(
+                "is_client",
+                _(
+                    "Staff in %(organization)s would make this client"
+                    " organization an external one: choose your own"
+                    " organization or an external one too."
+                )
+                % {"organization": org},
+            )
         unticked = user.is_active and not data.get("is_active")
         if unticked and user.pk == self.actor.pk:
             self.add_error("is_active", _("You can't deactivate yourself."))
@@ -105,9 +127,11 @@ class UserAdmin(admin.ReadWriteModelAdmin):
         stays (``activation.lock_with_admins()``). Another organization or
         becoming a client drops subscriptions in projects they can't open
         anymore, like moving them on the pages
-        (``organizations.operations.access_changed()``)."""
+        (``organizations.operations.access_changed()``); becoming a client
+        also unassigns them from what they can't see and takes them out of
+        their teams (``made_client()``)."""
         from biwak.organizations import activation
-        from biwak.organizations.operations import access_changed
+        from biwak.organizations.operations import access_changed, made_client
 
         if not change:
             super().save_model(request, obj, form, change)
@@ -132,6 +156,8 @@ class UserAdmin(admin.ReadWriteModelAdmin):
             obj.is_client,
         ):
             access_changed([obj.pk])
+        if obj.is_client and not before.is_client:
+            made_client(obj, actor=request.user)
 
     @admin.action(description=_("Mail to the selected people works again"))
     def clear_undeliverable(self, request, queryset):

@@ -262,17 +262,20 @@ Organisation ihrer Domain und, für Admins, Mitarbeitende für die eigene
 und externe Organisationen, sonst Kund:in eingesetzt, ausser du hast
 diese Felder in der Zeile geändert. „Weitere hinzufügen“ fügt eine
 Zeile hinzu. Neue Personen bekommen eine Mail, die die Projekte nennt;
-Personen mit einem Konto werden ihnen hinzugefügt. Lässt sich eine Zeile
-nicht einladen (eine deaktivierte Person, Mitarbeitende, eingeladen von
-jemandem, der kein Admin ist), wird niemand eingeladen, und das Formular
-sagt, welche Zeile falsch ist.
+Personen mit einem Konto werden ihnen hinzugefügt. Vom Import angelegte
+Personen, die auf die Aktivierung warten, werden aktiviert und bekommen
+die Einladung, die alle ihre Projekte nennt. Lässt sich eine Zeile nicht
+einladen (jemand, der nicht mehr dabei ist und zuerst aktiviert werden
+muss, Mitarbeitende, eingeladen von jemandem, der kein Admin ist), wird
+niemand eingeladen, und das Formular sagt, welche Zeile falsch ist.
 
 **Einladungen:** Bis sich jemand zum ersten Mal anmeldet, sehen
 Mitarbeitende „Eingeladen, noch nicht angemeldet“ daneben, mit wer
 eingeladen hat und wann. „Erneut senden“ schickt die Einladung nochmals
 und nennt die Projekte, in denen die Person jetzt ist. „Zurückziehen…“
-entfernt sie aus allen ihren Projekten und löscht das Konto, wenn
-nichts anderes darauf verweist (keine Kommentare, keine Zuweisungen);
+entfernt sie aus allen ihren Projekten und von deren offenen To-dos und
+löscht das Konto, wenn nichts anderes darauf verweist (keine Kommentare,
+keine erledigten To-dos);
 verweist etwas darauf, bleibt das Konto, wird aber deaktiviert.
 Mitarbeitende senden und ziehen Einladungen von Kund:innen zurück,
 Admins die von allen. „Eingeladen“ auf der Seite Personen zeigt alle,
@@ -283,12 +286,15 @@ können sich nicht anmelden und bekommen keine Mails, bis sie jemand
 aktiviert. „Inaktiv“ auf der Seite Personen zeigt sie; „Aktivieren…“
 (dort oder auf der Seite der Person) aktiviert sie, mit einer Checkbox,
 um die Einladungsmail zu senden (nicht an Adressen, deren Mails
-zurückkamen); sonst ändert sich nichts. „Deaktivieren…“ ist für
+zurückkamen, und nicht an jemanden ohne Projekt: Füge die Person zuerst
+einem hinzu); sonst ändert sich nichts. „Deaktivieren…“ ist für
 jemanden, der nicht mehr dabei ist: Die Person wird überall abgemeldet,
 ihre API-Tokens, ihr Kalenderlink und ihre Geräte für
 Push-Benachrichtigungen werden gelöscht, und sie kann sich
 nicht mehr anmelden, während bleibt, was sie getan hat. Ihre To-dos
-bleiben ihr zugewiesen, als inaktiv markiert, bis jemand sie übergibt.
+bleiben ihr zugewiesen, als inaktiv markiert, bis jemand sie übergibt;
+Erwähnungen zeigen ihren Namen, ebenfalls als inaktiv markiert, neu
+erwähnen kann man sie aber nicht.
 Die Frage vor dem Deaktivieren sagt, wie viele offene To-dos sie hat
 (der Link zeigt sie auf der To-do-Seite, wo „Zuweisen…“ sie übergibt)
 und in welchen Projekten sie die einzige aktive Mitarbeiterin oder der

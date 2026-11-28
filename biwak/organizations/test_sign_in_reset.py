@@ -96,6 +96,39 @@ class OperationTest(Base):
             set(PushSubscription.objects.values_list("user", flat=True)), {self.bob.pk}
         )
 
+    def test_push_devices_alone(self):
+        """Consistent (2026-11-28): push devices count like the rest, also
+        alone: offered, removed, named in the question, the message, the
+        mail and the API"""
+        from biwak.accounts.models import PushSubscription
+
+        Authenticator.objects.filter(user=self.cleo).delete()
+        for number in [1, 2]:
+            PushSubscription.objects.create(
+                user=self.cleo,
+                endpoint=f"https://push.example.org/{number}",
+                p256dh="k",
+                auth="a",
+            )
+        self.assertEqual(
+            activation.sign_in(self.cleo),
+            activation.SignIn(app=False, passkeys=0, api_tokens=0, push_devices=2),
+        )
+        self.client.force_login(self.ada)
+        url = f"/people/{self.cleo.pk}/reset-sign-in/"
+        self.assertContains(self.client.get(f"/people/{self.cleo.pk}/"), url)
+        self.assertContains(
+            self.client.get(url), "Removes 2 devices for push notifications"
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(url, follow=True)
+        self.assertContains(
+            response,
+            f"Removed from {self.cleo.display_name}: 2 devices for push notifications.",
+        )
+        self.assertFalse(PushSubscription.objects.filter(user=self.cleo).exists())
+        self.assertIn("- 2 devices for push notifications\n", mail.outbox[0].body)
+
     def test_staff_may_not_reset_staff_or_externals(self):
         for user in [self.bob, self.pia, self.root]:
             with self.subTest(user=user), self.assertRaises(PermissionError):
@@ -266,7 +299,8 @@ class APITest(Base):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["reset"])
         self.assertEqual(
-            response.json()["removed"], {"app": True, "passkeys": 0, "api_tokens": 0}
+            response.json()["removed"],
+            {"app": True, "passkeys": 0, "api_tokens": 0, "push_devices": 0},
         )
         self.assertFalse(self.has_app(self.cleo))
         self.assertEqual(len(mail.outbox), 1)

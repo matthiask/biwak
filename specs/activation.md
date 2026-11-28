@@ -52,9 +52,16 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
 - **The projects:** one set for all rows, those the inviter can open and
   not archived, with one "Only when tagged / Everything new" choice
   for the round, stored per project.
-- **All or nothing:** errors per row (a deactivated person's address,
-  staff invited by a non-admin, an organization the inviter may not
-  touch).
+- **All or nothing:** errors per row (the address of somebody who left,
+  "activate them first", staff invited by a non-admin, an organization
+  the inviter may not touch).
+- **People waiting to be activated** (imported, inactive, no `left_at`;
+  decided by the user 2026-11-28, verification round 1) are activated
+  by inviting them, by whoever may activate them (waiting staff by
+  admins only), added to the projects and sent the invitation like
+  activating with the mail (`activation.mail_invitation()`: naming all
+  the projects they're in, not to bounced addresses). People who left
+  still need "Activate…" first.
 - **The mail:** one per person after the commit, naming the one project
   ("Ada invited you to Website") or, with several, "Ada invited you to
   Biwak" with a line per project. People who already have an account are
@@ -84,7 +91,11 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
   withdrawing"), recorded as
   "removed", the "added" events stay. The account goes when nothing
   refers to it (comments, items, events, files, links, assignments,
-  check-ins asking them, mentions, reactions); when something does, it
+  check-ins asking them, mentions, reactions), decided after removing
+  them from the projects, which unassigns them from the open to-dos
+  there (consistent, verification round 1, 2026-11-28: open assignments
+  alone don't keep the account; `_referred_to(leaving=)` for the
+  question); when something does, it
   stays deactivated (decided 2026-11-21: through
   `activation.deactivate()`, so sessions, API tokens and calendar links
   go too). The question says which happens and names the projects the
@@ -109,6 +120,14 @@ in Basecamp are created active (decided 2026-11-22,
   show as invited until they sign in. Not to addresses that bounced
   (`mail_undeliverable_at`): they can be activated, the page says the
   mail wasn't sent, and they aren't marked as invited.
+- **Not with the mail for somebody in no project** (none that isn't
+  archived; decided by the user 2026-11-28, verification round 1): the
+  mail would name none, so `activate()` refuses (`ActivationError`, all
+  or nothing: the page's form error, the API's 400, the CLI's message)
+  "Dora Example isn't in any project, so the invitation mail would name
+  none: add them to a project first, or activate them without the
+  mail." Without the mail it works; bounced addresses get no mail, so
+  they aren't refused.
 - No event in the feed (it isn't about a project); the audit log records
   the change.
 

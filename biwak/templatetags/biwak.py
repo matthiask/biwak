@@ -55,9 +55,11 @@ def _mentions(state):
             user = people.get(int(match[1]))
             mention = Token("html_inline", "", 0)
             if user:
-                text = (
-                    f'title="{escape(str(user))}">@{escape(display_name(user, reader))}'
-                )
+                title = str(user)
+                if not user.is_active:
+                    # Shown as such, like assignees (specs/handover.md)
+                    title = gettext("%(name)s (inactive)") % {"name": title}
+                text = f'title="{escape(title)}">@{escape(display_name(user, reader))}'
                 # A link to the page where the person's page is open to the
                 # reader (visible_people() are those they may know); not in
                 # mails and the API, whose texts leave the site
@@ -68,6 +70,11 @@ def _mentions(state):
                     )
                 else:
                     mention.content = f'<span class="wb-mention" {text}</span>'
+                if not user.is_active:
+                    mention.content += (
+                        ' <span class="text-body-secondary">'
+                        f"{escape(gettext('(inactive)'))}</span>"
+                    )
             else:
                 mention.content = escape(f"@{label.removeprefix('@')}")
             result.append(mention)

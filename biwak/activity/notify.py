@@ -66,11 +66,13 @@ def can_see(user, item):
     return Item.objects.visible_to(user).filter(pk=item.pk).exists()
 
 
-def people_who_see(project, visible):
+def people_who_see(project, visible, *, active=True):
     """The active people who see an item of ``project``, visible to clients
     or not, that isn't trashed (it may not exist yet):
     ``Item.objects.visible_to()`` in reverse, for everybody at once.
-    ``test_notify.WhoCanSeeTest`` compares the two so they can't drift."""
+    ``test_notify.WhoCanSeeTest`` compares the two so they can't drift.
+    ``active=False``: inactive people too, who would see it if they were
+    active (mentions of people deactivated later, specs/people.md)."""
     members = models.Q(memberships__project=project)
     can_see = models.Q(is_client=False) & members
     if project.is_all_access:
@@ -78,7 +80,8 @@ def people_who_see(project, visible):
         can_see |= own_staff()
     if visible:
         can_see |= models.Q(is_client=True, memberships__project=project)
-    return User.objects.active().filter(can_see).distinct()
+    people = User.objects.active() if active else User.objects.all()
+    return people.filter(can_see).distinct()
 
 
 def who_can_see(item):

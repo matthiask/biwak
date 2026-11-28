@@ -26,6 +26,11 @@ msgstr "Mail unzustellbar"
 msgid "yes"
 msgstr "ja"
 
+#: biwak/accounts/admin.py
+#, python-format
+msgid "Staff in %(organization)s would make this client organization an external one: choose your own organization or an external one too."
+msgstr "Mitarbeitende in %(organization)s würden diese Organisation von Kund:innen zu einer externen machen: Wähle auch die eigene Organisation oder eine externe."
+
 #: biwak/accounts/admin.py biwak/organizations/activation.py
 msgid "You can't deactivate yourself."
 msgstr "Du kannst dich nicht selbst deaktivieren."
@@ -3991,6 +3996,13 @@ msgid "You may not change %(names)s: only admins change staff."
 msgstr "Du darfst %(names)s nicht ändern: Nur Admins ändern Mitarbeitende."
 
 #: biwak/organizations/activation.py
+#, python-format
+msgid "%(names)s isn't in any project, so the invitation mail would name none: add them to a project first, or activate them without the mail."
+msgid_plural "%(names)s aren't in any project, so the invitation mail would name none: add them to a project first, or activate them without the mail."
+msgstr[0] "%(names)s ist in keinem Projekt, die Einladungsmail würde also keines nennen: Füge die Person zuerst einem Projekt hinzu oder aktiviere sie ohne die Mail."
+msgstr[1] "%(names)s sind in keinem Projekt, die Einladungsmail würde also keines nennen: Füge sie zuerst einem Projekt hinzu oder aktiviere sie ohne die Mail."
+
+#: biwak/organizations/activation.py
 msgid "The last active admin can't be deactivated."
 msgstr "Mindestens eine aktive Person muss Admin bleiben, die letzte kann nicht deaktiviert werden."
 
@@ -4019,6 +4031,13 @@ msgid "%(count)s API token"
 msgid_plural "%(count)s API tokens"
 msgstr[0] "%(count)s API-Token"
 msgstr[1] "%(count)s API-Tokens"
+
+#: biwak/organizations/activation.py
+#, python-format
+msgid "%(count)s device for push notifications"
+msgid_plural "%(count)s devices for push notifications"
+msgstr[0] "%(count)s Gerät für Push-Benachrichtigungen"
+msgstr[1] "%(count)s Geräte für Push-Benachrichtigungen"
 
 #: biwak/organizations/activation.py
 #, python-format
@@ -4376,8 +4395,8 @@ msgstr "%(name)s ist zurück."
 
 #: biwak/organizations/people.py
 #, python-format
-msgid "%(name)s has no authenticator app, passkeys or API tokens."
-msgstr "%(name)s hat keine Authenticator-App, keine Passkeys und keine API-Tokens."
+msgid "%(name)s has no authenticator app, passkeys, API tokens or devices for push notifications."
+msgstr "%(name)s hat keine Authenticator-App, keine Passkeys, keine API-Tokens und keine Geräte für Push-Benachrichtigungen."
 
 #: biwak/organizations/people.py
 #, python-format
@@ -5170,8 +5189,8 @@ msgid "memberships"
 msgstr "Mitgliedschaften"
 
 #: biwak/projects/operations.py
-msgid "This person has been deactivated."
-msgstr "Diese Person wurde deaktiviert."
+msgid "This person has been deactivated: activate them first."
+msgstr "Diese Person wurde deaktiviert: Aktiviere sie zuerst."
 
 #: biwak/projects/operations.py
 msgid "Only admins can invite staff."
@@ -6410,8 +6429,8 @@ msgid "Removed:"
 msgstr "Entfernt:"
 
 #: biwak/templates/accounts/sign_in_reset.txt
-msgid "Sign in with a code sent to your address, or through your organization's sign-in if it uses one. You can add a passkey, set up an authenticator app and create API tokens again in your settings:"
-msgstr "Melde dich mit einem Code an, der an deine Adresse geschickt wird, oder über die Anmeldung deiner Organisation, falls sie eine verwendet. In deinen Einstellungen kannst du wieder einen Passkey hinzufügen, eine Authenticator-App einrichten und API-Tokens erstellen:"
+msgid "Sign in with a code sent to your address, or through your organization's sign-in if it uses one. You can add a passkey, set up an authenticator app, create API tokens and turn on push notifications again in your settings:"
+msgstr "Melde dich mit einem Code an, der an deine Adresse geschickt wird, oder über die Anmeldung deiner Organisation, falls sie eine verwendet. In deinen Einstellungen kannst du wieder einen Passkey hinzufügen, eine Authenticator-App einrichten, API-Tokens erstellen und Push-Benachrichtigungen einschalten:"
 
 #: biwak/templates/accounts/sign_in_reset.txt
 #, python-format

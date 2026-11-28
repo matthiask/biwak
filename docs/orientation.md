@@ -227,16 +227,18 @@ the organization of its domain and, for admins, staff for your own and
 external organizations, client otherwise, unless you changed those
 fields in that row. "Add another" adds a row. New
 people get one mail naming the projects; people who have an account are
-added to them. If a row can't be invited (a deactivated person, staff
-invited by somebody who isn't an admin), nobody is, and the form says
-which row is wrong.
+added to them. People the import created who are waiting to be
+activated are activated and get the invitation, naming all their
+projects. If a row can't be invited (somebody who left, who needs
+activating first, staff invited by somebody who isn't an admin), nobody
+is, and the form says which row is wrong.
 
 **Invitations:** until someone signs in for the first time, staff see
 "Invited, not signed in yet" next to them, with who invited them and
 when. "Resend" sends the invitation again, naming the projects they are
-in now. "Withdraw…" removes them from all their projects and
-deletes the account if nothing else refers to it (no comments, no
-assignments); if something does, the account stays but is deactivated. Staff resend and withdraw clients' invitations,
+in now. "Withdraw…" removes them from all their projects and their open
+to-dos and deletes the account if nothing else refers to it (no
+comments, no completed to-dos); if something does, the account stays but is deactivated. Staff resend and withdraw clients' invitations,
 admins everybody's. "Invited" on the People page lists
 everybody who hasn't signed in yet, the oldest invitation first.
 
@@ -244,11 +246,13 @@ everybody who hasn't signed in yet, the oldest invitation first.
 and get no mail until someone activates them. "Inactive" on the People
 page lists them; "Activate…" (there, or on the person's page) activates
 them, with a checkbox to send the invitation mail (not to addresses that
-bounced); nothing else changes. "Deactivate…" is for somebody who left:
+bounced, and not to somebody in no project: add them to one first);
+nothing else changes. "Deactivate…" is for somebody who left:
 they are signed out everywhere, their API tokens, calendar link and
 devices for push notifications are deleted and they can't sign in, while what they did stays. They stay
 assigned to their to-dos, marked as inactive, until someone hands them
-over. The question before deactivating says how many open to-dos they
+over; mentions of them show their name, marked as inactive too, but they
+can't be mentioned anew. The question before deactivating says how many open to-dos they
 have (the link lists them on the to-dos page, where "Assign…" hands
 them over) and which projects they're the only active staff member of,
 counting only projects you can open; it never stops you. Staff change clients, admins also staff and
