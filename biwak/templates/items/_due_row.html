@@ -3,7 +3,8 @@
   {% include "items/_todo_check.html" with keep_page=True %}
   <div class="wb-todo-body">
     {% include "items/_todo_title.html" %}
-    {% client_badge todo %}
+    {# By list the list's heading has the badge: its to-dos share its visibility #}
+    {% if not in_project %}{% client_badge todo %}{% endif %}
     <div class="wb-todo-meta">
       {% include "items/_signals.html" %}
       {% include "items/_todo_assignees.html" %}

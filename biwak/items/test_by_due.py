@@ -893,3 +893,29 @@ class NobodyActiveTest(TestCase):
         User.objects.filter(pk=gone.pk).update(is_active=False)
         found = {t.title for t in due.todos(ada, assignee="nobody")}
         self.assertEqual(found, {"Left behind", "Unassigned"})
+
+
+class ClientBadgeByListTest(TestCase):
+    """The project's to-dos by list mark the list as visible to clients, not
+    each of its to-dos, which share the list's visibility (the user,
+    2026-11-28: "This could be calmer. Mark only the list as client
+    visible"); by due date the rows keep their badges, lists mixed"""
+
+    def test_the_list_not_its_rows(self):
+        ada = person("Ada")
+        p = project(members=[ada])
+        shared = ops.create_list(project=p, title="Shared", creator=ada, visible=True)
+        internal = ops.create_list(project=p, title="Internal", creator=ada)
+        for todolist in (shared, internal):
+            for title in ("One", "Two"):
+                ops.create_todo(
+                    todolist=todolist, title=f"{todolist} {title}", creator=ada
+                )
+        self.client.force_login(ada)
+        url = f"/projects/{p.pk}/todos/"
+        html = self.client.get(url).content.decode()
+        self.assertEqual(html.count("wb-client-badge"), 1)
+        heading = html[html.index(f'data-list="{shared.pk}"') :].split("</h3>", 1)[0]
+        self.assertIn("wb-client-badge", heading)
+        html = self.client.get(url + "?grouping=due").content.decode()
+        self.assertEqual(html.count("wb-client-badge"), 2)
