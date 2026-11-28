@@ -21,7 +21,10 @@ the tests.
 [--include-disabled] [--user EMAIL] [--archive] [--cache-dir DIR | --no-cache]
 [--answers-max-age HOURS] [--token-command CMD]`.
 Always dry-run first: counts per kind, people to create, problems, what
-goes into internal containers, archived recordings skipped.
+goes into internal containers, archived recordings skipped. A dry run
+writes nothing, also for projects imported before (found 2026-11-28 in
+verification round 1: completions, assignees, archiving and their events
+were written on what was imported before).
 
 - The token must be an administrator's: only they get the people's
   addresses (others get them redacted; the importer reports it and

@@ -962,7 +962,7 @@ class Importer(Resolver):
             for person in people:
                 user = self._user(person)
                 self._image(person, user)
-                if user is not None and project is not None:
+                if user is not None and project is not None and not self.dry:
                     with importing(at=parse_time(rec["created_at"])):
                         self._add_member(project, user)
             self._dock(rec, project)
@@ -1243,7 +1243,7 @@ class Importer(Resolver):
     def _internal_list(self, todo_rec, group, creator):
         """The internal list "<list> (internal)" of the list (or card
         table) being imported, and the group of that title in it (created
-        when needed); None, None in a dry run"""
+        when needed; in a dry run None for what doesn't exist)"""
         container = self._container
         bc_type = "Kanban::Board" if self._container_is_board else "Todolist"
         key = (bc_type, container["id"])
@@ -1270,7 +1270,7 @@ class Importer(Resolver):
         if item is None or group is None:
             return item, None
         found = item.todolist.groups.filter(title=group.title).first()
-        if found is None:
+        if found is None and not self.dry:
             found = ops.create_group(
                 todolist=item.todolist, title=group.title, color=group.color
             )
@@ -1279,11 +1279,12 @@ class Importer(Resolver):
     def _touch(self, bc_type, rec):
         """Whether what ``_upsert()`` returned for the recording may be
         written on (its visibility, completion, assignees, archiving, times):
-        not when it was skipped as unchanged since the last run, which may
-        have been changed in Biwak since and isn't touched at all (decided
-        2026-11-28: Biwak's change stays; found 2026-11-27: every rerun
-        reset their times)"""
-        return (bc_type, rec["id"]) not in self._skipped
+        not in a dry run (found 2026-11-28: it wrote on what was imported
+        before), and not when it was skipped as unchanged since the last
+        run, which may have been changed in Biwak since and isn't touched at
+        all (decided 2026-11-28: Biwak's change stays; found 2026-11-27:
+        every rerun reset their times)"""
+        return not self.dry and (bc_type, rec["id"]) not in self._skipped
 
     def _restamp(self, bc_type, item, rec):
         """``_stamp()`` after ``_upsert()``, not for what it skipped"""
@@ -1786,7 +1787,7 @@ class Importer(Resolver):
             self._top_visibility(item, visible, rec)
             self._stamp(item, rec)
         self._follow("Message", rec, item)
-        if item is not None:
+        if item is not None and not self.dry:
             # From the original times, for the board's order
             ops.refresh_message_activity(item)
 
@@ -1867,7 +1868,7 @@ class Importer(Resolver):
             item,
             replies=f"/buckets/{bucket_id}/inbox_forwards/{rec['id']}/replies.json",
         )
-        if item is not None:
+        if item is not None and not self.dry:
             ops.refresh_message_activity(item)
 
     # Docs & Files -------------------------------------------------------------------------------
@@ -2070,7 +2071,7 @@ class Importer(Resolver):
             new = ("Question::Answer", answer["id"]) in self._created
             if user is not None and new and user not in asked:
                 asked.append(user)
-        if item is not None and asked:
+        if item is not None and asked and not self.dry:
             who = [u for u in asked if u.is_active]
             allowed = who_can_see(item).filter(pk__in=[u.pk for u in who])
             if allowed:

@@ -1384,6 +1384,50 @@ class DryRunTest(ImportCase):
         self.assertEqual(Event.objects.count(), 0)
         self.assertEqual(self.client_.downloads, [])
 
+    def test_writes_nothing_for_what_was_imported_before(self):
+        """Completion, assignees, archiving, visibility, times, members:
+        the callers of ``_upsert()`` wrote on what it returned"""
+        self.run_import()
+        data = self.client_.data
+        later = "2026-03-01T08:00:00.000Z"
+        data["/todolists/301/todos.json"][1] |= {
+            "completed": True,
+            "completion": {"created_at": later, "creator": support.ADA},
+            "assignees": [support.ADA],
+            "updated_at": later,
+        }
+        data["/todosets/300/todolists.json"][0] |= {
+            "status": "archived",
+            "visible_to_clients": True,
+            "updated_at": later,
+        }
+        data["/message_boards/200/messages.json"][0] |= {
+            "visible_to_clients": True,
+            "updated_at": later,
+        }
+        data[f"/projects/{support.PROJECT}.json"] |= {
+            "status": "archived",
+            "updated_at": later,
+        }
+        data[f"/projects/{support.PROJECT}/people.json"].append(support.EVE)
+
+        def state():
+            return (
+                list(Item.objects.order_by("pk").values()),
+                list(Todo.objects.order_by("pk").values()),
+                list(Todo.assignees.through.objects.order_by("pk").values()),
+                list(Project.objects.values()),
+                list(Membership.objects.order_by("pk").values()),
+                list(Event.objects.order_by("pk").values()),
+                list(ImportedObject.objects.order_by("pk").values()),
+            )
+
+        before = state()
+        for full in (False, True):
+            with self.subTest(full=full):
+                self.run_import(dry_run=True, full=full)
+                self.assertEqual(state(), before)
+
     def test_counts_people_and_problems(self):
         report = self.run_import(dry_run=True)
         counts = {label: c["created"] for label, c in report.counts.items()}
