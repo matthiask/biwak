@@ -328,6 +328,16 @@ def set_notification_settings(
         user.notification_level = NotificationLevel(level)
         fields.append("notification_level")
     if delivery is not None:
+        if user.mail_delivery == MailDelivery.NONE and delivery == MailDelivery.EACH:
+            # What piled up goes as one mail in the digest's form, a mail
+            # per change from then on (decided 2026-11-28): held, like
+            # what waited for quiet hours (``mails._send_held()``)
+            from biwak.activity.mails import MAILABLE
+            from biwak.activity.models import Notification
+
+            Notification.objects.filter(
+                user=user, held_at__isnull=True, **MAILABLE
+            ).update(held_at=timezone.now())
         user.mail_delivery = MailDelivery(delivery)
         fields.append("mail_delivery")
     if quiet_hours is not None:

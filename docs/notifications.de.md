@@ -129,8 +129,11 @@ In den Einstellungen unter „Mails“:
   passiert ist (siehe unten);
 - **Keine Mails:** nur die Laterne, auch keine Check-in-Fragen und
   -Zusammenfassungen. Wechselst du zurück zu Mails, wird gesendet, was
-  dann noch ungelesen ist (ausser was du als ungelesen markiert hast),
-  mit der nächsten Mail oder Zusammenfassung.
+  dann noch ungelesen ist (ausser was du als ungelesen markiert hast):
+  mit „Eine Mail pro Änderung“ als eine Mail wie die Zusammenfassung
+  (oder die übliche Mail, wenn es nur um einen Eintrag geht), danach
+  wieder eine Mail pro Änderung; mit der Zusammenfassung in der
+  nächsten Zusammenfassung.
 
 Was du in der Laterne gelesen hast, bevor die Mail hinausgeht, wird
 nicht gemailt, und eine Mail, in der nichts übrig bleibt, wird nicht

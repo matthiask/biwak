@@ -110,7 +110,10 @@ Under Settings, "Mails":
   below);
 - **No mails:** the lantern only, also no check-in questions and
   summaries. Switching back to mails sends what is still unread then
-  (except what you marked as unread) with the next mail or digest.
+  (except what you marked as unread): with "A mail for each change" as
+  one mail like the digest (or the usual mail when it's about one item
+  only), then a mail per change again; with the digest in the next
+  digest.
 
 What you have read in the lantern before the mail goes out isn't mailed,
 and a mail with nothing left isn't sent. What happened on an item that

@@ -14,7 +14,11 @@ from biwak.accounts.models import APIToken, MailDelivery, NotificationLevel
 from biwak.activity import lantern, mentions
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Event, Notification
-from biwak.activity.operations import set_level_override, subscribe
+from biwak.activity.operations import (
+    set_level_override,
+    set_notification_settings,
+    subscribe,
+)
 from biwak.files import operations as file_ops
 from biwak.items import operations as ops
 from biwak.live import announce
@@ -170,6 +174,28 @@ class ReadNotMailedTest(LanternTestCase):
         self.assertIn("Order the tent", sent.subject + sent.body)
         self.assertNotIn("Budget", sent.subject + sent.body)
         self.assertNotIn("News", sent.subject + sent.body)
+
+    def test_switching_back_from_none_sends_one_mail_of_what_piled_up(self):
+        """What piled up goes as one mail in the digest's form, not a mail
+        per item; a mail per change from then on (decided 2026-11-28)"""
+        set_notification_settings(self.bob, delivery=MailDelivery.NONE)
+        self.comment(self.todo, "One")
+        self.comment(self.secret, "Two")
+        self.send(timezone.now() + dt.timedelta(minutes=11))
+        set_notification_settings(self.bob, delivery=MailDelivery.EACH)
+        self.send(timezone.now() + dt.timedelta(minutes=11))
+        (sent,) = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertIn("Order the tent", sent.body)
+        self.assertIn("Budget", sent.body)
+        self.assertIn("One", sent.body)
+        mail.outbox.clear()
+        self.comment(self.todo, "Three")
+        self.comment(self.secret, "Four")
+        self.send(timezone.now() + dt.timedelta(minutes=11))
+        self.assertEqual(
+            sorted(m.subject for m in mail.outbox if m.to == [self.bob.email]),
+            ["[Website] Budget", "[Website] Order the tent"],
+        )
 
     def test_a_change_after_reading_is_unread_again(self):
         """A merged edit moves the unsent notification forward: unread"""

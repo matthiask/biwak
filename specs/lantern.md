@@ -123,7 +123,13 @@ and pages that update while they're open.
   mentions them for the first time since is mailed and pushed (decided
   2026-11-28: a first mention tells, `notify._tell()`).
 - **Switching mail back from "none":** whatever is unread and wasn't
-  marked unread by hand goes with the next mail or digest.
+  marked unread by hand goes with the next mail or digest. To a mail
+  per change (decided 2026-11-28, it was a mail per item): what piled
+  up is held (`held_at`, `set_notification_settings()`) and goes at
+  once as one mail in the digest's form, or the usual mail when it's
+  one mail's worth, like what waited for quiet hours
+  (`mails._send_held()`, `quiet-hours.md`); mails per change from then
+  on.
 - A merged edit moving an unsent notification forward makes it unread
   again: the change is new.
 
