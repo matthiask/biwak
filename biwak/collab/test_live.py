@@ -379,6 +379,76 @@ class LiveTest(TestCase):
         self.assertFalse(operations.save_live(0))
 
 
+class Browser:
+    """An open editor: synced once, sending what it types"""
+
+    def __init__(self, pk, user):
+        from pycrdt import Doc, XmlFragment
+
+        self.pk, self.user = pk, user
+        self.doc = Doc()
+        self.doc.apply_update(live.load(pk).get_update())
+        self.fragment = self.doc.get(ytext.FRAGMENT, type=XmlFragment)
+
+    def send(self, change):
+        before = self.doc.get_state()
+        change()
+        live.append(self.pk, self.doc.get_update(before), self.user)
+
+
+class StateLeftAloneTest(TestCase):
+    """What Markdown can't hold (a space at the end, a line just begun)
+    is in the state only: a state its content was written from isn't
+    made to follow it behind the open editors (found 2026-11-28,
+    verification round 2: the next words arrived glued or were lost)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.project = project(members=[self.ada])
+        self.item = bare_doc(
+            project=self.project, title="Minutes", content="Agenda", creator=self.ada
+        )
+        self.pk = self.item.pk
+        live.prepare(self.pk)
+        self.browser = Browser(self.pk, self.ada)
+
+    def content(self):
+        return self.item.doc.__class__.objects.get(pk=self.pk).content
+
+    def test_a_space_typed_before_somebody_opens_the_editor(self):
+        words = self.browser.fragment.children[0].children[0]
+        self.browser.send(lambda: words.insert(len("Agenda"), " "))
+        operations.save_live(self.pk)
+        state = bytes(LiveState.objects.get(doc_id=self.pk).state)
+        live.history(self.pk)  # Somebody opens the editor
+        self.assertEqual(bytes(LiveState.objects.get(doc_id=self.pk).state), state)
+        self.browser.send(lambda: words.insert(len("Agenda "), "next"))
+        operations.save_live(self.pk)
+        self.assertEqual(self.content(), "Agenda next")
+
+    def test_a_line_begun_before_somebody_opens_the_editor(self):
+        from pycrdt import XmlElement, XmlText
+
+        line = XmlElement("paragraph")
+        self.browser.send(lambda: self.browser.fragment.children.append(line))
+        operations.save_live(self.pk)
+        live.history(self.pk)
+        text = XmlText()
+
+        def type_():
+            line.children.append(text)
+            text.insert(0, "Budget")
+
+        self.browser.send(type_)
+        operations.save_live(self.pk)
+        self.assertEqual(self.content(), "Agenda\n\nBudget")
+
+    def test_content_changed_some_other_way_is_followed(self):
+        self.item.doc.__class__.objects.filter(pk=self.pk).update(content="Budget")
+        live.prepare(self.pk)
+        self.assertEqual(ytext.text(live.load(self.pk)), "Budget")
+
+
 class AuditNameTest(TestCase):
     """The audit log names who typed what a save merges, not who caused it
     (decided 2026-11-28, specs/auditing.md)"""

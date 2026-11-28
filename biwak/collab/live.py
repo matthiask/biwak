@@ -60,13 +60,19 @@ def ensure_state(doc):
     """The doc's ``LiveState``, made from its content the first time; call
     with the doc's row locked. A state whose document differs from the
     content's without updates pending (the content changed some other way)
-    follows the content."""
+    follows the content. Not a state the content was written from: it
+    may hold what Markdown can't (a space at the end, a line just begun),
+    and changing it here, behind the open editors, lost what they typed
+    next (found 2026-11-28, verification round 2); so the state's own
+    text is compared, not its document with the content's."""
     state = LiveState.objects.filter(doc=doc).first()
     if state is None:
         return LiveState.objects.create(doc=doc, state=ytext.initial_state(doc.content))
     if not doc.live_updates.exists():
         y = ytext.ydoc(state.state)
-        if not ytext.means(y, doc.content):
+        if ytext.text(y, doc.content) != ytext.text(
+            ytext.ydoc(ytext.initial_state(doc.content)), doc.content
+        ):
             ytext.edit(y, doc.content)
             state.state = y.get_update()
             state.updated_at = timezone.now()
