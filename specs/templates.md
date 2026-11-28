@@ -68,7 +68,11 @@ of what's needed:
   none; a template that has them means them). **Assignments are kept**
   (decided 2026-11-22: unless there's a good reason not to): assignees
   who wouldn't see the new project are added as members, as "Copy…"
-  does (`lists-across-projects.md`).
+  does (`lists-across-projects.md`). Deactivated assignees and people
+  asked stay, as on the template, where they see the new project, not
+  subscribed and never asked (only active people are, `checkins.md`);
+  they aren't added as members (decided 2026-11-28, verification round
+  1: creating the project failed on them).
 - **Client visibility** is copied (decided 2026-11-22): a template
   prepares what the client sees from day one, e.g. a welcome message.
   The new project form says what clients will see ("Visible to

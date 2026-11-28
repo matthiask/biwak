@@ -57,7 +57,8 @@ project. Staff create lists with "New list" on the project's page.
   the open to-dos with their notes, checklists, attachments and repeat
   rules. Not completed to-dos, comments or subscribers. Assignees stay:
   staff who aren't in that project are added to it; clients who won't
-  see the copy are left out. The dialog names them first. The due dates stay, move by a number of days or go. The copy
+  see the copy are left out. Deactivated people stay assigned where they
+  see the copy. The dialog names them first. The due dates stay, move by a number of days or go. The copy
   keeps the list's title, with "(copy)" if the project has a list of
   that name, and is internal unless you tick "Visible to clients"
   (which asks first).

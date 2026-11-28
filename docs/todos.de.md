@@ -71,7 +71,8 @@ auf der Seite des Projekts.
   Checklisten, Anhängen und Wiederholungsregeln. Keine erledigten
   To-dos, Kommentare oder Abonnent:innen. Zugewiesene bleiben:
   Mitarbeitende, die nicht in diesem Projekt sind, werden hinzugefügt;
-  Kund:innen, die die Kopie nicht sehen werden, fallen weg. Der Dialog
+  Kund:innen, die die Kopie nicht sehen werden, fallen weg.
+  Deaktivierte bleiben zugewiesen, wo sie die Kopie sehen. Der Dialog
   nennt sie vorher. Die Fälligkeiten bleiben, verschieben sich um eine
   Anzahl Tage oder fallen weg. Die Kopie behält den Titel der Liste, mit
   „(Kopie)“, wenn das Projekt eine Liste mit diesem Namen hat, und ist

@@ -3,8 +3,14 @@ show; the to-dos page lists their open to-dos (specs/handover.md)"""
 
 from django.test import TestCase
 
+from biwak.activity.models import Subscription
+from biwak.checkins import operations as checkin_ops
+from biwak.checkins.support import MONDAY_9
 from biwak.items import operations as ops
+from biwak.items.models import Item, Kind
 from biwak.organizations import activation
+from biwak.projects import operations as project_ops
+from biwak.projects.models import Project
 from biwak.test_utils import person, project
 
 
@@ -92,3 +98,74 @@ class InactiveAssigneesTest(TestCase):
         self.assertEqual((gil["id"], gil["is_active"]), (self.gil.pk, False))
         data = self.client.get(f"/api/v1/todos/?assignee={self.gil.pk}").json()
         self.assertEqual([t["id"] for t in data["results"]], [self.todo.pk])
+
+    def test_copying_the_list(self):
+        """The copy keeps them assigned, without subscribing them (decided
+        2026-11-28)"""
+        self.client.force_login(self.ada)
+        pk = self.website.pk
+        response = self.client.post(
+            f"/lists/{self.todolist.pk}/copy/",
+            {
+                "project": pk,
+                "title": "Launch",
+                "dates": "keep",
+                "visible": "on",
+                "confirmed": f"{pk}:1",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        copy = Item.objects.get(
+            parent__project=self.website, title="Write the copy", pk__gt=self.todo.pk
+        )
+        self.assertEqual(list(copy.todo.assignees.all()), [self.gil])
+        self.assertFalse(Subscription.objects.filter(item=copy, user=self.gil).exists())
+
+
+class InactiveInTemplatesTest(TestCase):
+    """A template's assignees and people asked who were deactivated stay on
+    the new project's to-dos and questions, unsubscribed (decided 2026-11-28)"""
+
+    def setUp(self):
+        self.root = person("Root", is_admin=True)
+        self.ada = person("Ada")
+        self.gil = person("Gil")
+        self.template = project_ops.create_template(name="Web", actor=self.ada)
+        todolist = ops.create_list(
+            project=self.template, title="Launch", creator=self.ada
+        )
+        ops.create_todo(
+            todolist=todolist,
+            title="Write the copy",
+            creator=self.ada,
+            assignees=[self.gil],
+        )
+        checkin_ops.create_question(
+            project=self.template,
+            title="What are you working on?",
+            creator=self.ada,
+            people=[self.gil, self.ada],
+            **MONDAY_9,
+        )
+        activation.deactivate([self.gil], actor=self.root)
+
+    def test_api(self):
+        self.client.force_login(self.ada)
+        response = self.client.post(
+            "/api/v1/projects/",
+            {"name": "Website", "template": self.template.pk},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+        website = Project.objects.get(pk=response.json()["id"])
+        todo = Item.objects.get(project=website, kind=Kind.TODO)
+        self.assertEqual(list(todo.todo.assignees.all()), [self.gil])
+        question = Item.objects.get(project=website, kind=Kind.QUESTION)
+        self.assertEqual(set(question.question.people.all()), {self.ada, self.gil})
+        self.assertFalse(
+            Subscription.objects.filter(
+                item__in=[todo, question], user=self.gil
+            ).exists()
+        )
+        # Not asked: only active people are
+        self.assertEqual(checkin_ops._recipients(question.question), [self.ada])

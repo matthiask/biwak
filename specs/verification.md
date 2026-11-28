@@ -125,7 +125,8 @@ and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
 Fixed: stale to-dos marked obsolete on the promised day; copies keep
-a group's "Keep untouched to-dos for a year".
+a group's "Keep untouched to-dos for a year"; copies keep deactivated
+assignees and people asked instead of failing.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -172,9 +173,6 @@ part's spec with the fix):
     (decided; today `_assignable()` drops them) and subscribes the
     list's watchers (today it copies the old to-do's subscribers).
 - **People:**
-  - Copying a list, a project from a template, or a template's check-in
-    with a deactivated assignee or person asked fails (`subscribe()`
-    raises; the copy page shows the untranslated error, the API 500).
   - The API can't keep a deactivated assignee when changing assignees
     (`assignable_people()`; the page uses `assignable_or_assigned()`);
     the same for check-ins' people (`_check_people()`).

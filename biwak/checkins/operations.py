@@ -182,8 +182,11 @@ def copy_question(item, project, *, actor, now=None):
         question.save(update_fields=["next_at"])
     question.people.set(people)
     subscribe(actor, copy)
+    # Deactivated people stay in the list, as on the template, but aren't
+    # asked (``_recipients()``) and can't be subscribed
     for user in people:
-        subscribe(user, copy, added_by=actor)
+        if user.is_active:
+            subscribe(user, copy, added_by=actor)
     return copy
 
 

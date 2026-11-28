@@ -1738,8 +1738,9 @@ def copy_list(
             for pk in assignees
         ])
         # Assigned means subscribed (specs/subscribers.md), told by nobody:
-        # one event for the copy
-        for user in User.objects.filter(pk__in=assignees):
+        # one event for the copy. Deactivated people stay assigned
+        # (specs/handover.md) but can't be subscribed
+        for user in User.objects.filter(pk__in=assignees, is_active=True):
             subscribe(user, new, explicit=False)
     if quiet:
         subscribe(actor, copy)

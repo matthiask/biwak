@@ -25,7 +25,10 @@ Templates copy lists the same way (`templates.md`).
   (with the default notification choice, as assigning a non-member
   does); clients who don't see the copy are left out. The modal says
   who first: "Dan Example will be added to Website.", "Cleo Example
-  won't see the copy: left unassigned."
+  won't see the copy: left unassigned." Deactivated people stay
+  assigned where they see the copy, not subscribed (they can't be) and
+  never added as members (decided 2026-11-28, verification round 1: the
+  copy failed on them).
 - **Dates:** "Keep", "Move by N days" (due and start dates together),
   or "Remove"; recurrence rules stay.
 - **Visibility** is the target's: the copy is internal unless "Visible
