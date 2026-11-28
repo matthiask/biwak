@@ -48,7 +48,10 @@ lists, messages, docs and files, check-ins, members.
 - Staff add outside links (a design file, the live site) with "Add a
   link" on the project's page or in the command palette.
 - **Members** lists who is in the project, by organization: your own
-  first, then the clients' organizations, then externals'. Staff add
+  first, then the clients' organizations, then externals'. The project's
+  page shows each organization once with a row of its people's pictures
+  (the name shows on hovering, a click opens their page); "Manage" (or
+  "All") lists them with their names. Staff add
   people there, "Add people from …" an organization in the project, or
   invite them by email (see [People](#people)), and remove them with
   "Remove" in their row, which asks first.

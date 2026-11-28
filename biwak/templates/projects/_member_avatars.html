@@ -1,0 +1,17 @@
+{% load biwak %}
+{% comment %}
+  The project page's "Members": each organization's name once with a row of
+  avatars (decided 2026-11-28, GitHub issue #4); the people page lists them all
+{% endcomment %}
+<div class="mb-4" data-member-groups>
+  {% for group in member_groups %}
+    <div class="wb-member-group">
+      <div class="wb-member-org">
+        {% if group.organization %}{{ group.organization }}{% else %}{{ group.label }}{% endif %}
+      </div>
+      <div class="wb-avatar-row">
+        {% for row in group.people %}{% person_avatar row.0.user %}{% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</div>

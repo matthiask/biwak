@@ -1523,6 +1523,24 @@ html:not(.js) .wb-handle {
 }
 
 /* Inactive people (specs/handover.md): the mark greyed */
+/* The project page's members (projects/_member_avatars.html): each
+   organization once, its people as a row of avatars */
+.wb-member-group + .wb-member-group {
+  margin-top: 0.5rem;
+}
+
+.wb-member-org {
+  font-size: 0.875em;
+  color: var(--bs-secondary-color);
+  margin-bottom: 0.25rem;
+}
+
+.wb-avatar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
 .wb-avatar-inactive {
   filter: grayscale(1);
   opacity: 0.5;
