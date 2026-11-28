@@ -23,7 +23,9 @@ forever.
   organizations, teams, notification levels. New tables people change
   get `audit_tables()` in a migration (AGENTS.md).
 - **Who:** the row's `user_name`. Requests and API tokens set
-  `user-<id>-…` (`set_user_name()`), `user-0-anonymous` without a
+  `user-<id>-…` (`set_user_name()`, the short name without accents:
+  PostgreSQL keeps only ASCII in `application_name`, "Jürg" is "Jurg";
+  the history finds the person by the ID), `user-0-anonymous` without a
   sign-in; jobs name themselves: "Send mails", "Fairy tasks", "Resend"
   (incoming mail and delivery events), "Basecamp import". Mail replies,
   forwarded mails and live doc editing run as the person, and so do the

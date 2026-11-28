@@ -131,7 +131,8 @@ and activates through `activate()`; deactivating and "Reset sign-in…"
 remove push devices; single sign-on's 24-hour end keeps the push device
 (nothing audited is written then, so the connection's previous name
 doesn't matter there anymore); the mails' signed links ("Keep open",
-unsubscribing) are logged as their recipient.
+unsubscribing) are logged as their recipient; names in the audit log
+lose their accents instead of turning into escapes.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -226,8 +227,6 @@ part's spec with the fix):
 - **Who did what:**
   - A live save names the authors of the typing it merges (decided;
     today whoever triggered it, also a client who only opened the page).
-  - Names that aren't ASCII are garbled in `user_name`
-    (`application_name`).
 
 **Decided, no change:**
 
