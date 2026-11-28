@@ -767,13 +767,17 @@ def assign_todos(items, users, *, actor, replace=False):
     done = {}
     keep = {user.pk for user in users}
     for item in items:
+        removed = []
         if replace:
-            unassign(
+            removed = unassign(
                 item,
                 [u for u in item.todo.assignees.all() if u.pk not in keep],
                 actor=actor,
             )
         done[item] = assign(item, users, actor=actor, batch=batch)
+        if removed or done[item]:
+            # Reading by acting, like "Due date…" (specs/lantern.md)
+            read_by_acting(actor, item)
     return done
 
 

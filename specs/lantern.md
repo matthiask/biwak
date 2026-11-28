@@ -133,7 +133,9 @@ ticks the same thing off twice. **When in reasonable doubt, it stays
 unread.**
 
 - **Reads:** completing or reopening a to-do; editing any kind of item
-  (only when something actually changed: the to-do's fields,
+  (only when something actually changed: the to-do's fields, also
+  several at once with "Due date…" and "Assign…", each to-do it
+  changed, `assign_todos()` since 2026-11-28,
   `update_message()`, `update_upload()`, `replace_upload()`,
   `update_list()`, `update_answer()`, `update_question()`; a doc's saved
   change reads for each of its authors in `_save()`); ticking a

@@ -90,7 +90,7 @@ shows what you've read already in the same entry, quieter. The page "All notific
   change in the end, or nothing when it's back where it started; mails
   do the same.
 - **Acting on an item reads it:** completing or reopening a to-do,
-  changing it, ticking its checklist, commenting, reacting, or
+  changing it (also several at once with "Assign…" or "Due date…"), ticking its checklist, commenting, reacting, or
   answering a check-in. Only looking doesn't: opening an item from the
   feed, a list, search or a mail leaves it unread. Bookmarking and
   subscribing don't count either.

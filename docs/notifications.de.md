@@ -105,7 +105,8 @@ Seite „Alle Benachrichtigungen“ hat die ganze Liste mit „Ungelesen“ und
   die Änderung am Ende, oder nichts, wenn es wieder ist wie am Anfang;
   Mails tun dasselbe.
 - **Etwas mit einem Eintrag tun liest ihn:** ein To-do erledigen oder
-  wieder öffnen, es ändern, seine Checkliste abhaken, kommentieren,
+  wieder öffnen, es ändern (auch mehrere aufs Mal mit „Zuweisen…“ oder
+  „Fälligkeit…“), seine Checkliste abhaken, kommentieren,
   reagieren oder einen Check-in beantworten. Nur ansehen nicht: Einen
   Eintrag aus der Aktivität, einer Liste, der Suche oder einer Mail zu
   öffnen lässt ihn ungelesen. Lesezeichen setzen und abonnieren zählen
