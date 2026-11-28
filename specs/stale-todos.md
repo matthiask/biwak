@@ -192,7 +192,10 @@ gets a pointer here.
 - **Who gets the mail** is decided at the warning: `StaleWarning` rows
   (`biwak/items/stale.py`) for the subscribers then. When sending, rows
   of people without mail (none, inactive, bounced, away) and of to-dos
-  not warned any more are dropped, not kept for later.
+  not warned any more are dropped, not kept for later; so are to-dos
+  that aren't stale any more since the run (commented on, edited, their
+  list or project archived), checked with the run's rule when the mail
+  is built (verification round 1, 2026-11-28, consistent).
 - **Clearing:** the daily run clears the warning of every warned to-do
   which isn't stale any more (touched, its dates moved, its group kept
   for a year now) or isn't open; keeping clears it at once.

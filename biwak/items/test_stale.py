@@ -387,6 +387,22 @@ class WarningMailTest(StaleBase):
         self.assertEqual(message.subject, "[Biwak] 1 to-do will be marked as obsolete")
         self.assertNotIn("Order the tent", message.body)
 
+    def test_not_stale_any_more(self):
+        """Commented on (or its list archived) since the run: left out
+        like a kept one (verification round 1, consistent)"""
+        with time_machine.travel(NOW.replace(hour=5), tick=False):
+            ops.add_comment(self.first, author=self.ada, content="Still needed")
+        self.send(NOW.replace(hour=8))
+        [message] = self.mails_to(self.bob)
+        self.assertEqual(message.subject, "[Biwak] 1 to-do will be marked as obsolete")
+        self.assertNotIn("Order the tent", message.body)
+        self.assertIn("Book the bus", message.body)
+
+    def test_list_archived_since(self):
+        ops.archive(self.list, actor=self.ada)
+        self.send(NOW.replace(hour=8))
+        self.assertEqual(self.mails_to(self.bob), [])
+
     def test_german(self):
         self.bob.language = "de"
         self.bob.save()

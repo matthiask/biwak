@@ -327,16 +327,18 @@ def _due(user, local):
     return local.time() >= DIGEST_AT
 
 
-def _still_warned(user, pks):
-    """The warned, open to-dos among ``pks`` the person still sees"""
+def _still_warned(user, pks, now):
+    """The warned to-dos among ``pks`` the person still sees which are
+    still stale at ``now`` (the run's rule): not commented on, kept,
+    completed or archived since the run"""
     return list(
         Item.objects
         .visible_to(user)
         .filter(
             pk__in=pks,
             todo__stale_warned_at__isnull=False,
-            todo__completed_at__isnull=True,
         )
+        .filter(pk__in=stale_todos(now).values("pk"))
         .select_related("project", "parent", "todo")
         .order_by("project__name", "project_id", "parent__position", "position")
     )
@@ -399,7 +401,7 @@ def _deliverable(user):
 def send_warnings(now):
     """The warning mails due now, one per person; returns how many.
     Warnings of people who get no mail (no mails, inactive, bounced, away)
-    or about to-dos not warned any more are dropped."""
+    or about to-dos not warned or not stale any more are dropped."""
     local = timezone.localtime(now)
     pending = {}
     for user_id, pk in StaleWarning.objects.filter(sent_at__isnull=True).values_list(
@@ -432,7 +434,7 @@ def _send(user, pks, now, local):
     if not claimed or not _deliverable(user) or is_away(user, local.date()):
         return 0
     with translation.override(language_for(user)), mentions.reading_as(user):
-        items = _still_warned(user, claimed)
+        items = _still_warned(user, claimed, now)
         if not items:
             return 0
         message = warning_mail(user, items)
