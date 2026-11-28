@@ -574,6 +574,8 @@ class InvitationsVisibleTest(TestCase):
         )
         todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
         ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        # Completed to-dos keep their assignees
+        ops.complete(todo, actor=self.ada)
         url = reverse("invitation_withdraw", args=[self.dora.pk])
         self.client.force_login(self.bob)
         self.assertContains(self.client.get(url), "the account is deactivated")
@@ -581,6 +583,22 @@ class InvitationsVisibleTest(TestCase):
         self.assertRedirects(response, "/people/")
         self.dora.refresh_from_db()
         self.assertFalse(self.website.is_member(self.dora))
+
+    def test_withdraw_unassigns_before_deciding(self):
+        """Consistent (2026-11-28): open assignments go with withdrawing
+        (``remove_member()``), so they don't keep the account, in the
+        question either"""
+        todolist = ops.create_list(
+            project=self.website, title="Launch", creator=self.ada, visible=True
+        )
+        todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
+        ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        url = reverse("invitation_withdraw", args=[self.dora.pk])
+        self.client.force_login(self.bob)
+        self.assertContains(self.client.get(url), "the account is deleted")
+        self.client.post(url)
+        self.assertFalse(User.objects.filter(pk=self.dora.pk).exists())
+        self.assertEqual(list(todo.todo.assignees.all()), [])
 
     def test_withdraw_removes_from_projects_the_actor_cant_open(self):
         """Decided 2026-11-21: withdrawing is withdrawing, also from projects
@@ -611,6 +629,7 @@ class InvitationsVisibleTest(TestCase):
         )
         todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
         ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        ops.complete(todo, actor=self.ada)
         self.client.force_login(self.bob)
         url = reverse("invitation_withdraw", args=[self.dora.pk])
         self.assertContains(self.client.get(url), "the account is deactivated")
@@ -685,6 +704,7 @@ class InvitationsVisibleTest(TestCase):
         )
         todo = ops.create_todo(todolist=todolist, title="Copy", creator=self.ada)
         ops.update_todo(todo, actor=self.ada, assignees=[self.dora])
+        ops.complete(todo, actor=self.ada)
         APIToken.create_for(user=self.dora, title="T", access="write")
         CalendarToken.objects.create(user=self.dora)
         url = reverse("invitation_withdraw", args=[self.dora.pk])

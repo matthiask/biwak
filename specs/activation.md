@@ -91,7 +91,11 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
   withdrawing"), recorded as
   "removed", the "added" events stay. The account goes when nothing
   refers to it (comments, items, events, files, links, assignments,
-  check-ins asking them, mentions, reactions); when something does, it
+  check-ins asking them, mentions, reactions), decided after removing
+  them from the projects, which unassigns them from the open to-dos
+  there (consistent, verification round 1, 2026-11-28: open assignments
+  alone don't keep the account; `_referred_to(leaving=)` for the
+  question); when something does, it
   stays deactivated (decided 2026-11-21: through
   `activation.deactivate()`, so sessions, API tokens and calendar links
   go too). The question says which happens and names the projects the

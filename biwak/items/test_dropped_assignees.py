@@ -6,6 +6,7 @@ theirs (decided 2026-11-22, specs/handover.md)."""
 from django.core import mail
 from django.test import TestCase
 
+from biwak.accounts.models import User
 from biwak.activity.models import Action, Event
 from biwak.items import operations as ops
 from biwak.organizations import activation
@@ -92,8 +93,8 @@ class DroppedAssigneesTest(TestCase):
             self.todos["Website"], actor=self.ada, assignees=[self.ada, dora]
         )
         project_ops.withdraw_invitation(dora, actor=self.ada)
-        dora.refresh_from_db()
-        self.assertFalse(dora.is_active)
+        # Nothing else referred to Dora: deleted (decided 2026-11-28)
+        self.assertFalse(User.objects.filter(pk=dora.pk).exists())
         self.assertEqual(self.assignees(self.todos["Website"]), {self.ada})
 
 

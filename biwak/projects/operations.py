@@ -326,11 +326,14 @@ def resend_invitation(user, *, actor):
     send_invitation(list(invitation_projects(user)), user, actor=actor)
 
 
-def _referred_to(user):
+def _referred_to(user, *, leaving=()):
     """Whether something keeps the person: what can't be deleted with
     them (comments, items, events, files, links: ``PROTECT``), what others
-    gave them (assignments, check-ins asking them), mentions and reactions"""
+    gave them (assignments, check-ins asking them), mentions and reactions.
+    Not the assignments on open to-dos of the projects they're ``leaving``,
+    which ``remove_member()`` takes away (decided 2026-11-28)."""
     from biwak.activity.models import Mention
+    from biwak.items.models import Todo
     from biwak.reactions.models import Reaction
 
     for relation in User._meta.get_fields(include_hidden=True):
@@ -338,7 +341,12 @@ def _referred_to(user):
             continue
         if relation.many_to_many or relation.on_delete is models.PROTECT:
             manager = relation.related_model._base_manager
-            if manager.filter(**{relation.field.name: user}).exists():
+            rows = manager.filter(**{relation.field.name: user})
+            if relation.related_model is Todo:
+                rows = rows.exclude(
+                    completed_at__isnull=True, item__project__in=list(leaving)
+                )
+            if rows.exists():
                 return True
     return (
         Mention.objects.filter(user=user).exists()
@@ -379,7 +387,7 @@ def withdrawal(user, *, actor):
     projects = list(
         Project.objects.filter(memberships__user=user).order_by(Lower("name"))
     )
-    referred_to = _referred_to(user)
+    referred_to = _referred_to(user, leaving=projects)
     return Withdrawn(projects, deleted=not referred_to, deactivated=referred_to)
 
 
@@ -398,14 +406,17 @@ def withdraw_invitation(user, *, actor):
             "Only staff withdraw invitations of clients not signed in, admins"
             " everybody's."
         )
-    withdrawn = withdrawal(user, actor=actor)
-    for project in withdrawn.projects:
+    projects = withdrawal(user, actor=actor).projects
+    for project in projects:
+        # Unassigns them from the open to-dos before deciding (decided
+        # 2026-11-28)
         remove_member(project, user, actor=actor)
-    if withdrawn.deleted:
-        user.delete()
-    elif withdrawn.deactivated:
+    referred_to = _referred_to(user)
+    if referred_to:
         activation.deactivate([user], actor=actor)
-    return withdrawn
+    else:
+        user.delete()
+    return Withdrawn(projects, deleted=not referred_to, deactivated=referred_to)
 
 
 def send_invitation(projects, user, *, actor):

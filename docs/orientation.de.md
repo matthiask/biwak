@@ -273,8 +273,9 @@ niemand eingeladen, und das Formular sagt, welche Zeile falsch ist.
 Mitarbeitende „Eingeladen, noch nicht angemeldet“ daneben, mit wer
 eingeladen hat und wann. „Erneut senden“ schickt die Einladung nochmals
 und nennt die Projekte, in denen die Person jetzt ist. „Zurückziehen…“
-entfernt sie aus allen ihren Projekten und löscht das Konto, wenn
-nichts anderes darauf verweist (keine Kommentare, keine Zuweisungen);
+entfernt sie aus allen ihren Projekten und von deren offenen To-dos und
+löscht das Konto, wenn nichts anderes darauf verweist (keine Kommentare,
+keine erledigten To-dos);
 verweist etwas darauf, bleibt das Konto, wird aber deaktiviert.
 Mitarbeitende senden und ziehen Einladungen von Kund:innen zurück,
 Admins die von allen. „Eingeladen“ auf der Seite Personen zeigt alle,
