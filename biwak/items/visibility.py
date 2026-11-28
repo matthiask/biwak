@@ -7,7 +7,6 @@ subtrees whenever a switch changes, an item moves or is created, in the
 same transaction. ``check()`` compares the stored values with the tree.
 """
 
-from biwak.accounts.models import User
 from biwak.items.models import Comment, Item, Status
 
 
@@ -76,7 +75,10 @@ def shown_by_moving_into(todos, project, *, visible):
     see something new. None if it shows nothing."""
     if not visible:
         return None
-    clients = User.objects.active().filter(is_client=True, memberships__project=project)
+    # Those waiting to be activated count, as in clients_of() (found
+    # 2026-11-28, verification round 2: only active ones did, so imported
+    # projects asked about "0 clients" or didn't ask)
+    clients = project.client_members()
     shown = [todo.pk for todo in todos if not todo.is_client_visible]
     new = set(clients.values_list("pk", flat=True)) if shown else set()
     sources = {

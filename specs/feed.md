@@ -86,7 +86,9 @@ Decisions (2026-11-20 unless dated):
   stores the list's ID (`to_id`) next to its title;
   `feed.add_target_lists()` resolves a page of events in one query and
   shows the list's current title. Events without the ID stay staff-only
-  (staff see the title at the time). The source list is visible anyway,
+  (staff see the title at the time; not that of a list in a project
+  they can't open, a limited one: verification round 2, 2026-11-28, the
+  API named it). The source list is visible anyway,
   since the to-do is. In the API a client's `data` has `to` and `to_id`
   only for a visible list.
 - **Moves between groups** (a board column) are a `moved` event with the

@@ -218,6 +218,50 @@ class NewEventDataTest(FeedBase):
             )
             self.assertEqual(unassigned["data"]["assignees"], [self.bob.pk])
 
+    def test_the_note_is_for_those_told(self):
+        """ "Tell them now"'s note: the feed's pages don't show it, the API
+        gave it to everybody (found 2026-11-28, verification round 2)"""
+        from biwak.activity.operations import share
+
+        share(self.todo, [self.bob], actor=self.ada, notify=True, note="Cleo haggles")
+        dan = person("Dan")
+        self.project.memberships.create(user=dan)
+        for user, reads in [
+            (self.ada, True),
+            (self.bob, True),
+            (dan, False),
+            (self.cleo, False),
+        ]:
+            (event,) = [
+                event for event in self.get(user) if event["action"] == "shared"
+            ]
+            with self.subTest(user=user):
+                self.assertEqual("note" in event["data"], reads)
+
+    def test_a_limited_projects_list_isnt_named(self):
+        """A move's trace names the target list by its title at the time
+        only to who can open its project (round 2: own staff outside a
+        limited project read it)"""
+        limited = project("Staff matters", members=[self.ada], all_access=False)
+        target = ops.create_list(project=limited, title="Zebra", creator=self.ada)
+        ops.move_todos_to([self.todo], todolist=target, actor=self.ada)
+
+        def trace(user):
+            (event,) = [
+                event
+                for event in self.get(user)
+                if event["action"] == "moved" and event["item"] is None
+            ]
+            return event["data"]
+
+        self.assertEqual(trace(self.bob), {"todos": 1})
+        self.assertEqual(trace(self.ada)["to"], "Zebra")
+        # A list that is gone: the title at the time, as before
+        Event.objects.filter(action=Action.MOVED, item=None).update(
+            data={"todos": 1, "to": "Zebra", "to_id": 0}
+        )
+        self.assertEqual(trace(self.bob)["to"], "Zebra")
+
     def test_people_the_reader_may_not_know_are_left_out(self):
         """Clients learn about members only: people who aren't members (any
         more), assigned or mentioned, don't show in the events' data by ID

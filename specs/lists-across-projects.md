@@ -50,7 +50,8 @@ Templates copy lists the same way (`templates.md`).
 - **Everything comes along:** children, comments, reactions, events
   and history stay with the item (the new project's feed shows them,
   including past events; the old one's keeps a trace, below), checklist
-  counts, public links (they keep working), bookmarks.
+  counts, bookmarks. Public links end (`public-links.md`, decided
+  2026-11-28; this line said they keep working).
 - **People** (decided 2026-11-22): assignees of open to-dos stay. Those who see the
   item in the target (members; own staff of an all-access project) just
   stay, own staff and externals who don't are added as members (the
