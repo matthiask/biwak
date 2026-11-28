@@ -50,8 +50,9 @@ project. Staff create lists with "New list" on the project's page.
   stays readable, but is left out of the project's lists (under the
   lists, "3 archived lists" leads to them, at the end of the project's
   to-dos page), of your to-dos, of the calendar link and of the
-  palette's suggestions, and its recurring to-dos don't repeat. Nothing
-  is archived automatically. To-dos are completed, not archived.
+  palette's suggestions, and its recurring to-dos don't repeat. No
+  to-dos are added to it or moved into it, the same in an archived
+  project. Nothing is archived automatically. To-dos are completed, not archived.
 - **Copy:** "Copy…" in the list's "More" menu (staff) copies its open
   work into this or another project: the description, the groups and
   the open to-dos with their notes, checklists, attachments and repeat

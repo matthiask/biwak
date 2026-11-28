@@ -206,8 +206,10 @@ def create_todo(
     recurrence_count=None,
 ):
     """``todolist`` is the list's item; ``InvalidDates`` for a start date
-    without a due date or after it"""
+    without a due date or after it, ``ValueError`` for an archived list or
+    one in an archived project (``refuse_closed()``)"""
     check_dates(starts_on, due_on)
+    refuse_closed(todolist)
     TodoList.objects.select_for_update().get(item=todolist)
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
@@ -1016,8 +1018,8 @@ def _create_next(item, todo, *, actor):
     if item.following.exclude(item__status=Status.TRASHED).exists():
         return None
     todolist = item.parent
-    if todolist.status == Status.ARCHIVED:
-        # Nothing new in an archived list (specs/archiving.md)
+    if not takes_todos(todolist):
+        # Nothing new in an archived list or project (specs/archiving.md)
         return None
     TodoList.objects.select_for_update().get(item=todolist)
     following = create_item(
@@ -1129,7 +1131,8 @@ def move_todos(
     isn't the index among all, specs/todos.md). Locks the
     lists, so concurrent moves don't mix up positions. Moving into another
     list recomputes the visibility. Raises ``ValueError`` for a to-do given
-    twice. The events of more than one share a ``batch``
+    twice and for to-dos coming into an archived list or one in an
+    archived project (``refuse_closed()``; reordering there stays). The events of more than one share a ``batch``
     (specs/handover.md). Into another project: ``move_todos_to()``, which
     passes ``_from``, the projects they come from by to-do."""
     if not items:
@@ -1141,6 +1144,8 @@ def move_todos(
     list(TodoList.objects.select_for_update().filter(item__in=lists).order_by("pk"))
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
+    if any(i.parent_id != todolist.pk for i in items):
+        refuse_closed(todolist)
     _from = _from or {}
     if any(i.project_id != todolist.project_id and i.pk not in _from for i in items):
         raise ValueError("Moving to-dos between projects isn't possible")
@@ -1892,6 +1897,8 @@ def move_todos_to(items, *, todolist, group=None, index=None, actor):
         raise ValueError(gettext("Nothing moves into or out of an archived project."))
     if project.is_template or any(s.is_template for s in sources.values()):
         raise ValueError(gettext("Nothing moves into or out of a template."))
+    # Before anybody is added or dropped
+    refuse_closed(todolist)
     added, dropped = (
         list(people)
         for people in todos_move_people(
@@ -1947,9 +1954,24 @@ def may_add_to(user, todolist_item):
     return (
         can_create(user, Kind.TODO)
         and todolist_item.kind == Kind.LIST
-        and todolist_item.status == Status.ACTIVE
+        and takes_todos(todolist_item)
+    )
+
+
+def takes_todos(todolist_item):
+    """Whether new and moved to-dos go into the list: an active list in a
+    project that isn't archived (specs/archiving.md)"""
+    return (
+        todolist_item.status == Status.ACTIVE
         and todolist_item.project.archived_at is None
     )
+
+
+def refuse_closed(todolist_item):
+    """``ValueError`` unless the list ``takes_todos()``; the import brings
+    the source's to-dos wherever they are"""
+    if not is_importing() and not takes_todos(todolist_item):
+        raise ValueError(gettext("No to-dos can be added to this list."))
 
 
 def text_plan(todolist_item, text, user):

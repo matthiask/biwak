@@ -126,7 +126,8 @@ and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 throwaway test that was run again and failed before it was listed.
 Fixed: stale to-dos marked obsolete on the promised day; copies keep
 a group's "Keep untouched to-dos for a year"; copies keep deactivated
-assignees and people asked instead of failing.
+assignees and people asked instead of failing; archived lists and
+lists in archived projects take no new or moved to-dos.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -165,10 +166,6 @@ part's spec with the fix):
   - Check-in questions and answers changed in Basecamp aren't updated
     (`_upsert` without `update=`).
 - **To-dos:**
-  - Archived lists and lists in archived projects refuse new and moved
-    to-dos at every entry point, like `may_add_to()`: the inline form,
-    the API's create and move, dragging; a repeating to-do in an
-    archived project creates no next one (decided).
   - The next to-do of a repeating one keeps deactivated assignees
     (decided; today `_assignable()` drops them) and subscribes the
     list's watchers (today it copies the old to-do's subscribers).

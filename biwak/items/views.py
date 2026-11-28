@@ -346,32 +346,38 @@ def todolist(request, pk):
         by_group[todo.todo.group_id].append(todo)
     form = TodoForm(request.POST or None, item=item, user=request.user)
     if request.method == "POST":
-        if not form.is_valid():
-            if wants_fragment(request):
-                return HttpResponse(
-                    " ".join(e for errors in form.errors.values() for e in errors),
-                    status=422,
-                    content_type="text/plain; charset=utf-8",
-                )
-        else:
+        if form.is_valid():
             data = form.cleaned_data
             group = None
             if group_id := data["group"]:
                 group = get_object_or_404(Group, pk=group_id, todolist=todolist)
-            todo = ops.create_todo(
-                todolist=item,
-                title=data["title"],
-                creator=request.user,
-                group=group,
-                notes=data["notes"],
-                due_on=data["due_on"],
-                starts_on=data["starts_on"],
-                assignees=list(data["assignees"]),
-                **form.recurrence_kwargs(),
+            try:
+                todo = ops.create_todo(
+                    todolist=item,
+                    title=data["title"],
+                    creator=request.user,
+                    group=group,
+                    notes=data["notes"],
+                    due_on=data["due_on"],
+                    starts_on=data["starts_on"],
+                    assignees=list(data["assignees"]),
+                    **form.recurrence_kwargs(),
+                )
+            except ValueError as exc:
+                # An archived list or project (ops.refuse_closed())
+                form.add_error(None, str(exc))
+            else:
+                if wants_fragment(request):
+                    return render(
+                        request, "items/_todo.html", {"todo": todo}, status=201
+                    )
+                return redirect(item)
+        if wants_fragment(request):
+            return HttpResponse(
+                " ".join(e for errors in form.errors.values() for e in errors),
+                status=422,
+                content_type="text/plain; charset=utf-8",
             )
-            if wants_fragment(request):
-                return render(request, "items/_todo.html", {"todo": todo}, status=201)
-            return redirect(item)
     view = request.GET.get("view") or todolist.view
     completed, completed_cursor = _completed_page(
         todos, size=_shown(request.GET.get("completed"), COMPLETED_FIRST)
@@ -418,7 +424,7 @@ def todolist(request, pk):
             "people_teams": form.fields["assignees"].widget.team_attrs(),
             "view": view,
             "can_change": ops.can_change(request.user, item),
-            "can_add_from_text": ops.may_add_to(request.user, item),
+            "can_add": ops.may_add_to(request.user, item),
         },
     )
 
@@ -569,13 +575,19 @@ def todo_move(request, pk):
     group = None
     if group_id:
         group = get_object_or_404(Group, pk=_number(group_id), todolist=target.todolist)
-    ops.move_todo(
-        item,
-        todolist=target,
-        group=group,
-        index=_index(request.POST.get("index")),
-        actor=request.user,
-    )
+    try:
+        ops.move_todo(
+            item,
+            todolist=target,
+            group=group,
+            index=_index(request.POST.get("index")),
+            actor=request.user,
+        )
+    except ValueError as exc:
+        # Into an archived list or project (ops.refuse_closed())
+        return HttpResponse(
+            str(exc), status=400, content_type="text/plain; charset=utf-8"
+        )
     if request.headers.get("HX-Request") or request.POST.get("quiet"):
         return HttpResponse(status=204)
     return redirect(item if target_value else target)
@@ -628,14 +640,19 @@ def todo_move_to(request, pk):
         group = None
         if group_id:
             group = get_object_or_404(Group, pk=int(group_id), todolist=target.todolist)
-        ops.move_todo(
-            item,
-            todolist=target,
-            group=group,
-            index=_index(form.cleaned_data["index"]),
-            actor=request.user,
-        )
-        return redirect(item)
+        try:
+            ops.move_todo(
+                item,
+                todolist=target,
+                group=group,
+                index=_index(form.cleaned_data["index"]),
+                actor=request.user,
+            )
+        except ValueError as exc:
+            # Into an archived list or project (ops.refuse_closed())
+            form.add_error(None, str(exc))
+        else:
+            return redirect(item)
     return form_response(
         request,
         form,

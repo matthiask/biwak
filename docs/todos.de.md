@@ -63,7 +63,8 @@ auf der Seite des Projekts.
   archivierte Listen“ zu ihnen, am Ende der To-dos des Projekts), bei
   deinen To-dos, im Kalenderlink und bei den Vorschlägen
   der Palette, und ihre wiederkehrenden To-dos wiederholen sich nicht.
-  Nichts wird automatisch archiviert. To-dos werden erledigt, nicht
+  Es kommen keine To-dos dazu, auch nicht verschoben, ebenso in einem
+  archivierten Projekt. Nichts wird automatisch archiviert. To-dos werden erledigt, nicht
   archiviert.
 - **Kopieren:** „Kopieren…“ im Menü „Mehr“ der Liste (Mitarbeitende)
   kopiert ihre offene Arbeit in dieses oder ein anderes Projekt: die

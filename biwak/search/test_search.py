@@ -354,8 +354,11 @@ class FiltersTest(SearchBase):
             return len(queries_), len(response.context["results"])
 
         one = count()
+        # Archived lists take no new to-dos (specs/archiving.md)
+        ops.unarchive(self.visible, actor=self.ada)
         for n in range(3):
             ops.create_todo(todolist=self.visible, title=f"Tent {n}", creator=self.ada)
+        ops.archive(self.visible, actor=self.ada)
         many = count()
         self.assertEqual((one[1], many[1]), (3, 6))
         self.assertEqual(one[0], many[0])

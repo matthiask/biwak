@@ -310,7 +310,9 @@ def _on_list(user, item, context, url):
     """What a list's page offers besides an item's"""
     actions = []
     view = context.get("view")
-    actions.append(focus(_("New to-do"), ADD_TODO))
+    if ops.may_add_to(user, item):
+        # The inline form isn't there otherwise (specs/archiving.md)
+        actions.append(focus(_("New to-do"), ADD_TODO))
     if view == "board":
         actions.append(link(_("List view"), f"{url}?view=list"))
     else:

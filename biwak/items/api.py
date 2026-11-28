@@ -582,6 +582,8 @@ def todo_create(request, list_id: int, data: TodoIn):
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=item.todolist)
+    if not ops.takes_todos(item):
+        bad_request(_("No to-dos can be added to this list."))
     with invalid_dates():
         todo = ops.create_todo(
             todolist=item,
@@ -1034,9 +1036,13 @@ def todo_move(request, todo_id: int, data: MoveIn):
     group = None
     if data.group_id is not None:
         group = get_object_or_404(Group, pk=data.group_id, todolist=target.todolist)
-    ops.move_todo(
-        item, todolist=target, group=group, index=data.index, actor=request.user
-    )
+    try:
+        ops.move_todo(
+            item, todolist=target, group=group, index=data.index, actor=request.user
+        )
+    except ValueError as exc:
+        # Into an archived list or project (ops.refuse_closed())
+        bad_request(str(exc))
     return todo_out(Item.objects.get(pk=todo_id), request.user)
 
 
