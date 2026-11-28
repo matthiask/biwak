@@ -1978,7 +1978,8 @@ def move_todos_to(items, *, todolist, group=None, index=None, actor):
     links end. Each to-do's
     ``moved`` event names both projects; each project they left keeps one
     line for all of them (an event without item, for its staff) pointing
-    to the list. Nobody is told."""
+    to the list. The target list's watchers are told (``move_todos()``'s
+    events, decided 2026-11-28), nobody else."""
     project = todolist.project
     foreign = [item for item in items if item.project_id != project.pk]
     if not foreign:

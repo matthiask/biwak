@@ -6,7 +6,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from biwak.accounts.models import NotificationLevel
-from biwak.activity import mentions
+from biwak.activity import mails, mentions
 from biwak.activity.mails import _deliverable
 from biwak.activity.models import (
     Action,
@@ -139,7 +139,10 @@ class NotifyTest(TestCase):
                 lambda: ops.set_visibility(self.shared, visible=False, actor=self.ada)
             )
         )
-        # Moving tells nobody (decided 2026-11-22, specs/handover.md)
+        # Moving tells nobody (decided 2026-11-22, specs/handover.md) but
+        # the watchers of the list it comes into (decided 2026-11-28,
+        # ``WatchingListsTest``): Bob subscribed to it, not watching it
+        set_level_override(self.bob, NotificationLevel.CONCERNS_ME, item=self.shared)
         for action in [
             lambda: ops.move_todo(self.todo, todolist=self.internal, actor=self.ada),
             lambda: ops.move_todo(self.todo, todolist=self.shared, actor=self.ada),
@@ -488,6 +491,16 @@ class WatchingListsTest(TestCase):
         todo = Item.objects.get(title="Three")
         self.assertEqual(self.subscribers(todo), {self.ada.pk})
 
+    def test_added_from_text_tells_the_watchers_only(self):
+        """Like new to-dos one by one, not list subscribers on "only what
+        concerns me" (decided 2026-11-28)"""
+        self.watch(self.bob)
+        subscribe(self.dan, self.board)
+        told = self.told(
+            lambda: ops.add_from_text(self.board, "- One\n- Two", actor=self.ada)
+        )
+        self.assertEqual(told, {self.bob})
+
     def test_watchers_are_subscribed_to_new_to_dos(self):
         self.watch(self.bob)
         # Subscribed to the list on "only what concerns me": not watching
@@ -554,14 +567,32 @@ class WatchingListsTest(TestCase):
         ops.create_todo(todolist=self.board, title="Second", creator=self.ada)
         self.assertEqual(self.told(self.move(None, index=1)), set())
 
-    def test_moving_to_another_list_still_tells_nobody(self):
+    def test_moving_into_another_list_tells_its_watchers(self):
+        """Those watching the list it comes into who see it, nobody else,
+        never the mover (decided 2026-11-28)"""
+        eve = person("Eve")
+        project_ops.add_member(self.project, eve, actor=self.ada)
         subscribe(self.dan, self.todo)
+        # Subscribed to the list on "only what concerns me": not watching
+        subscribe(self.dan, self.other)
+        # Watching the list it leaves
         self.watch(self.bob)
-        set_level_override(self.dan, NotificationLevel.EVERYTHING, item=self.other)
-        told = self.told(
-            lambda: ops.move_todo(self.todo, todolist=self.other, actor=self.ada)
+        # Cleo can't see the internal list
+        for user in [self.ada, eve, self.cleo]:
+            set_level_override(user, NotificationLevel.EVERYTHING, item=self.other)
+
+        def into_other():
+            ops.move_todo(self.todo, todolist=self.other, actor=self.ada)
+
+        self.assertEqual(self.told(into_other), {eve})
+        notification = Notification.objects.get(user=eve)
+        self.assertEqual(
+            mails.describe(notification.event, eve), "Ada Example moved it to Other."
         )
-        self.assertEqual(told, set())
+        # Not after unsubscribing from the to-do (like moves between groups)
+        ops.move_todo(self.todo, todolist=self.board, actor=self.ada)
+        unsubscribe(eve, self.todo)
+        self.assertEqual(self.told(into_other), set())
 
     def test_moving_back_is_not_mailed(self):
         """Into "Doing" and back out: nothing to tell, whether the moves

@@ -30,7 +30,8 @@ from biwak.live import announce as live
 # list (specs/archiving.md), public links (specs/public-links.md), moving
 # (to-dos, files, lists and messages to another project; decided
 # 2026-11-22, specs/handover.md: the feed and the history say it), except
-# moving a to-do into another group of its list (``column_move()``)
+# moving a to-do into another group of its list (``column_move()``) and
+# into another list (``moved_in()``)
 SILENT = {
     Action.MOVED,
     # "Keep open" on a stale to-do (specs/stale-todos.md)
@@ -50,6 +51,13 @@ def column_move(event):
     board's column, ``move_todos()``): told, unlike other moves (decided
     2026-11-26, specs/notifications.md, "Watching a list")"""
     return event.action == Action.MOVED and "group" in event.data
+
+
+def moved_in(event):
+    """Whether the event moved a to-do into another list (from another
+    project too, ``move_todos()``): its watchers are told, nobody else
+    (decided 2026-11-28, specs/notifications.md, "Watching a list")"""
+    return event.action == Action.MOVED and "to_id" in event.data
 
 
 def watchers(todolist):
@@ -150,10 +158,11 @@ def wanting(people, event):
     "Who gets told": subscribing is the switch): everybody subscribed to the
     item, whatever their level, and those this event assigns; the people newly
     mentioned; the subscribers of the container hear about what's new in it
-    (``created``) on "everything". Reactions and sharing tell on every
+    (``created``, to-dos added from text) on "everything". Reactions and sharing tell on every
     level, like a mention."""
     item = event.item
-    if event.action in {Action.REACTED, Action.SHARED}:
+    if event.action in {Action.REACTED, Action.SHARED} or moved_in(event):
+        # A move into a list: its watchers (``candidates()``)
         return list(people)
     mentioned = set(event.data.get("mentioned", ()))
     if item.kind == Kind.ANSWER and event.action == Action.CREATED:
@@ -183,6 +192,16 @@ def wanting(people, event):
                 and Mode(modes.get(user.pk, DEFAULT_MODE)) == Mode.EACH
             )
             or user.pk in mentioned
+        ]
+    if event.action == Action.ADDED_TODOS:
+        # To-dos added from text, one event on the list: its watchers, like
+        # new to-dos one by one (decided 2026-11-28), not its subscribers on
+        # "only what concerns me"
+        levels = effective_levels(people, item)
+        return [
+            user
+            for user in people
+            if levels[user.pk] == NotificationLevel.EVERYTHING or user.pk in mentioned
         ]
     subscribed = set(
         Subscription.objects.filter(item=item, user__in=people).values_list(
@@ -233,6 +252,17 @@ def candidates(event):
         ids = set(event.data.get("people", ()))
         ids.discard(event.actor_id)
         return User.objects.active().filter(pk__in=ids)
+    if moved_in(event):
+        # The watchers of the list it came into, unless they unsubscribed
+        # from the to-do; nobody else
+        todolist = Item.objects.filter(pk=event.data["to_id"]).first()
+        if todolist is None:
+            return User.objects.none()
+        ids = {user.pk for user in watchers(todolist)} - set(
+            Unsubscription.objects.filter(item=item).values_list("user", flat=True)
+        )
+        ids.discard(event.actor_id)
+        return User.objects.active().filter(pk__in=ids)
     items = [item.pk]
     # A doc written from a draft is quiet (specs/files.md, "Docs"):
     # its creator tells people at "Done"
@@ -275,7 +305,7 @@ def notify(event_pk):
     event = Event.objects.select_related("item", "project").filter(pk=event_pk).first()
     if event is None or event.item is None:
         return []
-    if event.action in SILENT and not column_move(event):
+    if event.action in SILENT and not (column_move(event) or moved_in(event)):
         return []
     if event.project.is_template:
         # Nothing that happens inside a template tells anybody

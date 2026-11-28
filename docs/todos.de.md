@@ -132,7 +132,8 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   seiner Aktivität („hat 23 To-dos nach Pläne in Website verschoben“).
   Kund:innen verschieben innerhalb des Projekts und nur To-dos eines
   Projekts. Verschieben in eine andere Liste oder ein anderes Projekt
-  benachrichtigt niemanden.
+  benachrichtigt nur die, die die Liste beobachten („Alles“ unter ihren
+  „Benachrichtigungen…“), einmal für alle To-dos.
 - **Fälligkeit…** gibt allen dieselbe Fälligkeit („Ein Datum setzen“;
   Startdaten bleiben, also kann sie nicht vor einem davon liegen),
   verschiebt ihre Daten um eine Anzahl Tage („Verschieben um“, Startdaten

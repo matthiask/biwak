@@ -1315,6 +1315,20 @@ msgid_plural "%(actor)s changed the dates of %(count)s to-dos."
 msgstr[0] "%(actor)s hat die Daten eines To-dos geändert."
 msgstr[1] "%(actor)s hat die Daten von %(count)s To-dos geändert."
 
+#: biwak/activity/lantern.py
+#, python-format
+msgid "%(actor)s moved a to-do."
+msgid_plural "%(actor)s moved %(count)s to-dos."
+msgstr[0] "%(actor)s hat ein To-do verschoben."
+msgstr[1] "%(actor)s hat %(count)s To-dos verschoben."
+
+#: biwak/activity/lantern.py
+#, python-format
+msgid "%(actor)s moved a to-do to %(where)s."
+msgid_plural "%(actor)s moved %(count)s to-dos to %(where)s."
+msgstr[0] "%(actor)s hat ein To-do nach %(where)s verschoben."
+msgstr[1] "%(actor)s hat %(count)s To-dos nach %(where)s verschoben."
+
 #: biwak/activity/mails.py biwak/files/models.py biwak/templatetags/biwak.py
 msgid "attachment"
 msgstr "Anhang"

@@ -99,7 +99,9 @@ own time zone per question goes (`checkins.md`, decided 2026-11-22).
   all just work. Notifications read in the lantern meanwhile aren't
   mailed, as before; switching to "No mails" keeps them unsent, and
   switching back to a mail per change sends them, and whatever piled up
-  meanwhile, as this one mail (decided 2026-11-28, `lantern.md`).
+  meanwhile, as this one mail (decided 2026-11-28, `lantern.md`);
+  switching from the daily digest to a mail per change sends what
+  waited for the digest as this one mail too (decided 2026-11-28).
 - **Digests** with quiet hours: due whenever the person is in their
   working time (so at its start on working days), with the
   notifications before today's midnight and everything held; without

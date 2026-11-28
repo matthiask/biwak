@@ -7,8 +7,9 @@ opening Biwak.
 ## What you hear about
 
 **Subscribed means you hear about everything on the item:** every
-comment, change, completion; not about moving it, which only the
-activity and the history show. To stop hearing about one item,
+comment, change, completion; about moving it only within a list you
+watch or into it (see "Watching a list" below), otherwise only the
+activity and the history show it. To stop hearing about one item,
 unsubscribe from it.
 
 You are subscribed to an item when you:
@@ -28,8 +29,9 @@ in it later. Joining a project subscribes you to nothing that exists
 already. "Unsubscribe" works on anything, except a to-do you are
 assigned to: "Unassign me" instead. A mail about one item has a link to
 unsubscribe from it; a mail about several uploaded files, about several
-to-dos assigned to you at once ("Ada assigned you 23 to-dos") or dated
-at once ("Ada changed the dates of 23 to-dos") and the daily digest
+to-dos assigned to you at once ("Ada assigned you 23 to-dos"), dated
+at once ("Ada changed the dates of 23 to-dos") or moved into a list you
+watch at once ("Ada moved 23 to-dos to Launch") and the daily digest
 link to your notification settings.
 
 You are never told about what you did yourself, and only about what you
@@ -43,7 +45,9 @@ Notifications, "Notify me about" is one of:
 
 - **Only what concerns me** (the default): being mentioned or assigned
   and your own things subscribe you; new messages, docs and files only
-  when you follow their folder or the poster adds you;
+  when you follow their folder or the poster adds you; new to-dos in a
+  list you follow (also added from a text) only when you're assigned
+  or mentioned;
 - **Everything:** every new message, doc or file you can see tells and
   subscribes you, so you hear about its comments too, and you hear about
   everything new in the lists you follow.
@@ -63,8 +67,10 @@ those moved into it from elsewhere or added from a text), so you
 hear about their comments and completion too, and you're told when a
 to-do moves to another group (a column of the board): a board works for
 Kanban. Moving a to-do into another group also tells everybody
-subscribed to it; moving it within its group, to another list or to
-another project tells nobody. Unsubscribing from the list stops the
+subscribed to it. Moving to-dos into the list from another list or
+project tells those watching it ("Ada moved 5 to-dos to Launch.", once
+for all to-dos moved together) and nobody else; moving a to-do within
+its group tells nobody. Unsubscribing from the list stops the
 watching; unsubscribing from one to-do (also with the link in its
 mail) stops hearing about it, its moves too. Other items have no level: subscribe or
 unsubscribe. On a project's people page staff see who is notified "Only
@@ -108,7 +114,9 @@ Under Settings, "Mails":
   about ten minutes after its last change, so quick edits and several
   comments arrive together;
 - **A daily digest** at 07:00, with what happened the day before (see
-  below);
+  below). Switching to "A mail for each change" sends what waited for
+  the next digest at once, as one mail like the digest (or the usual
+  mail when it's about one item only);
 - **No mails:** the lantern only, also no check-in questions and
   summaries. Switching back to mails sends what is still unread then
   (except what you marked as unread): with "A mail for each change" as

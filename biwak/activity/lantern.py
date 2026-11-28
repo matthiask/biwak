@@ -63,31 +63,38 @@ def wanted(notifications, user):
     return _deliverable(notifications, user, others=others)
 
 
-# The keys of to-dos assigned by one "Assign…" and dated by one "Due
-# date…" (``batch_key()``)
+# The keys of to-dos assigned by one "Assign…", dated by one "Due date…"
+# and moved into a list by one "Move…" (``batch_key()``)
 ASSIGNED = "assigned"
 DATED = "dated"
+MOVED = "moved"
 
 # The actions of to-dos changed together, across projects
 # (specs/handover.md), and their keys
-TODO_BATCHES = {Action.ASSIGNED: ASSIGNED, Action.EDITED: DATED}
+TODO_BATCHES = {Action.ASSIGNED: ASSIGNED, Action.EDITED: DATED, Action.MOVED: MOVED}
 
 
-def todo_batch(action):
-    """The key of to-dos changed together by ``action``, or None"""
-    return TODO_BATCHES.get(action)
+def todo_batch(action, actor, to_id=None):
+    """The key of to-dos ``actor`` changed together by ``action``, or None:
+    moved into the list ``to_id`` (its watchers are told, decided
+    2026-11-28); moves between a list's groups aren't one"""
+    kind = TODO_BATCHES.get(action)
+    if kind == MOVED:
+        return (MOVED, actor, to_id) if to_id is not None else None
+    return (kind, actor) if kind else None
 
 
 def batch_key(notification):
     """For files uploaded in a batch: who uploaded them where (the project
     and the folder, or the top level); for to-dos assigned by one
-    "Assign…" or dated by one "Due date…" (specs/handover.md): who did it,
-    across projects; None for anything else"""
+    "Assign…", dated by one "Due date…" (specs/handover.md) or moved into
+    a list by one "Move…" (and into the same list): who did it, across
+    projects; None for anything else"""
     event = notification.event
     if not event.data.get("batch"):
         return None
-    if kind := todo_batch(event.action):
-        return (kind, event.actor_id)
+    if key := todo_batch(event.action, event.actor_id, event.data.get("to_id")):
+        return key
     if event.action != Action.CREATED:
         return None
     return (event.actor_id, event.project_id, event.item.parent_id)
@@ -151,9 +158,11 @@ def entry_items(user, notification):
     key = batch_key(notification)
     if key is None:
         return [notification.event.item]
-    if key[0] in {ASSIGNED, DATED}:
+    if key[0] in TODO_BATCHES.values():
         action = next(a for a, kind in TODO_BATCHES.items() if kind == key[0])
         same = notifications_for(user).filter(event__actor=key[1], event__action=action)
+        if key[0] == MOVED:
+            same = same.filter(event__data__to_id=key[2])
     else:
         actor, project, parent = key
         same = notifications_for(user).filter(
@@ -262,8 +271,9 @@ class Batch:
     """Files uploaded together (``group_batches()``), one entry of the
     lantern in place of an item's: "Ada uploaded 5 files to Minutes", each
     file linked; or the to-dos of one "Assign…" (specs/handover.md): "Ada
-    assigned you 23 to-dos", or of one "Due date…": "Ada changed the dates
-    of 23 to-dos", each to-do linked"""
+    assigned you 23 to-dos", of one "Due date…": "Ada changed the dates
+    of 23 to-dos", or of one "Move…" into a list: "Ada moved 23 to-dos to
+    Launch", each to-do linked"""
 
     is_batch = True
 
@@ -293,6 +303,23 @@ class Batch:
             self.title = _("To-dos")
             self.url = reverse("todos")
             self.line = assigned_line(event.actor_name, len(self.files), you=you)
+            self.subject = self.line.removesuffix(".")
+            return
+        if event.action == Action.MOVED:
+            # The list, as the reader sees it now (its watchers do)
+            self.kind_icon = "arrow-right"
+            self.item_icon = KIND_ICONS[self.files[0].kind]
+            todolist = (
+                Item.objects
+                .visible_to(newest.user)
+                .filter(pk=event.data.get("to_id"))
+                .first()
+            )
+            self.title = todolist.title if todolist else _("To-dos")
+            self.url = todolist.get_absolute_url() if todolist else reverse("todos")
+            self.line = moved_line(
+                event.actor_name, len(self.files), todolist.title if todolist else ""
+            )
             self.subject = self.line.removesuffix(".")
             return
         if event.action == Action.EDITED:
@@ -349,6 +376,20 @@ def dated_line(actor, count):
         "%(actor)s changed the dates of %(count)s to-dos.",
         count,
     ) % {"actor": actor, "count": count}
+
+
+def moved_line(actor, count, where):
+    """ "Ada moved 23 to-dos to Launch." (one "Move…" into a list), without
+    the list when the reader doesn't see it"""
+    if not where:
+        return ngettext(
+            "%(actor)s moved a to-do.", "%(actor)s moved %(count)s to-dos.", count
+        ) % {"actor": actor, "count": count}
+    return ngettext(
+        "%(actor)s moved a to-do to %(where)s.",
+        "%(actor)s moved %(count)s to-dos to %(where)s.",
+        count,
+    ) % {"actor": actor, "count": count, "where": where}
 
 
 def by_item(notifications, *, batches=True):

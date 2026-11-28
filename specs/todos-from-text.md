@@ -73,10 +73,11 @@ disabled and the preview says why.
 - An operation `add_from_text(todolist, text, *, actor)`,
   `@transaction.atomic`: groups through `create_group()`, to-dos created
   silently like `copy_list()`'s, **one event** "added 12 to-dos to
-  Launch" (list subscribers hear about it once, the lantern shows one
-  entry), the adder subscribed to the to-dos as their creator, and the
-  list's watchers too (decided 2026-11-28, `notifications.md`,
-  "Watching a list"). Live updates reload the list once.
+  Launch" (the list's watchers hear about it once, the lantern shows one
+  entry; its subscribers on "only what concerns me" don't, like new
+  to-dos one by one, decided 2026-11-28), the adder subscribed to the
+  to-dos as their creator, and the list's watchers subscribed to them
+  too (decided 2026-11-28, `notifications.md`, "Watching a list"). Live updates reload the list once.
 - **Visibility** is the list's: the to-dos inherit it.
 - **Who:** whoever may add to-dos to the list. Headings that need a new
   group follow the rule for creating groups (`access.md`: clients only

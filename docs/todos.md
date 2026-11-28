@@ -108,8 +108,9 @@ somebody leaves and their to-dos go to someone else:
   unsubscribed); their comments and history come along, and the
   project they left shows one line in its activity ("moved 23 to-dos to
   Plans in Website"). Clients move within the project, and only to-dos
-  of one project. Moving to another list or project tells
-  nobody.
+  of one project. Moving to another list or project tells only
+  those watching the list (Everything in its "Notifications..."), once
+  for all the to-dos.
 - **Due date…** gives them all one due date ("Set a date"; start dates
   stay, so it can't be before one of them), moves their dates by a
   number of days ("Move by", start dates and "repeats until" too; to-dos

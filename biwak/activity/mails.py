@@ -527,8 +527,9 @@ def _batch(notifications, user):
 def batch_mail(user, notifications):
     """One mail about files uploaded together (specs/files.md, "Uploading files"):
     "Ada uploaded 5 files to Minutes", the files linked; or about the to-dos
-    of one "Assign…" or "Due date…" (specs/handover.md): "Ada assigned you
-    23 to-dos", "Ada changed the dates of 23 to-dos" """
+    of one "Assign…", "Due date…" or "Move…" (specs/handover.md): "Ada
+    assigned you 23 to-dos", "Ada changed the dates of 23 to-dos", "Ada
+    moved 23 to-dos to Launch" """
     context = _batch(notifications, user)
     if context is None:
         return None
@@ -717,6 +718,7 @@ def _groups(notifications):
         actor,
         project,
         parent,
+        to_id,
         created_at,
     ) in notifications.order_by("created_at", "pk").values_list(
         "pk",
@@ -728,16 +730,14 @@ def _groups(notifications):
         "event__actor",
         "event__project",
         "event__item__parent",
+        "event__data__to_id",
         "created_at",
     ):
-        if batch and (todo_batch(action) or action == Action.CREATED):
-            # To-dos of one "Assign…" or "Due date…" across projects
-            # (specs/handover.md), else files uploaded together
-            key = (
-                (user_id, todo_batch(action), actor)
-                if todo_batch(action)
-                else (user_id, actor, project, parent)
-            )
+        todos = todo_batch(action, actor, to_id) if batch else None
+        if todos or (batch and action == Action.CREATED):
+            # To-dos of one "Assign…", "Due date…" or "Move…" across
+            # projects (specs/handover.md), else files uploaded together
+            key = (user_id, *todos) if todos else (user_id, actor, project, parent)
             what = ("batch", (*key, chain(chains, key, batch, created_at)))
         else:
             what = ("item", item_id)

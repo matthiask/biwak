@@ -9,10 +9,11 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from biwak.accounts.models import NotificationLevel
 from biwak.activity import lantern
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Action, Event, Notification
-from biwak.activity.operations import subscribe
+from biwak.activity.operations import set_level_override, subscribe
 from biwak.items import operations as ops
 from biwak.items.models import Group
 from biwak.items.test_assign_several import Selection
@@ -188,6 +189,73 @@ class DatedOnceTest(TestCase):
         event = Event.objects.get(item=self.todos[0], action=Action.EDITED)
         self.assertEqual(event.data["due_was"], None)
         self.assertEqual(event.data["due_on"], "2026-12-21")
+
+
+@override_settings(
+    BASE_URL="https://biwak.example.org", DEFAULT_FROM_EMAIL="biwak@example.org"
+)
+class MovedInOnceTest(TestCase):
+    """The watchers of a list are told about the to-dos of one "Move…"
+    into it once, also from other projects (decided 2026-11-28)"""
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.bob = person("Bob")
+        website = project("Website", members=[self.ada, self.bob])
+        shop = project("Shop", members=[self.ada, self.bob])
+        self.launch = ops.create_list(project=website, title="Launch", creator=self.ada)
+        self.later = ops.create_list(project=website, title="Later", creator=self.ada)
+        self.todos = [
+            ops.create_todo(
+                todolist=ops.create_list(project=p, title="Plan", creator=self.ada),
+                title=title,
+                creator=self.ada,
+            )
+            for p, title in [(website, "Copy"), (website, "Photos"), (shop, "Invoice")]
+        ]
+        for todolist in [self.launch, self.later]:
+            set_level_override(self.bob, NotificationLevel.EVERYTHING, item=todolist)
+        Notification.objects.all().delete()
+        mail.outbox = []
+
+    def move(self, items, todolist=None):
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.move_todos_to(items, todolist=todolist or self.launch, actor=self.ada)
+
+    def test_one_lantern_entry_and_one_mail(self):
+        self.move(self.todos)
+        self.assertEqual(lantern.unread_counts(self.bob), (3, 1))
+        self.assertEqual(lantern.unread_counts(self.ada), (0, 0))
+        _marks, [(batch, entries)], _read, _more = lantern.menu(self.bob)
+        self.assertEqual(batch.line, "Ada Example moved 3 to-dos to Launch.")
+        # Following the entry reads them all
+        self.assertEqual(len(lantern.entry_items(self.bob, entries[0])), 3)
+        self.assertEqual(batch.title, "Launch")
+        self.assertEqual(batch.url, self.launch.get_absolute_url())
+        self.assertEqual({f.pk for f in batch.files}, {t.pk for t in self.todos})
+        with self.captureOnCommitCallbacks(execute=True):
+            send_mails(now=timezone.now() + dt.timedelta(minutes=11))
+        (to_bob,) = [m for m in mail.outbox if m.to == [self.bob.email]]
+        self.assertEqual(
+            to_bob.subject, "[Website] Ada Example moved 3 to-dos to Launch"
+        )
+        for item in self.todos:
+            self.assertIn(item.get_absolute_url(), to_bob.body)
+
+    def test_moves_into_another_list_are_another_entry(self):
+        self.move(self.todos[:2])
+        self.move(self.todos[2:], self.later)
+        _marks, entries, _read, _more = lantern.menu(self.bob)
+        self.assertEqual(
+            [entry.title for entry, _entries in entries], ["Invoice", "Launch"]
+        )
+
+    def test_one_to_do_is_no_batch(self):
+        self.move(self.todos[:1])
+        self.assertNotIn(
+            "batch", Event.objects.get(item=self.todos[0], action=Action.MOVED).data
+        )
+        self.assertEqual(lantern.unread_counts(self.bob), (1, 1))
 
 
 class MoveAcrossTest(TestCase):
