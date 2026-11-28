@@ -390,7 +390,13 @@ same way.
   without writing. People with `left_at` who are among the account's
   people again get it cleared ("Back in Basecamp:", decided 2026-11-22
   by the user), only when the importer set it (`left_in_basecamp`), not
-  when somebody was deactivated in Biwak.
+  when somebody was deactivated in Biwak. **Back with a new Basecamp
+  ID** (removed and added again, Basecamp makes a new person for the
+  same address and keeps the old one as a tombstone): the new ID is
+  matched by the address and mapped to the same person, so both are;
+  who is among the account's people under any of their IDs hasn't left
+  (found 2026-11-28 in verification round 1: marked left and cleared in
+  every run, listed under both headings).
 - **Marks:** imported people get a drawn mark like everybody when
   they're created (`people.md`, "Stage 2: drawn marks"), counted with
   the organization's people who haven't left, so those imported

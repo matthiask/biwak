@@ -796,8 +796,24 @@ class Importer(Resolver):
         people.update(self._users)
         new = [pid for pid in people if pid not in self._looked_at]
         self._looked_at.update(new)
-        gone = {pid: people[pid] for pid in new}
-        back = {pid: gone.pop(pid) for pid in list(gone) if pid in self._account_people}
+        # Somebody removed and added again comes back with a new Basecamp
+        # ID, the old one a tombstone: among the account's people under any
+        # of their IDs, they haven't left (found 2026-11-28: marked left and
+        # cleared in every run)
+        present = {
+            user.pk
+            for pid, user in people.items()
+            if user is not None and pid in self._account_people
+        }
+        gone, back = {}, {}
+        for pid in new:
+            user = people[pid]
+            if pid in self._account_people:
+                # Once per person
+                if user is None or user not in back.values():
+                    back[pid] = user
+            elif user is None or user.pk not in present:
+                gone[pid] = user
         users = [user for user in gone.values() if user is not None]
         if self.dry:
             marked = {

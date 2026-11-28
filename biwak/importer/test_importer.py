@@ -2284,6 +2284,43 @@ class PeopleWhoLeftTest(ImportCase):
         self.assertFalse(bob.left_in_basecamp)
         self.assertEqual(self.run_import().back, [])
 
+    def test_back_with_a_new_basecamp_id(self):
+        """Removed and added again, Basecamp makes a new person for the same
+        address; the old one is a tombstone. Who is among the account's
+        people under any of their IDs hasn't left (checked 2026-11-28 in
+        verification round 1: marked left and cleared in every run, listed
+        under both headings)"""
+        self.run_import()
+        again = support.person(
+            33,
+            "Cleo Example",
+            "cleo@example.org",
+            client=True,
+            company={"id": 10, "name": "Example Client Ltd"},
+        )
+        data = self.client_.data
+        data["/people.json"] = [
+            p for p in data["/people.json"] if p["id"] != support.CLEO["id"]
+        ] + [again]
+        data[f"/projects/{support.PROJECT}/people.json"] = [
+            support.ADA,
+            support.BOB,
+            again,
+        ]
+        for _run in range(2):
+            report = self.run_import()
+            self.assertEqual((report.left, report.back), ([], []))
+            self.assertIsNone(self.left_at("cleo@example.org"))
+        cleo = User.objects.get(email="cleo@example.org")
+        self.assertEqual(
+            set(
+                ImportedObject.objects.filter(
+                    basecamp_type="Person", object_id=cleo.pk
+                ).values_list("basecamp_id", flat=True)
+            ),
+            {support.CLEO["id"], 33},
+        )
+
     def test_deactivated_in_biwak_stays_whatever_basecamp_lists(self):
         from biwak.organizations import activation
 
