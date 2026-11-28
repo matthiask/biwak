@@ -734,17 +734,30 @@ class Importer(Resolver):
         }
 
     def _people_who_left(self):
-        """Inactive people (created by an import, or deactivated) who turn up
-        in a project but aren't among the account's people anymore have
-        left: ``left_at`` is the run's date (specs/activation.md). Those
-        marked so who are among them again are back: ``left_at`` is cleared
-        (decided 2026-11-22). The account's people are read once per run;
-        inactive people still in the account wait to be activated, active
-        ones aren't touched."""
+        """Inactive people (created by an import, or deactivated) imported
+        from the account who aren't among its people anymore have left:
+        ``left_at`` is the run's date (specs/activation.md). Those marked so
+        who are among them again are back: ``left_at`` is cleared (decided
+        2026-11-22). The account's people are read once per run; inactive
+        people still in the account wait to be activated, active ones
+        aren't touched.
+
+        Everybody imported before counts, not only the people met in this
+        run (fixed 2026-11-28): later runs skip unchanged recordings, so
+        somebody met only on those in a run that stopped halfway would never
+        be looked at again."""
         self._account_ids()
-        new = [pid for pid in self._persons if pid not in self._looked_at]
+        by_pk = self._people()[0]
+        people = {
+            pid: by_pk[mapped.object_id]
+            for (bc_type, pid), mapped in self._mappings.items()
+            if bc_type == PERSON and mapped is not None and mapped.object_id in by_pk
+        }
+        # Met in this run (created now, or would be in a dry run)
+        people.update(self._users)
+        new = [pid for pid in people if pid not in self._looked_at]
         self._looked_at.update(new)
-        gone = {pid: self._users.get(pid) for pid in new}
+        gone = {pid: people[pid] for pid in new}
         back = {pid: gone.pop(pid) for pid in list(gone) if pid in self._account_people}
         users = [user for user in gone.values() if user is not None]
         if self.dry:
