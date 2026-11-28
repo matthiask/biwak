@@ -122,7 +122,7 @@ through every entry point (`AGENTS.md`).
 - **Moving internal to-dos into a visible list** asks first, like the
   switch (decided by the user 2026-11-28, verification round 1; before,
   they and every comment written while internal were shown without a
-  word): `visibility.shown_by_moving()` counts the internal to-dos
+  word): `visibility.shown_by_moving_into()` counts the internal to-dos
   going into a list clients see, their comments and the clients of the
   list's project (`clients_of()`), and `shown_note()` (`biwak/items/views.py`)
   says "Makes 2 to-dos and 5 comments visible to 3 clients.", also
@@ -145,6 +145,11 @@ through every entry point (`AGENTS.md`).
   - Moving a top-level item to another project keeps its switch, so it
     shows nothing internal; who would newly see something visible is
     asked about already (`new_clients()`).
+  - **Visible to-dos into another project's visible list** (the
+    selection's "Move…", a new list made visible too, and the API's
+    `todos/move/`) ask the same way when clients there didn't see them,
+    as `new_clients()` (decided 2026-11-28): they count as shown, and
+    the sentence's clients are everybody who sees something new.
   - **Internal folders, docs and files into a folder clients see** ask
     the same way (decided 2026-11-28):
     `visibility.shown_by_moving_items()` counts what's shown (the items

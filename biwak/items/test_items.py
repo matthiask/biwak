@@ -321,11 +321,9 @@ class VisibilityTest(TestCase):
             project=self.project, title="Launch", creator=self.ada
         )
         self.assertEqual(visibility.affected(todolist)["clients"], 2)
-        shared = ops.create_list(
-            project=self.project, title="Shared", creator=self.ada, visible=True
-        )
         todo = ops.create_todo(todolist=todolist, title="DNS", creator=self.ada)
-        self.assertEqual(visibility.shown_by_moving([todo], shared)["clients"], 2)
+        shown = visibility.shown_by_moving_into([todo], self.project, visible=True)
+        self.assertEqual(shown["clients"], 2)
 
     def test_affected_leaves_out_drafts_and_the_trash(self):
         """Somebody's draft and trashed items aren't what the switch shows

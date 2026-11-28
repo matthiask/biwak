@@ -1033,11 +1033,13 @@ def show_texts(item, clients=None):
     return title, intro
 
 
-def shown_note(todos, todolist):
-    """What moving the to-dos into the list shows clients, as a sentence
-    asking like the switch's (``visibility.shown_by_moving()``); empty if
-    nothing"""
-    shown = visibility.shown_by_moving(todos, todolist)
+def shown_note(todos, todolist=None, *, project=None, visible=None):
+    """What moving the to-dos into the list (or a new one of ``project``,
+    ``visible`` or not) shows clients, as a sentence asking like the
+    switch's (``visibility.shown_by_moving_into()``); empty if nothing"""
+    if todolist is not None:
+        project, visible = todolist.project, todolist.is_client_visible
+    shown = visibility.shown_by_moving_into(todos, project, visible=visible)
     if shown is None:
         return ""
     return _("Makes %(todos)s and %(comments)s visible to %(clients)s.") % {

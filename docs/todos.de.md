@@ -123,7 +123,8 @@ Beispiel, wenn jemand geht und die To-dos an jemand anderen gehen:
   aus denen sie kommen, es sind. Bevor To-dos, die Kund:innen sehen, in
   eine interne Liste kommen, sagt das Formular, dass Kund:innen sie
   nicht mehr sehen; bevor interne in eine Liste kommen, die Kund:innen
-  sehen, fragt es vorher und sagt, was Kund:innen sehen werden (auch
+  sehen, oder sichtbare in ein anderes Projekt, dessen Kund:innen sie
+  nicht sahen, fragt es vorher und sagt, was Kund:innen sehen werden (auch
   „Verschieben nach…“ eines To-dos). In ein anderes Projekt sagt das Formular
   zuerst, wer dort hinzugefügt wird und wer die To-dos dort nicht sieht
   (Zuweisungen und Abonnements fallen weg); Kommentare und Verlauf

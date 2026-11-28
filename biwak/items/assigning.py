@@ -316,8 +316,8 @@ def todos_move(request):
             visible = target.is_client_visible
         note = move_notes(todos, chosen, visible, request.user)
         # Hiding them says so, showing them asks like the switch
-        clients_note = hidden_note(todos, visible) or (
-            shown_note(todos, target) if target is not None else ""
+        clients_note = hidden_note(todos, visible) or shown_note(
+            todos, target, project=chosen, visible=visible
         )
         if not (note or clients_note) or form.asked(f"{chosen.pk}:{value}"):
             try:

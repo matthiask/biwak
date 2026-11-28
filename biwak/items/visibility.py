@@ -7,6 +7,7 @@ subtrees whenever a switch changes, an item moves or is created, in the
 same transaction. ``check()`` compares the stored values with the tree.
 """
 
+from biwak.accounts.models import User
 from biwak.items.models import Comment, Item, Status
 
 
@@ -71,21 +72,41 @@ def affected(item):
     }
 
 
-def shown_by_moving(todos, todolist):
-    """What moving the to-dos into the list ``todolist`` shows clients,
+def shown_by_moving_into(todos, project, *, visible):
+    """What moving the to-dos into a list of ``project`` (``visible`` to
+    clients or not; a new one too) shows clients,
     for asking first like the switch (decided 2026-11-28): the internal
-    ones going into a list clients see, their comments, and the clients
-    of the list's project (``clients_of()``); None if it shows
-    nothing"""
-    if not todolist.is_client_visible:
+    ones going into a list clients see, shown to the clients of the
+    list's project (``clients_of()``), and visible ones from other
+    projects whose clients there didn't see them (as
+    ``operations.new_clients()``); their comments, and how many clients
+    see something new. None if it shows nothing."""
+    if not visible:
         return None
-    hidden = [todo.pk for todo in todos if not todo.is_client_visible]
-    if not hidden:
+    clients = User.objects.active().filter(is_client=True, memberships__project=project)
+    shown = [todo.pk for todo in todos if not todo.is_client_visible]
+    new = set(clients.values_list("pk", flat=True)) if shown else set()
+    sources = {
+        todo.project_id
+        for todo in todos
+        if todo.is_client_visible and todo.project_id != project.pk
+    }
+    for source in sources:
+        if newly := set(
+            clients.exclude(memberships__project=source).values_list("pk", flat=True)
+        ):
+            new |= newly
+            shown += [
+                todo.pk
+                for todo in todos
+                if todo.is_client_visible and todo.project_id == source
+            ]
+    if not shown:
         return None
     return {
-        "items": len(hidden),
-        "comments": Comment.objects.filter(item__in=hidden).count(),
-        "clients": clients_of(todolist.project),
+        "items": len(shown),
+        "comments": Comment.objects.filter(item__in=shown).count(),
+        "clients": len(new),
     }
 
 

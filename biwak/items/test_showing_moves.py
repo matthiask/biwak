@@ -15,7 +15,7 @@ from biwak.test_utils import assert_modal, assert_modal_redirect, person, projec
 NOTE = "Makes 2 to-dos and 1 comment visible to 1 client."
 
 
-class ShowingMovesTest(TestCase):
+class Fixture:
     def setUp(self):
         self.ada = person("Ada")
         self.cleo = person("Cleo", client=True)
@@ -53,6 +53,8 @@ class ShowingMovesTest(TestCase):
             headers={"authorization": f"Bearer {secret}"},
         )
 
+
+class ShowingMovesTest(Fixture, TestCase):
     def test_move_to_asks(self):
         url = f"/todos/{self.budget.pk}/move-to/"
         data = {"target": str(self.shared.pk), "index": "end"}
@@ -183,6 +185,97 @@ class ShowingMovesTest(TestCase):
             # Saying so where nothing is shown is fine too
             with self.subTest(path=path):
                 self.assertEqual(self.api(path, data).status_code, 200)
+
+
+class ShowingAcrossProjectsTest(Fixture, TestCase):
+    """Visible to-dos into another project's visible list ask the same
+    way when clients there didn't see them (decided 2026-11-28; like
+    ``move_to_project``'s ``new_clients()``)"""
+
+    def setUp(self):
+        super().setUp()
+        self.dot = person("Dot", client=True)
+        self.other = project("Other", members=[self.ada, self.cleo, self.dot])
+        self.there = ops.create_list(
+            project=self.other, title="There", creator=self.ada, visible=True
+        )
+        ops.add_comment(self.tent, author=self.ada, content="Pegs?")
+
+    def test_selection_asks(self):
+        url = reverse("todos_move_selected") + f"?items={self.tent.pk}"
+        data = {
+            "project": self.other.pk,
+            "shown": self.other.pk,
+            "target": str(self.there.pk),
+            "index": "end",
+        }
+        response = self.client.post(url, data, headers={"HX-Modal": "true"})
+        # Cleo saw it already, Dot didn't
+        self.assertContains(
+            response, "Makes 1 to-do and 1 comment visible to 1 client."
+        )
+        self.assertIn_([self.tent], self.shared)
+        response = self.client.post(
+            url,
+            data | {"confirmed": f"{self.other.pk}:{self.there.pk}"},
+            headers={"HX-Modal": "true"},
+        )
+        assert_modal_redirect(self, response)
+        self.assertIn_([self.tent], self.there)
+
+    def test_a_new_list_asks_too(self):
+        """Visible to-dos make a new list visible (``new_list_visible()``)"""
+        url = reverse("todos_move_selected") + f"?items={self.tent.pk}"
+        data = {
+            "project": self.other.pk,
+            "shown": self.other.pk,
+            "target": "new",
+            "index": "end",
+        }
+        response = self.client.post(url, data, headers={"HX-Modal": "true"})
+        self.assertContains(
+            response, "Makes 1 to-do and 1 comment visible to 1 client."
+        )
+        self.assertIn_([self.tent], self.shared)
+        response = self.client.post(
+            url,
+            data | {"confirmed": f"{self.other.pk}:new"},
+            headers={"HX-Modal": "true"},
+        )
+        assert_modal_redirect(self, response)
+        self.tent.refresh_from_db()
+        self.assertEqual(self.tent.project, self.other)
+        self.assertTrue(self.tent.is_client_visible)
+
+    def test_no_new_clients_nothing_asked(self):
+        self.other.memberships.filter(user=self.dot).delete()
+        response = self.api(
+            "todos/move/", {"ids": [self.tent.pk], "list_id": self.there.pk}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn_([self.tent], self.there)
+
+    def test_api(self):
+        response = self.api(
+            "todos/move/", {"ids": [self.tent.pk], "list_id": self.there.pk}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("visible to 1 client.", response.json()["detail"])
+        self.assertIn("show_to_clients", response.json()["detail"])
+        response = self.api(
+            "todos/move/",
+            {"ids": [self.tent.pk], "list_id": self.there.pk, "show_to_clients": True},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn_([self.tent], self.there)
+
+    def test_internal_and_visible_together(self):
+        """Internal ones show to every client there, visible ones to the
+        new ones: everybody who sees something new"""
+        shown = visibility.shown_by_moving_into(
+            [self.budget, self.tent], self.other, visible=True
+        )
+        self.assertEqual(shown, {"items": 2, "comments": 2, "clients": 2})
 
 
 class ShowingMovesCLITest(CLITest):

@@ -161,7 +161,8 @@ Fixed (each in its part's spec):
   see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0);
   "visible to N clients" counts active and invited clients only; moving
   to another project ends public links; internal docs, files and
-  folders into a visible folder ask first (CLI 0.78.0).
+  folders into a visible folder, and visible to-dos into another
+  project's visible list (new clients), ask first (CLI 0.78.0).
 - **Docs and files:** a whole-text save from an old `base_version` is
   refused over the saver's own version with somebody else's typing
   merged into it (versions remember their co-authors); a form left open
@@ -213,9 +214,8 @@ decided, marked "consistent"):
     deleting and deactivating; "Reset sign-in…" counts push devices
     (consistent).
 - **Visibility:**
-  - Visible to-dos into another project's visible list (new clients)
-    ask first like to-dos into a visible list (decided); "Move to…" of
-    one to-do says when it hides, like "Move…" (consistent).
+  - "Move to…" of one to-do says when it hides, like "Move…"
+    (consistent).
   - The API refuses `visible_to_clients` in projects without clients
     (the pages hide the switch); a client's `todos/?assignee=` with
     somebody they may not know finds nothing (consistent).

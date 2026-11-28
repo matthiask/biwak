@@ -101,6 +101,7 @@ somebody leaves and their to-dos go to someone else:
   visible to clients when the lists they come from are. Before to-dos
   clients see go into an internal list, the form says clients won't
   see them any more; before internal ones go into a list clients see,
+  or visible ones into another project whose clients didn't see them,
   it asks first, saying what clients will see ("Move to…" of one to-do
   too). Into another project, the form first says who will be added to it
   and who won't see the to-dos there (they're unassigned and
