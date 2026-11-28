@@ -126,13 +126,16 @@ class AnswerCache:
         digest = hashlib.sha256(f"{identity}\n{url}".encode()).hexdigest()
         return self.directory / digest[:2] / digest
 
-    def get(self, identity, url):
-        """``(body, link)``, None without a fresh answer"""
+    def get(self, identity, url, *, newer_than=None):
+        """``(body, link)``, None without a fresh answer, or one fetched
+        before ``newer_than`` (a datetime)"""
         try:
             stored = json.loads(self._path(identity, url).read_bytes())
         except FileNotFoundError, ValueError:
             return None
         if self.clock() - stored["fetched"] > self.max_age:
+            return None
+        if newer_than is not None and stored["fetched"] < newer_than.timestamp():
             return None
         return stored["body"].encode(), stored["link"]
 
@@ -280,12 +283,13 @@ class BasecampClient:
             raise ApiError(f"{url}: status {response.status}")
         return response
 
-    def _answer(self, url):
+    def _answer(self, url, newer_than=None):
         """``(body, link)`` of a JSON answer, from the ``AnswerCache``
-        while fresh"""
+        while fresh and not fetched before ``newer_than``"""
         if (
             self.answers is not None
-            and (cached := self.answers.get(self.identity, url)) is not None
+            and (cached := self.answers.get(self.identity, url, newer_than=newer_than))
+            is not None
         ):
             self.answer_counts["cached"] += 1
             return cached
@@ -298,11 +302,13 @@ class BasecampClient:
     def get(self, path, **params):
         return json.loads(self._answer(self._url(path, params))[0])
 
-    def paginate(self, path, **params):
-        """All items of a collection, following the ``Link: rel="next"``"""
+    def paginate(self, path, *, newer_than=None, **params):
+        """All items of a collection, following the ``Link: rel="next"``.
+        ``newer_than``: a cached answer fetched before isn't used (what the
+        importer knows changed since, found 2026-11-28)."""
         url = self._url(path, params)
         while url:
-            body, link = self._answer(url)
+            body, link = self._answer(url, newer_than)
             yield from json.loads(body)
             found = re.search(r'<([^>]+)>;\s*rel="next"', link)
             url = found[1] if found else None

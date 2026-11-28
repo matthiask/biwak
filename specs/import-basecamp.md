@@ -196,7 +196,13 @@ were written on what was imported before).
   an older answer is fetched and overwritten, none is deleted. What
   changes in Basecamp within the hour is missed by that run, not lost:
   the run stores the `updated_at` it saw, so the next run after the
-  answers expired takes it up. Downloads still ask the API for the
+  answers expired takes it up. **Except a recording's comments**: the
+  listing may be fresher than their cached answer, and the run stores
+  the listing's count, so a comment added in between was lost for good
+  (found 2026-11-28 in verification round 1). Comments are read again
+  when the listing's `updated_at` is newer than the cached answer
+  (`paginate(newer_than=)`) or the answer has another number of comments
+  than the listing says. Downloads still ask the API for the
   redirect (the signed location is short-lived). The report counts
   "Basecamp answers: N from the cache".
 - **Few queries** (decided 2026-11-23: the import may run locally

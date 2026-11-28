@@ -1448,6 +1448,63 @@ class SharedAttachmentTest(ImportCase):
         self.assertTrue(in_todo.file.storage.exists(in_todo.file.name))
 
 
+class CachedCommentsTest(ImportCase):
+    """A recording's listing may be fresher than its comments' cached answer
+    (``--answers-max-age``): a comment added in between was missed while the
+    fresh count was stored (found 2026-11-28 in verification round 1)"""
+
+    COMMENTS = "/recordings/3011/comments.json"
+
+    def setUp(self):
+        super().setUp()
+        self.run_import()
+        # The cache's answer, fetched before the third comment
+        self.cached = self.client_.data[self.COMMENTS]
+        self.fetched = at("2026-03-01T08:00:00+00:00")
+        third = dict(self.cached[0], id=8003, content="<div>And Monday.</div>")
+        third["created_at"] = third["updated_at"] = "2026-03-01T09:00:00.000Z"
+        self.client_.data[self.COMMENTS] = [*self.cached, third]
+        self.fresh = []
+        paginate = self.client_.paginate
+
+        def cached_paginate(path, *, newer_than=None, **params):
+            if path == self.COMMENTS:
+                self.fresh.append(newer_than)
+                if newer_than is None or newer_than <= self.fetched:
+                    return iter(self.cached)
+            return paginate(path, newer_than=newer_than, **params)
+
+        self.client_.paginate = cached_paginate
+
+    def food(self, **changes):
+        self.client_.data["/todolists/301/todos.json"][0] |= {
+            "comments_count": 3,
+            **changes,
+        }
+
+    def comments(self):
+        return Comment.objects.filter(item=self.item("Buy giraffe food")).count()
+
+    def test_changed_after_the_cached_answer(self):
+        self.food(updated_at="2026-03-01T09:00:00.000Z")
+        self.run_import()
+        self.assertEqual(self.comments(), 3)
+        self.assertEqual(len(self.fresh), 1)
+
+    def test_more_comments_than_the_cached_answer(self):
+        """Only the count says so: read again"""
+        self.food()
+        self.run_import()
+        self.assertEqual(self.comments(), 3)
+        self.assertEqual(len(self.fresh), 2)
+
+    def test_a_fresh_cached_answer_is_used(self):
+        self.food(updated_at="2026-02-28T09:00:00.000Z", comments_count=2)
+        self.run_import()
+        self.assertEqual(self.comments(), 2)
+        self.assertEqual(len(self.fresh), 1)
+
+
 class UnchangedTest(ImportCase):
     """A later run skips recordings whose ``updated_at`` and comment count
     are as stored: no update, no requests for comments and subscribers"""

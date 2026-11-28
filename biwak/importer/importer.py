@@ -1542,12 +1542,20 @@ class Importer(Resolver):
         all were read (``--since`` skips older ones)."""
         if self.since and self._skip(rec):
             return False
-        if comment_count(rec) == 0:
+        count = comment_count(rec)
+        if count == 0:
             return True
+        path = path or f"/recordings/{rec['id']}/comments.json"
         try:
+            # The listing may be fresher than the comments' cached answer
+            # (``--answers-max-age``): changed after it, or with a count it
+            # doesn't have, they're read again (found 2026-11-28: a comment
+            # added in between was missed, the fresh count stored)
             comments = list(
-                self.client.paginate(path or f"/recordings/{rec['id']}/comments.json")
+                self.client.paginate(path, newer_than=parse_time(rec.get("updated_at")))
             )
+            if count is not None and len(comments) != count:
+                comments = list(self.client.paginate(path, newer_than=timezone.now()))
         except api.NotFound:
             return True
         self._preload(bc_type, comments)

@@ -142,7 +142,8 @@ Fixed (each in its part's spec):
   folders do too; a project's and a template's archived state comes from
   Basecamp only at the first import, both ways; people back with a new
   Basecamp ID haven't left (they were marked left and back in every
-  run).
+  run); a recording's comments are read again when its listing is newer
+  than their cached answer.
 - **To-dos:** stale to-dos are marked obsolete on the promised day;
   copies keep a group's "Keep untouched to-dos for a year" and
   deactivated assignees and people asked instead of failing; archived
@@ -230,8 +231,6 @@ decided, marked "consistent"):
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).
-- **Import:** comments read fresh when a
-  listing is newer than the cached answer (consistent).
 
 **Decided, no change:**
 

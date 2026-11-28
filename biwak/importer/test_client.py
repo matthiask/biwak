@@ -413,6 +413,26 @@ class AnswerCacheTest(ClientCase):
         client = self.make(ok({"id": 2}))
         self.assertEqual(client.get("/x.json"), {"id": 2})
 
+    def test_an_answer_older_than_asked_for_is_fetched_again(self):
+        """``newer_than``: what the importer knows changed after the answer
+        was fetched (a recording's listing newer than its cached comments,
+        found 2026-11-28 in verification round 1)"""
+        import datetime as dt
+
+        self.make(ok([1])).get("/x.json")
+        self.wall += 60
+        before = dt.datetime.fromtimestamp(self.wall - 120, tz=dt.UTC)
+        client = self.make()
+        self.assertEqual(list(client.paginate("/x.json", newer_than=before)), [1])
+        self.assertEqual(client.answer_counts, {"cached": 1})
+        after = dt.datetime.fromtimestamp(self.wall - 30, tz=dt.UTC)
+        client = self.make(ok([1, 2]))
+        self.assertEqual(list(client.paginate("/x.json", newer_than=after)), [1, 2])
+        self.assertEqual(client.answer_counts, {})
+        self.assertEqual(len(self.transport.requests), 1)
+        # and stored again
+        self.assertEqual(self.make().get("/x.json"), [1, 2])
+
     def test_make_client(self):
         import tempfile
         from pathlib import Path
