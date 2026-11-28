@@ -2,6 +2,7 @@ import json
 
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.accounts.models import User
 from biwak.organizations.models import Organization
@@ -344,7 +345,9 @@ class NewProjectTest(TestCase):
         )
 
     def test_errors_keep_everything(self):
-        deactivated = person("Ivy", client=True, is_active=False)
+        deactivated = person(
+            "Ivy", client=True, is_active=False, left_at=timezone.localdate()
+        )
         response = self.client.post(
             "/projects/new/",
             {
