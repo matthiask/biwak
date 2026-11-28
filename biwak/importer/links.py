@@ -1,14 +1,18 @@
-"""Links to Basecamp recordings (specs/import-basecamp.md, "Links"): in texts
-they lead to what was imported from them when the text is shown
-(``render_markdown()``), so the order of the imports doesn't matter and
-links pasted later work too (decided 2026-11-28). The stored text keeps
-Basecamp's address."""
+"""Links to Basecamp recordings (specs/import-basecamp.md, "Rich text"):
+shown in texts as links to a trampoline (``render_markdown()``), which
+leads to what was imported from them, or to Basecamp (decided
+2026-11-28). Nothing is looked up to show a text, so the order of the
+imports doesn't matter, links pasted later work too, and a link doesn't
+tell whether its target is in Biwak. The stored text keeps Basecamp's
+address."""
 
 import re
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.urls import reverse
 
 
 # <account>/buckets/<project>/<path>/<id>, on Basecamp's old host and the
@@ -42,46 +46,52 @@ def recording(href):
     return LINK_TYPES[found[1]], int(found[2]), int(comment[1]) if comment else None
 
 
-def biwak_urls(hrefs, *, absolute=False):
-    """``{href: URL}`` for the links whose recordings were imported (a
-    comment's anchor too, when it was imported), with one query for the
-    mappings and one for what they point to. ``absolute``: with
-    ``BASE_URL`` (mails, the API)."""
+def trampoline(href, *, absolute=False):
+    """The trampoline's address for a link to a recording, or None: shown
+    without looking anything up. ``absolute``: with ``BASE_URL`` (mails,
+    the API)."""
+    if recording(href) is None:
+        return None
+    url = f"{reverse('basecamp_link')}?{urlencode({'to': href})}"
+    return settings.BASE_URL + url if absolute else url
+
+
+def destination(user, href):
+    """Where the trampoline leads ``user`` for a link to a recording: what
+    was imported from it if they may see it (its comment's anchor when the
+    comment was imported too), else Basecamp. Both look the same, nothing
+    tells whether it was imported."""
     from biwak.importer.models import ImportedObject
     from biwak.items.models import Comment, Item
 
-    wanted = {href: found for href in set(hrefs) if (found := recording(href))}
-    if not wanted:
-        return {}
-    keys = set()
-    for bc_type, bc_id, comment in wanted.values():
-        keys.add((bc_type, bc_id))
-        if comment is not None:
-            keys.add(("Comment", comment))
+    bc_type, bc_id, comment = recording(href)
+    keys = [(bc_type, bc_id)]
+    if comment is not None:
+        keys.append(("Comment", comment))
     query = Q()
-    for bc_type, bc_id in keys:
-        query |= Q(basecamp_type=bc_type, basecamp_id=bc_id)
-    item_type = ContentType.objects.get_for_model(Item)
-    comment_type = ContentType.objects.get_for_model(Comment)
+    for key_type, key_id in keys:
+        query |= Q(basecamp_type=key_type, basecamp_id=key_id)
     mapped = {
         (m.basecamp_type, m.basecamp_id): m.object_id
         for m in ImportedObject.objects.filter(
-            query, content_type__in=[item_type, comment_type]
+            query,
+            content_type__in=[
+                ContentType.objects.get_for_model(Item),
+                ContentType.objects.get_for_model(Comment),
+            ],
         )
     }
-    items = {
-        item.pk: item
-        for item in Item.objects.filter(
-            pk__in=[pk for key, pk in mapped.items() if key[0] != "Comment"]
-        ).only("pk", "kind")
-    }
-    urls = {}
-    for href, (bc_type, bc_id, comment) in wanted.items():
-        item = items.get(mapped.get((bc_type, bc_id)))
-        if item is None:
-            continue
-        url = item.get_absolute_url()
-        if comment is not None and (pk := mapped.get(("Comment", comment))):
-            url += f"#comment-{pk}"
-        urls[href] = settings.BASE_URL + url if absolute else url
-    return urls
+    pk = mapped.get((bc_type, bc_id))
+    item = (
+        Item.objects.visible_to(user).filter(pk=pk).first() if pk is not None else None
+    )
+    if item is None:
+        return href
+    url = item.get_absolute_url()
+    if (
+        comment is not None
+        and (comment_pk := mapped.get(("Comment", comment)))
+        and Comment.objects.filter(pk=comment_pk, item=item).exists()
+    ):
+        url += f"#comment-{comment_pk}"
+    return url

@@ -93,6 +93,7 @@ urlpatterns = [
     path("", include("biwak.search.urls")),
     path("", include("biwak.palette.urls")),
     path("", include("biwak.inbound.urls")),
+    path("", include("biwak.importer.urls")),
     path("", include("biwak.forwarding.urls")),
     path("help/", help_pages.help_page, name="help"),
     path("help/<slug:page>/", help_pages.help_page, name="help"),

@@ -67,8 +67,9 @@ sie kennst.
 - **To-dos aus Text hinzufügen** legt alles in die Liste, auf die du ihn
   ziehst: Überschriften werden Gruppen, nicht neue Listen.
 - **Links auf Basecamp** in Texten führen zum importierten To-do, zur
-  Mitteilung, Datei oder zum Kommentar, sobald es in Biwak ist, auch
-  später eingefügte Links; bis dahin führen sie zu Basecamp.
+  Mitteilung, Datei oder zum Kommentar, sobald es in Biwak ist und du
+  es sehen kannst, auch später eingefügte Links; sonst führen sie zu
+  Basecamp.
 
 ## Sich bewegen
 

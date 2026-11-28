@@ -228,32 +228,28 @@ def render_markdown(
     tokens = _markdown.parse(text, env)
     if without_title:
         tokens = _without_title(text, tokens)
-    _basecamp_links(tokens, absolute=absolute)
+    if public_token is None:
+        # Nobody signs in on public pages to follow the trampoline
+        _basecamp_links(tokens, absolute=absolute)
     if attachment_urls:
         _attachment_urls(tokens, item, absolute=absolute)
     return mark_safe(_markdown.renderer.render(tokens, _markdown.options, env))
 
 
 def _basecamp_links(tokens, *, absolute):
-    """Links to Basecamp recordings lead to what was imported from them
-    (``biwak.importer.links``), in Biwak, not a new tab"""
-    from biwak.importer.links import biwak_urls
+    """Links to Basecamp recordings go through the trampoline
+    (``biwak.importer.links``), which leads into Biwak or to Basecamp: no
+    new tab, nothing looked up"""
+    from biwak.importer.links import trampoline
 
-    links = [
-        child
-        for token in tokens
-        for child in token.children or ()
-        if child.type == "link_open"
-        and "basecamp.com/" in (child.attrGet("href") or "")
-    ]
-    if not links:
-        return
-    urls = biwak_urls([link.attrGet("href") for link in links], absolute=absolute)
-    for link in links:
-        if url := urls.get(link.attrGet("href")):
-            link.attrSet("href", url)
-            link.attrs.pop("target", None)
-            link.attrs.pop("rel", None)
+    for token in tokens:
+        for child in token.children or ():
+            if child.type != "link_open":
+                continue
+            if url := trampoline(child.attrGet("href"), absolute=absolute):
+                child.attrSet("href", url)
+                child.attrs.pop("target", None)
+                child.attrs.pop("rel", None)
 
 
 def _without_title(text, tokens):
