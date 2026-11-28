@@ -48,7 +48,9 @@ from biwak.importer.models import ImportedObject
 from biwak.items import operations as ops
 from biwak.items.models import (
     Comment,
+    Group,
     Item,
+    Kind,
     MessageCategory,
     Status,
     Todo,
@@ -61,6 +63,9 @@ from biwak.projects.models import Project
 
 
 PERSON, PROJECT, ATTACHMENT = "Person", "Project", "Attachment"
+# The internal twins of visible containers' lists and folders, and of
+# their groups: "<type>::Internal" (``Importer._twin()``)
+INTERNAL = "::Internal"
 COMPANY = "Company"
 GROUP, COLUMN = "Todolist::Group", "Kanban::Column"
 # Project templates and the to-do list library's bucket (specs/templates.md)
@@ -424,6 +429,9 @@ class Importer(Resolver):
         self._container_is_board = False
         self._container_project = None
         self._internal_lists = {}
+        # (Basecamp type, ID) of the group or column being imported, for its
+        # twin in the internal list
+        self._group_key = None
 
     # Reporting -----------------------------------------------------------
 
@@ -1423,12 +1431,43 @@ class Importer(Resolver):
         self._moved("to-do", todo_rec, container, "list")
         if item is None or group is None:
             return item, None
-        found = item.todolist.groups.filter(title=group.title).first()
-        if found is None and not self.dry:
-            found = ops.create_group(
-                todolist=item.todolist, title=group.title, color=group.color
-            )
-        return item, found
+        return item, self._internal_group(item, group)
+
+    def _internal_group(self, item, group):
+        """The twin of the group being imported in the internal list ``item``:
+        by its mapping, so a group renamed in Basecamp isn't doubled (found
+        2026-11-28); by its title for twins made before they had one; made
+        when missing. None (ungrouped) when deleted in Biwak."""
+        bc_type, bc_id = self._group_key
+        mapped, found = self._mapping(bc_type + INTERNAL, bc_id)
+        if mapped is not None and found is None:
+            return None
+        if found is None:
+            found = item.todolist.groups.filter(title=group.title).first()
+            if found is None and not self.dry:
+                found = ops.create_group(
+                    todolist=item.todolist, title=group.title, color=group.color
+                )
+            if found is not None and not self.dry:
+                self._remember(bc_type + INTERNAL, bc_id, found)
+        return found
+
+    def _rename_twin(self, bc_type, rec, **fields):
+        """The internal twin of a visible list, card table or folder (its
+        group, column) renamed in Basecamp follows it (found 2026-11-28:
+        it kept the old name), as Basecamp's change"""
+        twin = self._find(bc_type + INTERNAL, rec["id"])
+        if twin is None:
+            return
+        if isinstance(twin, Group):
+            ops.update_group(twin, title=rec["title"], **fields)
+            return
+        title = f"{rec['title']} (internal)"
+        with self._from_basecamp(rec):
+            if twin.kind == Kind.FOLDER:
+                file_ops.update_folder(twin, actor=None, title=title)
+            else:
+                ops.update_list(twin, actor=None, title=title)
 
     def _touch(self, bc_type, rec):
         """Whether what ``_upsert()`` returned for the recording may be
@@ -1600,6 +1639,7 @@ class Importer(Resolver):
             with self._from_basecamp(rec):
                 ops.update_list(item, actor=None, title=rec["title"], description=text)
             self._link(item, text, item.creator)
+            self._rename_twin("Todolist", rec)
 
         item = self._upsert("Todolist", rec, create=create, update=update, follow=True)
         if item is not None and self._touch("Todolist", rec):
@@ -1634,8 +1674,10 @@ class Importer(Resolver):
 
         def update(group):
             ops.update_group(group, title=rec["title"], color=color)
+            self._rename_twin(rec_type, rec, color=color)
 
         group = self._upsert(rec_type, rec, create=create, update=update)
+        self._group_key = (rec_type, rec["id"])
         if cards:
             self._cards(rec["id"], item, group, visible, project)
         else:
@@ -1875,6 +1917,8 @@ class Importer(Resolver):
         def update(item):
             with self._from_basecamp(rec):
                 ops.update_list(item, actor=None, title=rec["title"])
+            # Its twin is a list too
+            self._rename_twin("Todolist", rec)
 
         item = self._upsert(
             "Kanban::Board", rec, create=create, update=update, follow=True
@@ -2102,7 +2146,15 @@ class Importer(Resolver):
                     visible=visible,
                 )
 
-        item = self._upsert("Vault", rec, create=create, follow=True)
+        def update(item):
+            # Renamed in Basecamp (found 2026-11-28: neither it nor its
+            # internal twin followed)
+            with self._from_basecamp(rec):
+                file_ops.update_folder(item, actor=None, title=rec["title"])
+            if not nested:
+                self._rename_twin("Vault", rec)
+
+        item = self._upsert("Vault", rec, create=create, update=update, follow=True)
         if item is not None and self._touch("Vault", rec):
             self._move_item("Vault", item, parent, rec)
             self._top_visibility(item, visible, rec)

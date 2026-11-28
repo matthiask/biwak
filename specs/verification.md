@@ -137,7 +137,9 @@ Fixed (each in its part's spec):
   check-in questions and answers are updated; links to a list's group
   lead to the group on its list; archived to-dos without a completion
   are completed by nobody, at Basecamp's time; the same Basecamp file in
-  texts of several items gets a row per item, sharing the stored file.
+  texts of several items gets a row per item, sharing the stored file;
+  "(internal)" lists and folders and their groups follow renames, and
+  folders do too.
 - **To-dos:** stale to-dos are marked obsolete on the promised day;
   copies keep a group's "Keep untouched to-dos for a year" and
   deactivated assignees and people asked instead of failing; archived
@@ -225,8 +227,7 @@ decided, marked "consistent"):
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).
-- **Import:** "(internal)" lists and folders follow renames and
-  a renamed group isn't doubled; a project's (and template's) archived
+- **Import:** a project's (and template's) archived
   state comes from Basecamp only at the first import, both ways; people
   back with a new Basecamp ID (to check); comments read fresh when a
   listing is newer than the cached answer (consistent).

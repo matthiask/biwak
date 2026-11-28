@@ -329,7 +329,13 @@ same way.
   visible container** goes into an internal "<container> (internal)"
   (decided 2026-11-21): a top-level folder for docs and files (nested
   folders flattened into it), a list for to-dos (groups of the same
-  title; a board for a card table). An internal answer to a visible
+  title; a board for a card table). They follow renames of their
+  originals in Basecamp, as Basecamp's change, and so do their groups,
+  found by their mapping (`Todolist::Group::Internal`,
+  `Kanban::Column::Internal`), not their titles (found 2026-11-28 in
+  verification round 1: they kept the old names, a renamed group got a
+  second one; twins made before have none and are found by the title
+  once). A folder renamed in Basecamp is renamed too (it wasn't). An internal answer to a visible
   question can't move and is skipped and reported. A client's internal
   message stays internal.
 - **People** by address. Those without an account are created (never

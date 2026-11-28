@@ -2777,6 +2777,54 @@ class InternalInsideVisibleTest(ImportCase):
         self.assertEqual(internal.todolist.groups.count(), 1)
 
 
+class InternalRenamedTest(ImportCase):
+    """The internal twins follow renames of their originals in Basecamp
+    (found 2026-11-28 in verification round 1: they kept the old names, and
+    a renamed group got a second one)"""
+
+    LATER = "2026-03-01T08:00:00.000Z"
+
+    def setUp(self):
+        super().setUp()
+        grouped = self.client_.data["/todolists/3014/todos.json"]
+        grouped.append(
+            dict(grouped[0], id=3016, title="Wash the pots", visible_to_clients=False)
+        )
+        self.run_import()
+
+    def rename(self, rec, title):
+        rec |= {"title": title, "name": title, "updated_at": self.LATER}
+
+    def test_a_list_and_its_group(self):
+        data = self.client_.data
+        self.rename(data["/todosets/300/todolists.json"][1], "Kitchen")
+        self.rename(data["/todolists/301/groups.json"][0], "First week")
+        self.run_import()
+        internal = self.item("Kitchen (internal)")
+        self.assertEqual(
+            list(internal.todolist.groups.values_list("title", flat=True)),
+            ["First week"],
+        )
+        pots = self.item("Wash the pots")
+        self.assertEqual(pots.parent, internal)
+        self.assertEqual(pots.todo.group.title, "First week")
+        event = Event.objects.filter(item=internal, action=Action.EDITED).get()
+        self.assertIsNone(event.actor)
+        self.assertEqual(event.created_at, at("2026-03-01T08:00:00+00:00"))
+
+    def test_a_folder(self):
+        data = self.client_.data
+        self.rename(data["/vaults/400/vaults.json"][2], "Shared")
+        self.run_import()
+        self.assertEqual(self.item("Shared (internal)").kind, Kind.FOLDER)
+        self.assertEqual(
+            self.item("Internal in a public folder").parent,
+            self.item("Shared (internal)"),
+        )
+        # The folder itself too, like lists
+        self.assertEqual(self.item("Shared").kind, Kind.FOLDER)
+
+
 class StartDatesTest(ImportCase):
     """Basecamp's ``starts_on`` (specs/start-dates.md)"""
 
