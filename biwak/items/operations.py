@@ -206,8 +206,10 @@ def create_todo(
     recurrence_count=None,
 ):
     """``todolist`` is the list's item; ``InvalidDates`` for a start date
-    without a due date or after it"""
+    without a due date or after it, ``ValueError`` for an archived list or
+    one in an archived project (``refuse_closed()``)"""
     check_dates(starts_on, due_on)
+    refuse_closed(todolist)
     TodoList.objects.select_for_update().get(item=todolist)
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
@@ -1034,8 +1036,8 @@ def _create_next(item, todo, *, actor):
     if item.following.exclude(item__status=Status.TRASHED).exists():
         return None
     todolist = item.parent
-    if todolist.status == Status.ARCHIVED:
-        # Nothing new in an archived list (specs/archiving.md)
+    if not takes_todos(todolist):
+        # Nothing new in an archived list or project (specs/archiving.md)
         return None
     TodoList.objects.select_for_update().get(item=todolist)
     following = create_item(
@@ -1068,6 +1070,13 @@ def _create_next(item, todo, *, actor):
     for subscription in item.subscriptions.select_related("user"):
         if subscription.user.is_active:
             subscribe(subscription.user, following, added_by=subscription.added_by)
+    if not is_importing():
+        # Watching the list, as for a new to-do (create_todo(), decided
+        # 2026-11-28)
+        seeing = set(who_can_see(following).values_list("pk", flat=True))
+        for user in watchers(todolist):
+            if user.pk in seeing:
+                subscribe(user, following, explicit=False)
     record(actor=actor, action=Action.CREATED, project=item.project, item=following)
     # Assignees removed from the project since aren't brought back
     allowed = _assignable(following)
@@ -1080,6 +1089,25 @@ def _create_next(item, todo, *, actor):
             actor=actor,
             assigned_by={a.user_id: a.assigned_by for a in assignments},
         )
+    # Deactivated people stay assigned where they'd still see it, without
+    # being subscribed or told, as when copying (decided 2026-11-28,
+    # specs/handover.md)
+    staying_ids = set(
+        User.objects.filter(
+            staying(following.project, following.is_client_visible)
+        ).values_list("pk", flat=True)
+    )
+    now = timezone.now()
+    Assignment.objects.bulk_create([
+        Assignment(
+            todo_id=following.pk,
+            user_id=a.user_id,
+            assigned_by=a.assigned_by,
+            assigned_at=now,
+        )
+        for a in assignments
+        if not a.user.is_active and a.user_id in staying_ids
+    ])
     return following
 
 
@@ -1147,7 +1175,8 @@ def move_todos(
     isn't the index among all, specs/todos.md). Locks the
     lists, so concurrent moves don't mix up positions. Moving into another
     list recomputes the visibility. Raises ``ValueError`` for a to-do given
-    twice. The events of more than one share a ``batch``
+    twice and for to-dos coming into an archived list or one in an
+    archived project (``refuse_closed()``; reordering there stays). The events of more than one share a ``batch``
     (specs/handover.md). Into another project: ``move_todos_to()``, which
     passes ``_from``, the projects they come from by to-do."""
     if not items:
@@ -1159,6 +1188,8 @@ def move_todos(
     list(TodoList.objects.select_for_update().filter(item__in=lists).order_by("pk"))
     if group is not None and group.todolist_id != todolist.pk:
         raise ValueError("The group belongs to another list")
+    if any(i.parent_id != todolist.pk for i in items):
+        refuse_closed(todolist)
     _from = _from or {}
     if any(i.project_id != todolist.project_id and i.pk not in _from for i in items):
         raise ValueError("Moving to-dos between projects isn't possible")
@@ -1663,7 +1694,8 @@ def copy_list(
     quiet=False,
 ):
     """A copy of the list's open work in ``project`` (the same or another):
-    its description, groups in order and open to-dos in order with their
+    its description, groups in order (with their color and how long they
+    keep untouched to-dos) and open to-dos in order with their
     notes, checklists, recurrence and the assignees who are members of
     ``project`` or added to it (``copy_people()``; clients who aren't are
     left out). Not completed to-dos,
@@ -1698,6 +1730,7 @@ def copy_list(
             title=group.title,
             color=group.color,
             position=group.position,
+            stale_after=group.stale_after,
         )
         for group in source.groups.all()
     }
@@ -1754,8 +1787,9 @@ def copy_list(
             for pk in assignees
         ])
         # Assigned means subscribed (specs/subscribers.md), told by nobody:
-        # one event for the copy
-        for user in User.objects.filter(pk__in=assignees):
+        # one event for the copy. Deactivated people stay assigned
+        # (specs/handover.md) but can't be subscribed
+        for user in User.objects.filter(pk__in=assignees, is_active=True):
             subscribe(user, new, explicit=False)
     if quiet:
         subscribe(actor, copy)
@@ -1907,6 +1941,8 @@ def move_todos_to(items, *, todolist, group=None, index=None, actor):
         raise ValueError(gettext("Nothing moves into or out of an archived project."))
     if project.is_template or any(s.is_template for s in sources.values()):
         raise ValueError(gettext("Nothing moves into or out of a template."))
+    # Before anybody is added or dropped
+    refuse_closed(todolist)
     added, dropped = (
         list(people)
         for people in todos_move_people(
@@ -1962,9 +1998,24 @@ def may_add_to(user, todolist_item):
     return (
         can_create(user, Kind.TODO)
         and todolist_item.kind == Kind.LIST
-        and todolist_item.status == Status.ACTIVE
+        and takes_todos(todolist_item)
+    )
+
+
+def takes_todos(todolist_item):
+    """Whether new and moved to-dos go into the list: an active list in a
+    project that isn't archived (specs/archiving.md)"""
+    return (
+        todolist_item.status == Status.ACTIVE
         and todolist_item.project.archived_at is None
     )
+
+
+def refuse_closed(todolist_item):
+    """``ValueError`` unless the list ``takes_todos()``; the import brings
+    the source's to-dos wherever they are"""
+    if not is_importing() and not takes_todos(todolist_item):
+        raise ValueError(gettext("No to-dos can be added to this list."))
 
 
 def text_plan(todolist_item, text, user):

@@ -29,7 +29,10 @@ impossible to find afterwards.
   (`PeopleField`, the marks through `avatar_data`'s `inactive`), the
   API's people (`is_active` on every person) and the CLI's names.
 - **They aren't offered** for new assignments (the people picker),
-  but stay in the to-do's assignees until someone takes them out.
+  but stay in the to-do's assignees until someone takes them out; also
+  on the next to-do of a repeating one and on copies of lists and
+  templates, where they'd see it, without being subscribed (decided
+  2026-11-28, verification round 1).
 - **The to-dos page's "Assigned to"** offers inactive people too, after
   the active ones under "Inactive", so their open to-dos can be listed
   and handed over (`/todos/?assignee=ID`, `biwak todos --assignee ID`): an `<optgroup>`, inactive

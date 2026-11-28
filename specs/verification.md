@@ -130,7 +130,13 @@ with `--replace`) and check-ins' people asked who were deactivated
 and activates through `activate()`; deactivating and "Reset sign-in…"
 remove push devices; single sign-on's 24-hour end keeps the push device
 (nothing audited is written then, so the connection's previous name
-doesn't matter there anymore).
+doesn't matter there anymore);
+stale to-dos marked obsolete on the promised day; copies keep
+a group's "Keep untouched to-dos for a year"; copies keep deactivated
+assignees and people asked instead of failing; archived lists and
+lists in archived projects take no new or moved to-dos; the next to-do
+of a repeating one keeps deactivated assignees and subscribes the
+list's watchers.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -168,24 +174,6 @@ part's spec with the fix):
     comments were skipped; they come only with `--full`.
   - Check-in questions and answers changed in Basecamp aren't updated
     (`_upsert` without `update=`).
-- **To-dos:**
-  - Stale to-dos are marked obsolete a day after the date the mail and
-    the banner promise when the run starts a little earlier or across
-    the spring DST change (`stale.mark_warned()` compares timestamps,
-    `obsolete_on()` dates).
-  - Copying a list or a template keeps a group's "Keep untouched to-dos
-    for a year" (decided; today 90 days).
-  - Archived lists and lists in archived projects refuse new and moved
-    to-dos at every entry point, like `may_add_to()`: the inline form,
-    the API's create and move, dragging; a repeating to-do in an
-    archived project creates no next one (decided).
-  - The next to-do of a repeating one keeps deactivated assignees
-    (decided; today `_assignable()` drops them) and subscribes the
-    list's watchers (today it copies the old to-do's subscribers).
-- **People:**
-  - Copying a list, a project from a template, or a template's check-in
-    with a deactivated assignee or person asked fails (`subscribe()`
-    raises; the copy page shows the untranslated error, the API 500).
 - **Notifications:**
   - A first mention merged into an edit whose notification was marked
     unread is mailed and pushed (decided; today neither).

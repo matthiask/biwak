@@ -3,14 +3,18 @@ the places listed, notifying nobody"""
 
 import datetime as dt
 import importlib
+from contextlib import contextmanager
 
 from django.apps import apps
 from django.test import TestCase
+from django.urls import reverse
 
 from biwak.accounts.models import APIToken
 from biwak.activity.models import Action, Event
 from biwak.items import operations as ops
 from biwak.items.models import Item, Status, Todo
+from biwak.palette.test_actions import palette_data
+from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project
 
 
@@ -188,3 +192,171 @@ class MigrationTest(TestCase):
         trashed.todo.refresh_from_db()
         self.assertIsNotNone(trashed.todo.completed_at)
         self.assertFalse(Item.objects.get(pk=trashed.pk).archived_when_trashed)
+
+
+class ClosedListsTest(TestCase):
+    """Archived lists and lists in archived projects take no new or moved
+    to-dos, at every entry point (decided 2026-11-28); reordering what's
+    there stays"""
+
+    MESSAGE = "No to-dos can be added to this list."
+
+    def setUp(self):
+        self.ada = person("Ada")
+        self.project = project(members=[self.ada])
+        self.list = ops.create_list(
+            project=self.project, title="Launch", creator=self.ada
+        )
+        self.other = ops.create_list(
+            project=self.project, title="Later", creator=self.ada
+        )
+        self.tent = ops.create_todo(todolist=self.list, title="Tent", creator=self.ada)
+        self.stove = ops.create_todo(
+            todolist=self.list, title="Stove", creator=self.ada
+        )
+        self.map = ops.create_todo(todolist=self.other, title="Map", creator=self.ada)
+        self.client.force_login(self.ada)
+
+    def archived_list(self):
+        ops.archive(self.list, actor=self.ada)
+
+    def archived_project(self):
+        project_ops.archive_project(self.project, actor=self.ada)
+
+    @contextmanager
+    def closed(self, what):
+        """The list archived, or its project, brought back afterwards"""
+        if what == "list":
+            self.archived_list()
+        else:
+            self.archived_project()
+        self.list.refresh_from_db()
+        try:
+            yield
+        finally:
+            if what == "list":
+                ops.unarchive(self.list, actor=self.ada)
+            else:
+                project_ops.unarchive_project(self.project, actor=self.ada)
+            self.list.refresh_from_db()
+
+    def test_operations(self):
+        for what in ("list", "project"):
+            with self.subTest(closed=what), self.closed(what):
+                with self.assertRaisesMessage(ValueError, self.MESSAGE):
+                    ops.create_todo(todolist=self.list, title="Rope", creator=self.ada)
+                with self.assertRaisesMessage(ValueError, self.MESSAGE):
+                    ops.move_todo(self.map, todolist=self.list, actor=self.ada)
+                # Reordering stays
+                ops.move_todo(self.stove, todolist=self.list, index=0, actor=self.ada)
+                self.assertEqual(
+                    list(ops.open_todos(self.list).values_list("title", flat=True)),
+                    ["Stove", "Tent"],
+                )
+                ops.move_todo(self.stove, todolist=self.list, actor=self.ada)
+
+    def test_the_inline_form(self):
+        url = self.list.get_absolute_url()
+        self.assertContains(self.client.get(url), "wb-add-todo-form")
+        actions = {a["label"] for a in palette_data(self.client.get(url))["actions"]}
+        self.assertIn("New to-do", actions)
+        for what in ("list", "project"):
+            with self.subTest(closed=what), self.closed(what):
+                response = self.client.get(url)
+                self.assertNotContains(response, "wb-add-todo-form")
+                actions = {a["label"] for a in palette_data(response)["actions"]}
+                self.assertNotIn("New to-do", actions)
+                response = self.client.post(
+                    url, {"title": "Rope"}, headers={"X-Biwak-Fragment": "1"}
+                )
+                self.assertContains(response, self.MESSAGE, status_code=422)
+                self.assertFalse(Item.objects.filter(title="Rope").exists())
+
+    def test_dragging(self):
+        for what in ("list", "project"):
+            with self.subTest(closed=what), self.closed(what):
+                response = self.client.post(
+                    f"/todos/{self.map.pk}/move/",
+                    {"list": self.list.pk, "index": "0", "quiet": "1"},
+                )
+                self.assertEqual(response.status_code, 400)
+                response = self.client.post(
+                    f"/lists/{self.list.pk}/todos/move/",
+                    {"todos": [self.map.pk], "index": "0"},
+                )
+                self.assertEqual(response.status_code, 400)
+                self.map.refresh_from_db()
+                self.assertEqual(self.map.parent_id, self.other.pk)
+
+    def test_moving_without_dragging(self):
+        """ "Move to…" doesn't offer archived lists; in an archived project
+        it says why"""
+        url = f"/todos/{self.map.pk}/move-to/"
+        data = {"target": str(self.list.pk), "index": "end"}
+        with self.closed("list"):
+            self.assertNotContains(self.client.get(url), f'value="{self.list.pk}"')
+            response = self.client.post(url, data)
+            self.assertContains(response, "Select a valid choice.")
+        with self.closed("project"):
+            self.assertContains(self.client.post(url, data), self.MESSAGE)
+        self.map.refresh_from_db()
+        self.assertEqual(self.map.parent_id, self.other.pk)
+
+    def test_moving_several(self):
+        """The selection's "Move…" into another list of an archived project,
+        by a client (staff choose among active projects only)"""
+        cleo = person("Cleo", client=True)
+        project_ops.add_member(self.project, cleo, actor=self.ada)
+        here = ops.create_list(
+            project=self.project, title="Here", creator=self.ada, visible=True
+        )
+        there = ops.create_list(
+            project=self.project, title="There", creator=self.ada, visible=True
+        )
+        rope = ops.create_todo(todolist=here, title="Rope", creator=self.ada)
+        self.archived_project()
+        self.client.force_login(cleo)
+        response = self.client.post(
+            f"{reverse('todos_move_selected')}?items={rope.pk}",
+            {"target": str(there.pk), "index": "end"},
+        )
+        self.assertContains(response, self.MESSAGE)
+        rope.refresh_from_db()
+        self.assertEqual(rope.parent_id, here.pk)
+
+    def test_api(self):
+        def call(path, data):
+            return self.client.post(
+                f"/api/v1/{path}", data, content_type="application/json"
+            )
+
+        for what in ("list", "project"):
+            with self.subTest(closed=what), self.closed(what):
+                for path, data in [
+                    (f"lists/{self.list.pk}/todos/", {"title": "Rope"}),
+                    (f"todos/{self.map.pk}/move/", {"list_id": self.list.pk}),
+                    (f"lists/{self.list.pk}/todos/move/", {"todo_ids": [self.map.pk]}),
+                    ("todos/move/", {"ids": [self.map.pk], "list_id": self.list.pk}),
+                ]:
+                    with self.subTest(path=path):
+                        response = call(path, data)
+                        self.assertContains(response, self.MESSAGE, status_code=400)
+                self.map.refresh_from_db()
+                self.assertEqual(self.map.parent_id, self.other.pk)
+
+    def test_no_next_to_do_in_an_archived_project(self):
+        todo = ops.create_todo(
+            todolist=self.list,
+            title="Water",
+            creator=self.ada,
+            due_on="2027-03-01",
+            recurrence="FREQ=WEEKLY;BYDAY=MO",
+        )
+        self.archived_project()
+        ops.complete(todo, actor=self.ada)
+        self.assertFalse(
+            Item.objects
+            .filter(parent=self.list, title="Water")
+            .exclude(pk=todo.pk)
+            .exists()
+        )

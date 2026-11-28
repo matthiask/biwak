@@ -50,14 +50,16 @@ project. Staff create lists with "New list" on the project's page.
   stays readable, but is left out of the project's lists (under the
   lists, "3 archived lists" leads to them, at the end of the project's
   to-dos page), of your to-dos, of the calendar link and of the
-  palette's suggestions, and its recurring to-dos don't repeat. Nothing
-  is archived automatically. To-dos are completed, not archived.
+  palette's suggestions, and its recurring to-dos don't repeat. No
+  to-dos are added to it or moved into it, the same in an archived
+  project. Nothing is archived automatically. To-dos are completed, not archived.
 - **Copy:** "Copy…" in the list's "More" menu (staff) copies its open
   work into this or another project: the description, the groups and
   the open to-dos with their notes, checklists, attachments and repeat
   rules. Not completed to-dos, comments or subscribers. Assignees stay:
   staff who aren't in that project are added to it; clients who won't
-  see the copy are left out. The dialog names them first. The due dates stay, move by a number of days or go. The copy
+  see the copy are left out. Deactivated people stay assigned where they
+  see the copy. The dialog names them first. The due dates stay, move by a number of days or go. The copy
   keeps the list's title, with "(copy)" if the project has a list of
   that name, and is internal unless you tick "Visible to clients"
   (which asks first).
@@ -206,7 +208,7 @@ Who follows it hears about it being marked; "Reopen" brings it back.
 
 A group can keep its to-dos for a year instead, for a backlog or a list
 of ideas: "Keep untouched to-dos for a year" in the group's form (staff
-only).
+only). Copies of the list and projects from a template keep it.
 
 ## Repeating
 
@@ -216,8 +218,8 @@ interval, weekdays, or the nth weekday of the month. Optionally set
 repeating to-do shows a repeat icon; pointing at it says how it repeats.
 
 Completing a repeating to-do creates the next one at the end of the
-same list and group, with the same title, notes, assignees and
-subscribers, due on the rule's next date after today (or after the due
+same list and group, with the same title, notes, assignees (deactivated
+ones too) and subscribers, and whoever watches the list, due on the rule's next date after today (or after the due
 date, when you complete it early). A start date keeps its distance:
 starting four days before the due date, the next one does too. There is never a stack of open
 copies. Comments and attachments stay with the completed to-do, and the

@@ -94,7 +94,8 @@ a checkbox "Keep untouched to-dos for a year" (`update_group()`,
 values (`stale_after`, 400 for others, 403 for clients; `biwak groups
 create|update … --keep-for-a-year/--no-keep-for-a-year`, the existing
 commands, decided by the building agent 2026-11-26).
-Ungrouped to-dos: 90 days. Not on lists (a list of ideas gets a group),
+Copying a list and a new project from a template keep it (decided
+2026-11-28, verification round 1). Ungrouped to-dos: 90 days. Not on lists (a list of ideas gets a group),
 no "never". The board's column header and the list's group heading show
 nothing.
 
@@ -144,7 +145,11 @@ obsolete:
 ## Marking it obsolete automatically
 
 `STALE_WARNING` days after the warning, still untouched, `fairy_tasks`
-marks it obsolete. The event has **no actor**: `Event.actor` becomes
+marks it obsolete: on the date the mail and the banner promise (the
+local date of the warning plus 14 days), also when that day's run starts
+a little earlier than the warning's or the clocks changed meanwhile
+(fixed 2026-11-28, verification round 1: it compared timestamps and
+came a day late). The event has **no actor**: `Event.actor` becomes
 nullable, and every place reading it (the feed, the history, the
 lantern, mails' `From`, the API's events) says "Biwak" for none — the
 bigger change of this part. Its subscribers who are staff are told as

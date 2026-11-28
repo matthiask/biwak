@@ -52,7 +52,7 @@
   {% if item.status == "archived" %}
     <div class="alert alert-info">{% translate "This list is archived. It stays readable." %}</div>
   {% endif %}
-  {% if can_add_from_text %}
+  {% if can_add %}
     {% url 'list_from_text' item.pk as from_text_url %}
     {% include "items/_drop_text.html" with url=from_text_url %}
   {% endif %}
@@ -88,7 +88,7 @@
           {% for todo in ungrouped %}{% include "items/_todo.html" %}{% endfor %}
         </div>
         <div id="add-none" data-live class="wb-add-row">
-          {% include "items/_add_todo.html" with group=None %}
+          {% if can_add %}{% include "items/_add_todo.html" with group=None %}{% endif %}
           {% if not groups and can_change and not one_group %}{% include "items/_new_group.html" %}{% endif %}
         </div>
       </section>
@@ -169,7 +169,7 @@
             {% for todo in todos %}{% include "items/_todo.html" %}{% endfor %}
           </div>
           <div id="add-{{ group.pk }}" data-live class="wb-add-row">
-            {% include "items/_add_todo.html" %}
+            {% if can_add %}{% include "items/_add_todo.html" %}{% endif %}
             {% if forloop.last and can_change and not one_group %}{% include "items/_new_group.html" %}{% endif %}
           </div>
         </section>

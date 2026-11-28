@@ -63,7 +63,8 @@ auf der Seite des Projekts.
   archivierte Listen“ zu ihnen, am Ende der To-dos des Projekts), bei
   deinen To-dos, im Kalenderlink und bei den Vorschlägen
   der Palette, und ihre wiederkehrenden To-dos wiederholen sich nicht.
-  Nichts wird automatisch archiviert. To-dos werden erledigt, nicht
+  Es kommen keine To-dos dazu, auch nicht verschoben, ebenso in einem
+  archivierten Projekt. Nichts wird automatisch archiviert. To-dos werden erledigt, nicht
   archiviert.
 - **Kopieren:** „Kopieren…“ im Menü „Mehr“ der Liste (Mitarbeitende)
   kopiert ihre offene Arbeit in dieses oder ein anderes Projekt: die
@@ -71,7 +72,8 @@ auf der Seite des Projekts.
   Checklisten, Anhängen und Wiederholungsregeln. Keine erledigten
   To-dos, Kommentare oder Abonnent:innen. Zugewiesene bleiben:
   Mitarbeitende, die nicht in diesem Projekt sind, werden hinzugefügt;
-  Kund:innen, die die Kopie nicht sehen werden, fallen weg. Der Dialog
+  Kund:innen, die die Kopie nicht sehen werden, fallen weg.
+  Deaktivierte bleiben zugewiesen, wo sie die Kopie sehen. Der Dialog
   nennt sie vorher. Die Fälligkeiten bleiben, verschieben sich um eine
   Anzahl Tage oder fallen weg. Die Kopie behält den Titel der Liste, mit
   „(Kopie)“, wenn das Projekt eine Liste mit diesem Namen hat, und ist
@@ -247,7 +249,8 @@ ihm folgt, hört davon; „Wieder öffnen“ holt es zurück.
 
 Eine Gruppe kann ihre To-dos stattdessen ein Jahr behalten, für einen
 Backlog oder eine Liste von Ideen: „Unberührte To-dos ein Jahr behalten“
-im Formular der Gruppe (nur das Team).
+im Formular der Gruppe (nur das Team). Kopien der Liste und Projekte aus
+einer Vorlage behalten das.
 
 ## Wiederholen
 
@@ -260,7 +263,8 @@ da, wie es sich wiederholt.
 
 Ein wiederkehrendes To-do zu erledigen erstellt das nächste am Ende
 derselben Liste und Gruppe, mit demselben Titel, denselben Notizen,
-Zugewiesenen und Abonnent:innen, fällig am nächsten Datum der Regel nach
+Zugewiesenen (auch deaktivierten) und Abonnent:innen und allen, die die
+Liste beobachten, fällig am nächsten Datum der Regel nach
 heute (oder nach der Fälligkeit, wenn du es früher erledigst). Ein
 Beginn behält seinen Abstand: Beginnt es vier Tage vor der Fälligkeit,
 tut es das nächste auch. Es gibt nie einen Stapel offener Kopien.

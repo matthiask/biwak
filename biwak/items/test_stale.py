@@ -214,6 +214,24 @@ class DailyRunTest(StaleBase):
         )
         self.assertEqual(told, {self.ada.pk, self.bob.pk, self.pia.pk})
 
+    def test_marked_on_the_promised_day(self):
+        # A run a few seconds earlier than the warning's, two weeks later
+        self.run_at(NOW + dt.timedelta(seconds=30))
+        todo = self.todo(self.item)
+        self.assertEqual(stale.obsolete_on(todo), dt.date(2026, 12, 21))
+        late = dt.datetime(2026, 12, 20, 23, 59, tzinfo=ZURICH)
+        self.assertEqual(self.run_at(late), (0, 0, 0))
+        run = NOW + dt.timedelta(days=14, seconds=5)
+        self.assertEqual(self.run_at(run), (0, 1, 0))
+
+    def test_marked_on_the_promised_day_across_the_dst_change(self):
+        self.run_at(dt.datetime(2027, 3, 20, 3, 0, tzinfo=ZURICH))
+        todo = self.todo(self.item)
+        self.assertEqual(stale.obsolete_on(todo), dt.date(2027, 4, 3))
+        # In UTC, as ``timezone.now()`` is: 13 days and 23 hours later
+        run = dt.datetime(2027, 4, 3, 3, 0, tzinfo=ZURICH).astimezone(dt.UTC)
+        self.assertEqual(self.run_at(run), (0, 1, 0))
+
     def test_without_staff_subscribers(self):
         item = self.make("Nobody's", age=100)
         item.subscriptions.all().delete()

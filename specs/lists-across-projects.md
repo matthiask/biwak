@@ -15,7 +15,8 @@ Templates copy lists the same way (`templates.md`).
   project already has a list of that name (ignoring case) it gets
   " (copy)", then " (copy 2)" and so on (decided 2026-11-22).
 - **The open work** (decided 2026-11-22): title, description, groups
-  (in order), open to-dos in order with their notes and checklists
+  (in order, with their color and "Keep untouched to-dos for a year",
+  decided 2026-11-28), open to-dos in order with their notes and checklists
   (unticked as they are). Not completed to-dos, comments, history,
   events, subscribers, reactions, public links.
 - **Assignees stay** (decided 2026-11-22):
@@ -24,7 +25,10 @@ Templates copy lists the same way (`templates.md`).
   (with the default notification choice, as assigning a non-member
   does); clients who don't see the copy are left out. The modal says
   who first: "Dan Example will be added to Website.", "Cleo Example
-  won't see the copy: left unassigned."
+  won't see the copy: left unassigned." Deactivated people stay
+  assigned where they see the copy, not subscribed (they can't be) and
+  never added as members (decided 2026-11-28, verification round 1: the
+  copy failed on them).
 - **Dates:** "Keep", "Move by N days" (due and start dates together),
   or "Remove"; recurrence rules stay.
 - **Visibility** is the target's: the copy is internal unless "Visible

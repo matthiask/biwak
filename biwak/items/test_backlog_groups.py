@@ -5,7 +5,8 @@ from django.test import TestCase
 
 from biwak.accounts.models import APIToken
 from biwak.items import operations as ops
-from biwak.items.models import Group
+from biwak.items.models import Group, Kind
+from biwak.projects import operations as project_ops
 from biwak.test_utils import person, project
 
 
@@ -33,6 +34,23 @@ class BacklogGroupsTest(TestCase):
             ops.update_group(self.group, stale_after=30)
         with self.assertRaises(ValueError):
             ops.create_group(todolist=self.list.todolist, title="X", stale_after=0)
+
+    def test_copies_keep_it(self):
+        """Copying a list and a project from a template keep it (decided
+        2026-11-28)"""
+        ops.update_group(self.group, stale_after=365)
+        copy = ops.copy_list(
+            self.list, project=self.project, title="Board", actor=self.ada
+        )
+        self.assertEqual(copy.todolist.groups.get().stale_after, 365)
+        template = project_ops.create_template(name="Boards", actor=self.ada)
+        board = ops.create_list(project=template, title="Board", creator=self.ada)
+        ops.create_group(todolist=board.todolist, title="Later", stale_after=365)
+        website = project_ops.create_from_template(
+            template, actor=self.ada, name="Website"
+        )
+        copied = website.items.get(kind=Kind.LIST)
+        self.assertEqual(copied.todolist.groups.get().stale_after, 365)
 
     def test_form_as_staff(self):
         self.client.force_login(self.ada)

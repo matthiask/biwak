@@ -33,6 +33,17 @@ in the project's "More" menu (`projects-overview.md`).
   projects, Home and the calendar feed; last and marked in the palette, left out of search
   unless "Include archived". Their to-dos stay readable through the
   list. Recurring to-dos in them create no next one.
+- **No new or moved to-dos** in archived lists and lists of archived
+  projects (decided 2026-11-28, verification round 1; before, only
+  "Add from text…" refused): `ops.takes_todos()`, refused in the
+  operations (`refuse_closed()`: `create_todo()`, `move_todos()` for
+  to-dos coming from another list, `move_todos_to()`) with "No to-dos
+  can be added to this list.", so the inline form (not offered there,
+  nor the palette's "New to-do"), the API's create and moves, dragging,
+  "Move to…" and the selection's "Move…" say so. Reordering what's
+  there stays, as does moving to-dos out of an archived list in an
+  active project. The import is exempt. Recurring to-dos in archived
+  projects create no next one either.
 - `archived` and `unarchived` events, in the feed and the history,
   notifying nobody (`notify.SILENT`).
 - Trashing an archived list and restoring it keeps it archived.
