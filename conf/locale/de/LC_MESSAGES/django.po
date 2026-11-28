@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:06+0100\n"
+"POT-Creation-Date: 2026-11-28 11:27+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -3195,6 +3195,14 @@ msgstr "Nur Mitarbeitende verschieben To-dos in andere Projekte."
 #: biwak/items/api.py
 msgid "Send “confirm”: true to move them anyway."
 msgstr "Sende „confirm“: true, um sie trotzdem zu verschieben."
+
+#: biwak/items/api.py
+msgid "Completed to-dos can't be kept open."
+msgstr "Erledigte To-dos können nicht offen gelassen werden."
+
+#: biwak/items/api.py
+msgid "Completed to-dos can't be moved."
+msgstr "Erledigte To-dos können nicht verschoben werden."
 
 #: biwak/items/api.py biwak/items/views.py
 msgid "To-dos can't move to another project."

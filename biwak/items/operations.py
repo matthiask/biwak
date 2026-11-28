@@ -1018,7 +1018,7 @@ def _create_next(item, todo, *, actor):
     it, due on the rule's next date after today, or after the due date when
     completed early (specs/todos.md). None when the count or the end date
     is used up, or one was made from this to-do already (reopening and
-    completing again)."""
+    completing again), also one in the trash."""
     if todo.recurrence_count is not None and todo.recurrence_count <= 0:
         return None
     # After the due date when completed early: a weekly to-do due Friday
@@ -1033,7 +1033,9 @@ def _create_next(item, todo, *, actor):
     starts_on = None
     if todo.starts_on and todo.due_on:
         starts_on = due_on - (todo.due_on - todo.starts_on)
-    if item.following.exclude(item__status=Status.TRASHED).exists():
+    # One series: also when the next one is in the trash, trashing it
+    # ended the series (decided 2026-11-28)
+    if item.following.exists():
         return None
     todolist = item.parent
     if not takes_todos(todolist):
@@ -1051,7 +1053,7 @@ def _create_next(item, todo, *, actor):
     Todo.objects.create(
         item=following,
         group=todo.group,
-        notes=todo.notes,
+        notes=_share_attachments(todo.notes, item, following),
         starts_on=starts_on,
         due_on=due_on,
         recurrence=todo.recurrence,
@@ -1658,6 +1660,27 @@ def copy_people(list_item, project, *, visible):
         project,
         visible,
     )
+
+
+def _share_attachments(text, source, target):
+    """``text`` of ``source`` referencing rows of ``target``'s own for the
+    attachments it references, pointing at the same stored files (the next
+    to-do of a repeating one, decided 2026-11-28, specs/files.md): new
+    keys, the same uploader; a file is deleted with its last row"""
+    keys = set(REFERENCE.findall(text or ""))
+    for attachment in Attachment.objects.filter(key__in=keys, item=source):
+        shared = Attachment.objects.create(
+            project=target.project,
+            item=target,
+            key=new_key(),
+            file=attachment.file.name,
+            name=attachment.name,
+            size=attachment.size,
+            content_type=attachment.content_type,
+            uploaded_by=attachment.uploaded_by,
+        )
+        text = text.replace(f"attachment:{attachment.key}", f"attachment:{shared.key}")
+    return text
 
 
 def _copy_attachments(text, source, target, *, actor):

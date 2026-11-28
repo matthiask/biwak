@@ -145,6 +145,8 @@ class Attachment(ContentTypeMixin, models.Model):
 
     class Meta:
         ordering = ["created_at", "pk"]
+        # Deleting a row asks whether another one still uses its file
+        indexes = [models.Index(fields=["file"], name="files_attachment_file")]
         verbose_name = _("attachment")
         verbose_name_plural = _("attachments")
 
@@ -165,10 +167,16 @@ class Attachment(ContentTypeMixin, models.Model):
 def delete_file(sender, instance, **kwargs):
     """Deleting the row (also through items purged from the trash or a
     deleted project, which cascade) deletes the file, once the transaction
-    commits"""
+    commits, unless another row still uses it (the next to-do of a
+    repeating one shares its predecessor's files, specs/files.md)"""
     name, storage = instance.file.name, instance.file.storage
     if name:
-        transaction.on_commit(lambda: storage.delete(name))
+
+        def delete():
+            if not Attachment.objects.filter(file=name).exists():
+                storage.delete(name)
+
+        transaction.on_commit(delete)
 
 
 def version_path(version, filename):

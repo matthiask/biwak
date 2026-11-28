@@ -248,6 +248,21 @@ class OperationsTest(RecurrenceTestCase):
         ops.complete(item, actor=self.ada)
         self.assertEqual(Item.objects.filter(todo__previous=item).count(), 1)
 
+    def test_trashing_the_next_one_ends_the_series(self):
+        """Decided 2026-11-28 (verification round 1): the trash too, so
+        completing the previous one again never starts a second series"""
+        item = self.todo("FREQ=DAILY", "2026-11-20")
+        ops.complete(item, actor=self.ada)
+        ops.trash(self.following(item), actor=self.ada)
+        ops.reopen(item, actor=self.ada)
+        ops.complete(item, actor=self.ada)
+        self.assertEqual(Item.objects.filter(todo__previous=item).count(), 1)
+        # Not even when it was given a rule again
+        ops.reopen(item, actor=self.ada)
+        ops.update_todo(item, actor=self.ada, recurrence="FREQ=DAILY")
+        ops.complete(item, actor=self.ada)
+        self.assertEqual(Item.objects.filter(todo__previous=item).count(), 1)
+
     def test_assignees_who_cant_follow_are_left_out(self):
         item = self.todo("FREQ=DAILY", assignees=[self.ada, self.cleo])
         # Hidden from clients since: Cleo can't see the next to-do
@@ -760,12 +775,21 @@ class APITest(RecurrenceTestCase):
         self.assertIsNone(
             self.send("get", f"todos/{new.pk}/", self.cleo).json()["previous_id"]
         )
-        # Staff don't get it either (the API doesn't know who is asking)
-        self.assertIsNone(
-            self.send("get", f"todos/{new.pk}/", self.ada).json()["previous_id"]
-        )
         self.assertEqual(
             self.send("get", f"todos/{item.pk}/", self.cleo).status_code, 404
+        )
+        # Whoever sees it gets it, like the page's link (verification
+        # round 1, consistent), also in lists
+        self.assertEqual(
+            self.send("get", f"todos/{new.pk}/", self.ada).json()["previous_id"],
+            item.pk,
+        )
+        listed = self.send("get", f"lists/{self.list.pk}/todos/", self.ada).json()
+        self.assertEqual({t["id"]: t["previous_id"] for t in listed}[new.pk], item.pk)
+        # Not once it's in the trash
+        ops.trash(item, actor=self.ada)
+        self.assertIsNone(
+            self.send("get", f"todos/{new.pk}/", self.ada).json()["previous_id"]
         )
 
 

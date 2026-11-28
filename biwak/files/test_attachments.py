@@ -275,6 +275,60 @@ class OperationsTest(Fixture, TestCase):
         )
 
 
+class SharedFilesTest(Fixture, TestCase):
+    """The next to-do of a repeating one shares the attachments its notes
+    show: rows of its own, the same stored file, deleted with its last
+    row (decided 2026-11-28, specs/files.md)"""
+
+    def test_the_next_todo_shares_the_files(self):
+        plan = upload(self.project, self.ada, name="plan.pdf", content=b"%PDF")
+        elsewhere = upload(self.project, self.ada, name="other.png")
+        ops.add_comment(self.secret, author=self.ada, content=elsewhere.markdown)
+        item = ops.create_todo(
+            todolist=self.shared,
+            title="Water the plants",
+            creator=self.ada,
+            notes=f"{plan.markdown} [not its own](attachment:{elsewhere.key})",
+            recurrence="FREQ=WEEKLY",
+        )
+        ops.complete(item, actor=self.bob)
+        following = Item.objects.get(todo__previous=item)
+        [shared] = Attachment.objects.filter(item=following)
+        self.assertNotEqual(shared.key, plan.key)
+        self.assertEqual(shared.file.name, plan.file.name)
+        self.assertEqual(
+            (shared.name, shared.size, shared.uploaded_by),
+            ("plan.pdf", plan.size, self.ada),
+        )
+        self.assertEqual(
+            following.todo.notes,
+            f"{shared.markdown} [not its own](attachment:{elsewhere.key})",
+        )
+        self.assertIn(
+            f"/attachments/{shared.key}/plan.pdf",
+            str(render_markdown(following.todo.notes, following, absolute=True)),
+        )
+        # Moving it renames nothing
+        other = project("Other", members=[self.ada, self.cleo])
+        ops.move_to_project(self.shared, project=other, actor=self.ada)
+        shared.refresh_from_db()
+        self.assertEqual(shared.file.name, plan.file.name)
+
+        # The completed one deleted for good: the file stays for the next
+        ops.trash(item, actor=self.ada)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.purge_trash(now=timezone.now() + dt.timedelta(days=31))
+        self.assertFalse(Attachment.objects.filter(pk=plan.pk).exists())
+        self.assertTrue(default_storage.exists(shared.file.name))
+        self.client.force_login(self.cleo)
+        self.assertEqual(self.status(shared.get_absolute_url()), 200)
+        # With its last row it goes
+        ops.trash(following, actor=self.ada)
+        with self.captureOnCommitCallbacks(execute=True):
+            ops.purge_trash(now=timezone.now() + dt.timedelta(days=31))
+        self.assertFalse(default_storage.exists(shared.file.name))
+
+
 class ForeignReferencesTest(Fixture, TestCase):
     """A reference to an attachment of another item (copied from an
     internal to-do into a visible one) shows neither its name nor its URL,

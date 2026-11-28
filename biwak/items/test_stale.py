@@ -387,6 +387,22 @@ class WarningMailTest(StaleBase):
         self.assertEqual(message.subject, "[Biwak] 1 to-do will be marked as obsolete")
         self.assertNotIn("Order the tent", message.body)
 
+    def test_not_stale_any_more(self):
+        """Commented on (or its list archived) since the run: left out
+        like a kept one (verification round 1, consistent)"""
+        with time_machine.travel(NOW.replace(hour=5), tick=False):
+            ops.add_comment(self.first, author=self.ada, content="Still needed")
+        self.send(NOW.replace(hour=8))
+        [message] = self.mails_to(self.bob)
+        self.assertEqual(message.subject, "[Biwak] 1 to-do will be marked as obsolete")
+        self.assertNotIn("Order the tent", message.body)
+        self.assertIn("Book the bus", message.body)
+
+    def test_list_archived_since(self):
+        ops.archive(self.list, actor=self.ada)
+        self.send(NOW.replace(hour=8))
+        self.assertEqual(self.mails_to(self.bob), [])
+
     def test_german(self):
         self.bob.language = "de"
         self.bob.save()
@@ -504,3 +520,24 @@ class KeepingTest(StaleBase):
         response = self.call(self.cleo, f"todos/{secret.pk}/keep/")
         self.assertEqual(response.status_code, 404)
         self.assertEqual(json.loads(response.content).get("stale_warned_at"), None)
+
+    def test_completed_ones_arent_kept(self):
+        """Like the mail's link (verification round 1, consistent): keeping
+        a completed or obsolete to-do records nothing"""
+        done = self.make("Done")
+        ops.complete(done, actor=self.ada)
+        obsolete = self.make("Obsolete")
+        ops.mark_obsolete(obsolete, actor=self.ada)
+        self.client.force_login(self.ada)
+        for item in [done, obsolete]:
+            with self.subTest(item=item.title):
+                response = self.client.post(f"/todos/{item.pk}/keep/")
+                self.assertEqual(response.status_code, 404)
+                response = self.call(self.ada, f"todos/{item.pk}/keep/")
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.json()["detail"], "Completed to-dos can't be kept open."
+                )
+                self.assertFalse(
+                    Event.objects.filter(item=item, action=Action.KEPT).exists()
+                )

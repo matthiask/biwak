@@ -213,19 +213,29 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   due date (`start-dates.md`). In `complete()`'s transaction, created
   by the original creator with its own `created` event by whoever
   completed it.
-- **One series:** completing a to-do that already has a next one (not
-  in the trash) creates none, so reopening and completing again never
-  branches. Reopening doesn't remove the next one.
+- **One series:** completing a to-do that already has a next one
+  creates none, so reopening and completing again never branches.
+  Reopening doesn't remove the next one. Trashing the next one ends the
+  series: it still counts as the next one (decided 2026-11-28,
+  verification round 1; since the rule moves, the completed one has
+  none left anyway, unless somebody gives it one again).
 - Comments and attachments stay with the completed to-do; the new one
-  links to it ("Previous: completed on 3 March by Ada").
+  links to it ("Previous: completed on 3 March by Ada"). The new one's
+  notes show the same files: attachments of its own (new keys, the notes
+  rewritten to them) sharing the stored files, which are deleted with
+  their last row (decided 2026-11-28, verification round 1,
+  `files.md`).
 - **Ending:** an end date, a count, or removing the rule (which removes
   both ends). No next one in an archived list or an archived project
   (`archiving.md`).
 - **API:** `recurrence` (preset or RRULE; `null` or `""` removes it),
   `recurrence_description`, `recurrence_ends_on`, `recurrence_count`,
-  `previous_id` on `TodoOut`. `previous_id` is hidden when the to-do is
-  visible to clients and the previous one isn't (moved since), for staff
-  too. The CLI has `--repeat RULE` only.
+  `previous_id` on `TodoOut`. `previous_id` only names a previous
+  to-do the reader sees (`visible_to()`: not trashed, not internal for
+  clients), like the page's link (verification round 1, 2026-11-28,
+  consistent; it used to hide it for staff too when the to-do was
+  visible and the previous one wasn't). The CLI has `--repeat RULE`
+  only.
 
 ## The to-dos page
 

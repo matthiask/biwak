@@ -879,8 +879,11 @@ def _stale_banner(request, item):
 @require_POST
 def todo_keep(request, pk):
     """ "Keep open" on a stale to-do (specs/stale-todos.md): whoever sees
-    it, like a comment would"""
+    it, like a comment would; not a completed (or obsolete) one, like the
+    mail's link"""
     item = item_for(request, pk, Kind.TODO)
+    if item.todo.is_completed:
+        raise Http404
     stale.keep(item, actor=request.user)
     return redirect(next_url(request) or item)
 
