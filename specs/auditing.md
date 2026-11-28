@@ -26,7 +26,9 @@ forever.
   `user-<id>-…` (`set_user_name()`), `user-0-anonymous` without a
   sign-in; jobs name themselves: "Send mails", "Fairy tasks", "Resend"
   (incoming mail and delivery events), "Basecamp import". Mail replies,
-  forwarded mails and live doc editing run as the person.
+  forwarded mails and live doc editing run as the person, and so do the
+  links signed for one person in mails ("Keep open", unsubscribing),
+  whoever is signed in in that browser (decided 2026-11-28).
 - **Left out on purpose:** timestamps that change all the time
   (`last_login`, `last_used_at`, …), secrets (push
   keys, the calendar token, passkey data), the live doc's working state

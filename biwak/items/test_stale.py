@@ -13,6 +13,7 @@ from biwak.accounts.models import APIToken, MailDelivery
 from biwak.activity.mails import send_mails
 from biwak.activity.models import Action, Event, Notification
 from biwak.activity.operations import subscribe
+from biwak.audit.models import LoggedAction
 from biwak.items import operations as ops, stale
 from biwak.items.models import Item, StaleWarning, Todo
 from biwak.palette.test_actions import palette_data
@@ -393,6 +394,23 @@ class WarningMailTest(StaleBase):
         self.assertFalse(event.is_client_visible)
         # Telling nobody
         self.assertFalse(Notification.objects.filter(event=event).exists())
+
+    def test_keep_link_logged_as_the_recipient(self):
+        # Not who's signed in in that browser, if anybody (specs/auditing.md)
+        url = stale.keep_url(self.bob, self.first).removeprefix(
+            "https://biwak.example.org"
+        )
+        self.client.force_login(self.ada)
+        LoggedAction.objects.all().delete()
+        self.client.post(url)
+        self.assertEqual(
+            list(
+                LoggedAction.objects.filter(table_name="items_todo").values_list(
+                    "user_name", flat=True
+                )
+            ),
+            [f"user-{self.bob.pk}-Bob"],
+        )
 
     def test_bad_and_foreign_tokens(self):
         self.assertEqual(self.client.get("/keep/nonsense/").status_code, 404)
