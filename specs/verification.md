@@ -115,121 +115,17 @@ findings:
 - **To fix:** verified bugs and decided changes, by area, until fixed.
 - **Decided, no change:** behaviour the user decided stays.
 - **Data:** what to fix in production's data, without names.
-- **Risks and questions:** open until tested or decided.
-- **Ideas:** for later, not findings.
+- **Risks and questions:**
 
-### Round 1 (2026-11-28)
-
-All nine areas, an agent each, four at once, each in its own worktree
-and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
-`STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
-throwaway test that was run again and failed before it was listed.
-Fixed (each in its part's spec):
-
-- **Import:** later runs leave recordings unchanged in Basecamp alone
-  (Biwak's changes stay); a dry run writes nothing for projects imported
-  before; moves in Basecamp are followed; trashed in Basecamp is trashed
-  here, deleted here isn't imported again; a project archived in
-  Basecamp is archived only at its first import; renames and archiving
-  of projects and templates name nobody, at Basecamp's time; new files
-  in texts changed in Basecamp are linked; `--since` doesn't store a
-  recording as completely read when it skipped older comments; changed
-  check-in questions and answers are updated.
-- **To-dos:** stale to-dos are marked obsolete on the promised day;
-  copies keep a group's "Keep untouched to-dos for a year" and
-  deactivated assignees and people asked instead of failing; archived
-  lists and lists in archived projects take no new or moved to-dos; the
-  next to-do of a repeating one keeps deactivated assignees and
-  subscribes the list's watchers.
-- **People:** the API keeps deactivated assignees (one to-do and
-  "Assign…" with `--replace`) and check-ins' people asked who were
-  deactivated (the form too); the Django admin drops subscriptions when
-  access is lost and activates through `activate()`; deactivating and
-  "Reset sign-in…" remove push devices; single sign-on's 24-hour end
-  keeps the push device.
-- **Notifications:** a first mention merged into an edit marked unread
-  is mailed and pushed; unsubscribing from a to-do stops its column
-  moves, also through the mail's link; notifications of an item trashed
-  or hidden when their mail is due are kept unmailed; one "Assign…"
-  across projects is one entry in the digest; the outbox gives up
-  retries to deactivated people and undeliverable addresses; the
-  admins' notice names the outbox's retention (90 days).
-- **Check-ins:** a held summary is checked again when it goes; a stored
-  rule that isn't valid any more skips its question only.
-- **Visibility:** a client's open list page is told when a to-do leaves
-  it for an internal list; moving internal to-dos into a list clients
-  see asks first, the API and CLI with `show_to_clients` (CLI 0.77.0).
-- **Docs and files:** a whole-text save from an old `base_version` is
-  refused over the saver's own version with somebody else's typing
-  merged into it (versions remember their co-authors); a form left open
-  while its item moves to another project links what it uploaded.
-- **API and CLI:** `biwak feed` and `biwak lantern` name events without
-  an actor "Biwak" (CLI 0.76.0); the API's cursors are positions in the
-  whole ordering.
-- **Who did what:** the mails' signed links ("Keep open",
-  unsubscribing) are logged as their recipient; names lose their
-  accents instead of turning into escapes; a live save is logged as who
-  typed it, not who caused it.
-
-**To fix:** nothing left from the findings (all fixed 2026-11-28).
-
-**Decided, no change:**
-
-- Summaries of an asked occurrence go out also when the project was
-  archived or the question paused meanwhile (`checkins.md`).
-- A doc told an hour after its last change names its creator also when
-  they left or were removed (`files.md`).
-
-**Data:** check production for check-in questions with a stored rule
-that isn't valid any more (the bug above stops asking for everybody).
-
-**Risks and questions:**
-
-- Import: the answer cache can mix ages (a recording's listing fresh,
-  its comments from the dry run); the same Basecamp attachment ID in two
-  texts reuses one attachment, possibly across projects; "(internal)"
-  lists and folders keep old names, a renamed group gets a second one;
-  people back with a new Basecamp ID; links to a list's group lead to
-  Basecamp; archived to-dos without a completion are completed by the
-  importing person.
-- To-dos: a trashed next to-do takes its series with it (the rule moved
-  to it), so the "not in the trash" clause in `todos.md` is dead; `keep/`
-  accepts completed and obsolete to-dos (page, API, CLI); the warning
-  mail can list to-dos commented on since the run; unarchiving or
-  restoring a list puts its old to-dos up for warnings; "Move by N
-  days" shifts "repeats until" of undated to-dos in copies only;
-  `POST todos/{id}/move/` moves completed to-dos the page won't; the
-  API's `previous_id` names trashed or other projects' to-dos; the next
-  to-do copies notes but not their attachments.
-- People: mentions of people deactivated later show the label as
-  written, no link, no "(inactive)"; staff made client keep internal
-  assignments and teams, a client made staff turns their organization
-  external; inviting an imported person not activated yet says
-  "deactivated"; activating with the mail someone in no project sends
-  an empty invitation; withdrawing an invitation deactivates where
-  deleting would work.
-- Notifications: to-dos added from text or moved in don't subscribe
-  watchers; "Assign…" doesn't read by acting, "Due date…" does;
-  `notifications.md` contradicts itself on new to-dos in a followed list
-  at "only what concerns me" (the code follows "Levels"); switching from
-  "No mails" mails everything unread at once; `unread_counts()` loads
-  every unread notification; a forwarded mail with mention syntax
-  mentions members; a mention removed within a merged edit still counts.
-- Visibility: `completed_by` isn't filtered for clients; "visible to N
-  clients" counts inactive clients; `check_visibility` checks items
-  only; the live editor's 5-second re-check window.
-- Check-ins: imported
-  occurrences have nobody asked; "away" is judged by the run's day;
-  "People asked" lists people who left; people coming back are asked
-  again silently; later imports and Basecamp's schedule or pausing.
-- Docs and files: `fairy_tasks` deletes unlinked attachments before
-  saving pending typing; attachments by someone who lost access stay
-  unlinked; read-only isn't immediate for open editors; public links
-  survive a move into a limited project.
-- API and CLI: search pages by `-updated_at`; a client may filter
-  `todos/?assignee=` by people they may not know; the API accepts
-  `visible_to_clients` in projects without clients.
-- Who did what: the name is per connection (a reconnect in a long run,
-  a pooler, a higher `CONN_MAX_AGE`); the inbound webhook never sets
-  "Resend"; migrations and commands by hand write no name; linked
-  social accounts and sign-in addresses aren't audited.
+- Search pages by `-updated_at`: something edited while being read
+  moves to the top and is missed (nothing repeats).
+- `check_visibility` compares items only, not events or notifications;
+  the live editor re-checks access every 5 seconds at most.
+- "Move by N days" shifts the "repeats until" of to-dos without a due
+  date when copying a list, not with "Due date…".
+- Import: imported check-in occurrences have nobody asked; a check-in
+  question's visibility isn't followed (it would show answers internal
+  in Basecamp); comments, groups, check-in questions and email forwards
+  trashed in Basecamp aren't followed (Biwak can't trash them, or the
+  listing refuses the type); what was moved into an "(internal)" list or
+  folder isn't trashed with its original.
