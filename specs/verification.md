@@ -134,7 +134,8 @@ Fixed (each in its part's spec):
   of projects and templates name nobody, at Basecamp's time; new files
   in texts changed in Basecamp are linked; `--since` doesn't store a
   recording as completely read when it skipped older comments; changed
-  check-in questions and answers are updated.
+  check-in questions and answers are updated; links to a list's group
+  lead to the group on its list.
 - **To-dos:** stale to-dos are marked obsolete on the promised day;
   copies keep a group's "Keep untouched to-dos for a year" and
   deactivated assignees and people asked instead of failing; archived
@@ -222,8 +223,7 @@ decided, marked "consistent"):
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).
-- **Import:** links to a list's group lead to the list in Biwak;
-  archived to-dos without a completion are completed by nobody, at
+- **Import:** archived to-dos without a completion are completed by nobody, at
   Basecamp's time; the same Basecamp attachment in two texts gets an
   attachment per item; "(internal)" lists and folders follow renames and
   a renamed group isn't doubled; a project's (and template's) archived

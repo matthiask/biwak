@@ -62,8 +62,9 @@ and public links all work much as you know them.
   CLI as plain text. The editor looks the same as any other.
 - **Adding to-dos from text** puts everything into the list you drop it
   on: headings become groups, not new lists.
-- **Links to Basecamp** in texts lead to the imported to-do, message,
-  file or comment once it's in Biwak and you can see it, also links
+- **Links to Basecamp** in texts lead to the imported to-do, list
+  (a group's link to the group on its list), message, file or comment
+  once it's in Biwak and you can see it, also links
   pasted later; otherwise they lead to Basecamp.
 
 ## Getting around

@@ -407,8 +407,10 @@ cleanup deleted them a day later). **Links to
   trampoline, `/basecamp/?to=<address>` (`render_markdown()`,
   `biwak/importer/links.py`; decided 2026-11-28 by the user): it leads
   to what was imported from the recording when the person may see it (a
-  comment's anchor, `#__recording_ID`, to the imported comment), else to
-  Basecamp. Nothing is looked up to show a text; whatever was imported
+  comment's anchor, `#__recording_ID`, to the imported comment; a
+  group's link, `todolists/ID` like a list's, to its list at the group,
+  `#group-PK`, found 2026-11-28 in verification round 1: they led to
+  Basecamp), else to Basecamp. Nothing is looked up to show a text; whatever was imported
   first, links pasted later work too, and a link doesn't tell whether
   its target is in Biwak ("not imported" and "not visible" both lead to
   Basecamp). Only Basecamp's addresses of recordings (else 404: no open
