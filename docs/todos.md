@@ -227,8 +227,8 @@ same list and group, with the same title, notes, assignees (deactivated
 ones too) and subscribers, and whoever watches the list, due on the rule's next date after today (or after the due
 date, when you complete it early). A start date keeps its distance:
 starting four days before the due date, the next one does too. There is never a stack of open
-copies. Comments and attachments stay with the completed to-do, and the
-new one links back ("Previous: ..."). The repeat moves to the new
+copies. Comments stay with the completed to-do, the files in its notes
+are in the new one's notes too, and the new one links back ("Previous: ..."). The repeat moves to the new
 to-do: the completed one doesn't repeat any more, so changing its date
 changes nothing else. Reopening a completed to-do doesn't remove the
 next one. Putting the next one in the trash ends the series: completing

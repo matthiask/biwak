@@ -220,7 +220,11 @@ groupings and "assigned by" 2026-11-21; filters on a list 2026-11-24).
   verification round 1; since the rule moves, the completed one has
   none left anyway, unless somebody gives it one again).
 - Comments and attachments stay with the completed to-do; the new one
-  links to it ("Previous: completed on 3 March by Ada").
+  links to it ("Previous: completed on 3 March by Ada"). The new one's
+  notes show the same files: attachments of its own (new keys, the notes
+  rewritten to them) sharing the stored files, which are deleted with
+  their last row (decided 2026-11-28, verification round 1,
+  `files.md`).
 - **Ending:** an end date, a count, or removing the rule (which removes
   both ends). No next one in an archived list or an archived project
   (`archiving.md`).
