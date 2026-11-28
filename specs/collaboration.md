@@ -44,9 +44,10 @@ answering every sync, when an event may change it (moved, visibility,
 trashed, archived, project edited, member removed), when a person or
 project is saved, when the read-only option changes, when the person
 logs out or out everywhere (that login session's websockets close at
-once), every 60 seconds, and before passing on others' updates when the
-last check is older than 5 seconds (so losing access doesn't depend on
-one channel message, which Redis may evict). Not before every update: a
+once), every 60 seconds, and before passing on others' updates or
+taking the person's own typing when the last check is older than 5
+seconds (so losing access or a doc made read-only doesn't depend on one
+channel message, which Redis may evict; typing too since 2026-11-28). Not before every update: a
 few queries per keystroke of everybody. Losing access closes the session
 ("You can't see this doc anymore.", the text removed); losing only the
 right to type switches to watching.

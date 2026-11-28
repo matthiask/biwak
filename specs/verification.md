@@ -166,7 +166,8 @@ Fixed (each in its part's spec):
   lists' descriptions link their files (the import's were deleted after
   a day); `fairy_tasks` saves typing left over before deleting unlinked
   files; the files in typing kept from somebody who lost access are
-  linked.
+  linked; typing checks access again too, so a lost message doesn't let
+  an open editor type into a doc made read-only.
 - **API and CLI:** `biwak feed` and `biwak lantern` name events without
   an actor "Biwak" (CLI 0.76.0); the API's cursors are positions in the
   whole ordering.
@@ -227,7 +228,6 @@ decided, marked "consistent"):
 - **Check-ins:** "People asked" marks who isn't asked (inactive, can't
   see it; decided); "away" is judged by the occurrence's date
   (consistent).
-- **Docs and files:** read-only takes effect for open editors at once (to check).
 - **Who did what:** nameless changes show 🧙 in the history, as in
   Workbench; management commands and migrations name themselves;
   allauth's social accounts and sign-in addresses are audited (tokens
