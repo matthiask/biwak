@@ -198,7 +198,11 @@ gets a pointer here.
   is built (verification round 1, 2026-11-28, consistent).
 - **Clearing:** the daily run clears the warning of every warned to-do
   which isn't stale any more (touched, its dates moved, its group kept
-  for a year now) or isn't open; keeping clears it at once.
+  for a year now) or isn't open; keeping clears it at once. Until the
+  run, the banner and the palette's "Keep open" are gone already
+  (`stale.is_warned()` asks whether the to-do is still stale, and
+  whether `STALE_TODOS` is on; verification round 2, 2026-11-28: the
+  banner promised a day for a to-do commented on since).
 - **Net changes:** completing (or marking obsolete) and reopening by the
   same person cancel out as before; completed, reopened and marked
   obsolete leaves "marked as obsolete" (`timeline.cancelled()`).

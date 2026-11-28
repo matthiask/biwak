@@ -89,7 +89,9 @@ own (`notifications.md`); checklists, the toolbar and pasting are
   `todos/move/`; decided 2026-11-23). "Move to…" in the "More" menu is
   the keyboard's way, for open to-dos (404 for completed ones); the
   API's `todos/{id}/move/` refuses completed ones too (400, verification
-  round 1, 2026-11-28, consistent), the selection's "Move…" and its
+  round 1, 2026-11-28, consistent), and so do the dragging endpoints
+  and the API's `lists/{id}/todos/move/` (400, round 2: completed rows
+  have no grip), the selection's "Move…" and its
   `todos/move/` move them on purpose (`handover.md`).
 - Moves are one request and safe against concurrent moves (the list's
   row is locked).

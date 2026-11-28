@@ -131,6 +131,30 @@ class ManageTest(TestCase):
             with self.subTest(url=url, data=data):
                 self.assertEqual(self.client.post(url, data).status_code, 400)
 
+    def test_completed_todos_arent_dragged(self):
+        """The dragging endpoints and the API's lists/{id}/todos/move/
+        like todos/{id}/move/ (verification round 2, consistent)"""
+        ops.complete(self.todo, actor=self.ada)
+        self.client.force_login(self.ada)
+        _token, secret = APIToken.create_for(user=self.ada, title="T", access="write")
+        for url, data, kwargs in [
+            (f"/todos/{self.todo.pk}/move/", {"list": self.internal.pk}, {}),
+            (f"/lists/{self.internal.pk}/todos/move/", {"todos": [self.todo.pk]}, {}),
+            (
+                f"/api/v1/lists/{self.internal.pk}/todos/move/",
+                {"todo_ids": [self.todo.pk], "show_to_clients": False},
+                {
+                    "content_type": "application/json",
+                    "headers": {"authorization": f"Bearer {secret}"},
+                },
+            ),
+        ]:
+            with self.subTest(url=url):
+                response = self.client.post(url, data, **kwargs)
+                self.assertEqual(response.status_code, 400)
+                self.todo.refresh_from_db()
+                self.assertEqual(self.todo.parent_id, self.shared.pk)
+
     def test_completed_todos_dont_move_one_by_one(self):
         """The API's todos/{id}/move/ like the page's "Move to…"
         (verification round 1, consistent); the bulk move takes them on

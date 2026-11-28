@@ -157,9 +157,14 @@ def obsolete_on(todo):
 
 
 def is_warned(item):
-    """Open and warned: the to-do's page shows the banner"""
+    """Open, warned and still stale: the to-do's page shows the banner.
+    The daily run clears the warning of one touched since; until then the
+    banner's promise wouldn't be true (found 2026-11-28, verification
+    round 2), and neither while ``STALE_TODOS`` is off."""
     todo = item.todo
-    return todo.stale_warned_at is not None and not todo.is_completed
+    if todo.stale_warned_at is None or todo.is_completed or not is_on():
+        return False
+    return stale_todos(timezone.now()).filter(pk=item.pk).exists()
 
 
 # The daily run --------------------------------------------------------------
