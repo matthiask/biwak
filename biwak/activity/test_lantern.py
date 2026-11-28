@@ -914,6 +914,61 @@ class CountByItemsTest(LanternTestCase):
         self.assertEqual((data["unread"], data["unread_items"]), (3, 2))
         self.assertEqual(len(data["results"]), 3)
 
+    def test_counted_in_the_database(self):
+        """Many unread notifications aren't loaded to be counted, the same
+        number of queries for any number (consistent, 2026-11-28); only
+        those whose order matters (completing and reopening, moves,
+        batches) are, and the numbers stay those of the menu"""
+        todos = [
+            ops.create_todo(todolist=self.shared, title=f"To-do {n}", creator=self.ada)
+            for n in range(10)
+        ]
+        for todo in todos:
+            subscribe(self.bob, todo)
+        events = Event.objects.bulk_create([
+            Event(
+                project=self.project,
+                item=todos[n % 10],
+                actor=self.ada,
+                action="commented",
+                is_client_visible=True,
+            )
+            for n in range(60)
+        ])
+        Notification.objects.bulk_create([
+            Notification(user=self.bob, event=event) for event in events
+        ])
+        # Completed and reopened: cancels out; one "Assign…" of two
+        self.act(lambda: ops.complete(self.secret, actor=self.ada))
+        self.act(lambda: ops.reopen(self.secret, actor=self.ada))
+        self.act(lambda: ops.assign_todos(todos[:2], [self.bob], actor=self.ada))
+        self.act(lambda: ops.complete(todos[3], actor=self.ada))
+
+        everything = lantern.group_batches(
+            lantern.wanted(
+                list(lantern.notifications_for(self.bob, unread=True)), self.bob
+            )
+        )
+        expected = (len(everything), len({lantern.entry_key(n) for n in everything}))
+        self.assertEqual(expected, (63, 11))
+
+        loaded = []
+        from_db = Notification.from_db.__func__
+
+        def counting(cls, *args, **kwargs):
+            instance = from_db(cls, *args, **kwargs)
+            loaded.append(instance)
+            return instance
+
+        with (
+            mock.patch.object(Notification, "from_db", classmethod(counting)),
+            self.assertNumQueries(5),
+        ):
+            self.assertEqual(lantern.unread_counts(self.bob), expected)
+        # The completing and reopening, the to-do completed (and its
+        # comments), the assignments
+        self.assertLess(len(loaded), 15)
+
 
 class UnreadMarkupTest(LanternTestCase):
     """Unread items have a dot and are told apart from read ones"""

@@ -157,7 +157,8 @@ Fixed (each in its part's spec):
   "Subscriptions" bullet follows "Levels" (`notifications.md`);
   "Assign…" reads by acting like "Due date…" (`lantern.md`); a mention
   removed again within a merged edit doesn't count; mention syntax in
-  forwarded mails isn't a mention (`forwarding.md`).
+  forwarded mails isn't a mention (`forwarding.md`);
+  `lantern.unread_counts()` counts in the database.
 - **Check-ins:** a held summary is checked again when it goes; a stored
   rule that isn't valid any more skips its question only.
 - **Visibility:** a client's open list page is told when a to-do leaves
@@ -197,7 +198,6 @@ decided, marked "consistent"):
     in or added from text, and told about them like new to-dos (decided).
   - Switching from "No mails" (or after held mails) sends what piled up
     as one digest-form mail, mails per change from then on (decided).
-  - `unread_counts()` counts in the database (consistent).
 - **People:**
   - Mentions of people deactivated later show their current name,
     linked, marked inactive (decided).

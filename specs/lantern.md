@@ -52,7 +52,9 @@ and pages that update while they're open.
   of notifications (decided 2026-11-21: the menu groups by item): the
   button shows a small red dot without a number, the number is in its
   tooltip and screen-reader text and `/lantern/count/`
-  (`unread_count()`; `unread_counts()` gives both). The API answers
+  (`unread_count()`; `unread_counts()` gives both, counted in the
+  database since 2026-11-28: only what needs the order of events, the
+  items with completing, reopening or moves and batches, is loaded). The API answers
   `unread` (notifications) and `unread_items` next to `results`;
   `biwak lantern` prints one row per item ("(+N)" for more), `--json`
   the entries. Digests are unaffected.
