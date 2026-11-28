@@ -630,3 +630,23 @@ class ApiTest(OverviewTestCase):
         project_ops.archive_project(self.beta, actor=self.ada)
         bookmarks.add_bookmark(self.ada, project=self.beta)
         self.assertEqual(self.names(archived="true"), ["Beta", "Alpha"])
+
+
+class ArchiveLinkTest(TestCase):
+    """The link to the archived projects is a place, not an action: "Archiv"
+    in German, "Archivieren" stays the action's (the user, 2026-11-28)"""
+
+    def test_the_place_and_the_action(self):
+        from biwak.items import operations as ops
+
+        ada = person("Ada", language="de")
+        p = project(members=[ada])
+        todolist = ops.create_list(project=p, title="Camp", creator=ada)
+        self.client.force_login(ada)
+        page = self.client.get("/projects/")
+        self.assertContains(page, ">Archiv</a>")
+        self.assertNotContains(page, "Archivieren")
+        self.assertContains(self.client.get(reverse("templates")), ">Archiv</a>")
+        self.assertContains(
+            self.client.get(todolist.get_absolute_url()), ">Archivieren</button>"
+        )
