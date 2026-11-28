@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.utils.cache import patch_cache_control
 from django.utils.translation import gettext as _
 
+from biwak.activity.models import Action, Event
 from biwak.files import file_urls
 from biwak.files.models import (
     MAX_SIZE,
@@ -107,15 +108,34 @@ def upload(*, project, file, uploaded_by):
 
 def link(item, text, *, actor):
     """Links the attachments ``text`` references to ``item``: those without
-    item yet, in the item's project, uploaded by ``actor`` (the one saving
-    the text). Called by the operations saving texts, in their
-    transaction."""
+    item yet, uploaded by ``actor`` (the one saving the text), in the
+    item's project or one it (or what it's in) moved from, for a form left
+    open across the move; those come along. Called by the operations
+    saving texts, in their transaction."""
     keys = set(REFERENCE.findall(text or ""))
     if not keys:
         return 0
-    return Attachment.objects.filter(
-        key__in=keys, item=None, project=item.project_id, uploaded_by=actor
-    ).update(item=item)
+    found = Attachment.objects.filter(key__in=keys, item=None, uploaded_by=actor)
+    linked = found.filter(project=item.project_id).update(item=item)
+    foreign = found.exclude(project=item.project_id)
+    if foreign.exists():
+        linked += foreign.filter(project__in=_moved_from(item)).update(
+            item=item, project=item.project_id
+        )
+    return linked
+
+
+def _moved_from(item):
+    """The projects ``item`` and what it's in moved from"""
+    pks = []
+    while item is not None:
+        pks.append(item.pk)
+        item = item.parent
+    return set(
+        Event.objects.filter(
+            item__in=pks, action=Action.MOVED, data__has_key="from_project_id"
+        ).values_list("data__from_project_id", flat=True)
+    )
 
 
 @transaction.atomic

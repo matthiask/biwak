@@ -55,7 +55,10 @@ its item's.
   and inserts `![name](attachment:KEY)` (images) or `[name](attachment:KEY)`.
 - **Linking:** the operation saving a text links the attachments its
   Markdown references (`attachments.link()`): only those without an item
-  yet, in the item's project, uploaded by the person saving. Once linked
+  yet, in the item's project, uploaded by the person saving. Also those
+  in a project the item (or what it's in) moved from, which come along:
+  a form left open across a move uploads into the old project (decided
+  2026-11-28, the moved items' events say where from). Once linked
   an attachment stays with its item. Unlinked ones are visible only to
   their uploader; `fairy_tasks` deletes them after a day. Lists' and
   projects' descriptions take no attachments.

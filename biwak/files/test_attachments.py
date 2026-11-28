@@ -13,7 +13,7 @@ from django.utils import timezone
 from moto import mock_aws
 
 from biwak.accounts.models import APIToken
-from biwak.files import attachments
+from biwak.files import attachments, operations
 from biwak.files.models import MAX_SIZE, Attachment
 from biwak.items import operations as ops
 from biwak.items.models import Item
@@ -141,6 +141,41 @@ class OperationsTest(Fixture, TestCase):
             content=f"{elsewhere.markdown} {bobs.markdown}",
         )
         self.assertFalse(Attachment.objects.filter(item__isnull=False).exists())
+
+    def test_linking_own_uploads_from_before_a_move(self):
+        """A form left open while its item (or what it's in) moved to
+        another project uploads into the old one: linked and moved along"""
+        new = project("Relaunch", members=[self.ada, self.cleo])
+        doc = ops.create_doc(project=self.project, title="Minutes", creator=self.ada)
+        for_doc, for_comment = (upload(self.project, self.ada) for _i in range(2))
+        ops.move_to_project(doc, project=new, actor=self.bob)
+        ops.move_to_project(self.shared, project=new, actor=self.bob)
+        operations.update_doc(
+            Item.objects.get(pk=doc.pk), actor=self.ada, content=for_doc.markdown
+        )
+        ops.add_comment(
+            Item.objects.get(pk=self.todo.pk),
+            author=self.ada,
+            content=for_comment.markdown,
+        )
+        for attachment, item in [(for_doc, doc), (for_comment, self.todo)]:
+            with self.subTest(item=item):
+                attachment.refresh_from_db()
+                self.assertEqual(attachment.item, item)
+                self.assertEqual(attachment.project, new)
+        # Still only one's own, and not from projects it never was in
+        bobs = upload(self.project, self.bob)
+        elsewhere = upload(project("Other", members=[self.ada]), self.ada)
+        ops.add_comment(
+            Item.objects.get(pk=self.todo.pk),
+            author=self.ada,
+            content=f"{bobs.markdown} {elsewhere.markdown}",
+        )
+        self.assertFalse(
+            Attachment.objects.filter(
+                pk__in=[bobs.pk, elsewhere.pk], item__isnull=False
+            ).exists()
+        )
 
     def test_visibility(self):
         """Through the item, unlinked ones only for their uploader"""
