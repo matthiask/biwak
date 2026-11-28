@@ -135,7 +135,10 @@ and pages that update while they're open.
 - **Switching from the daily digest to a mail per change** (decided
   2026-11-28, it was a mail per item): what waited for the next digest
   is held the same way and goes at once as one mail in the digest's
-  form (or the usual mail when it's one mail's worth).
+  form (or the usual mail when it's one mail's worth). Switching away
+  from a mail per change again before it went (a misclick) lets it wait
+  for the next digest (verification round 2, 2026-11-28: the digest
+  went at once).
 - A merged edit moving an unsent notification forward makes it unread
   again: the change is new.
 
