@@ -371,8 +371,16 @@ same way.
 - **Rich text:** HTML to Markdown with `markdownify`
   (`biwak/richtext/htmlmarkdown.py`, shared with pasting); mentions of the
   project's people become `[@Name](person:ID)`, others stay `@Name`;
-  files in texts are downloaded once and attached; links to imported
-  recordings are rewritten.
+  files in texts are downloaded once and attached. **Links to
+  recordings** (on `3.basecamp.com` and `app.basecamp.com`) keep
+  Basecamp's address in the stored text and lead to what was imported
+  from them when the text is shown (`render_markdown()`,
+  `biwak/importer/links.py`; decided 2026-11-28 by the user): whatever
+  was imported first, links pasted later too, a comment's anchor
+  (`#__recording_ID`) to the imported comment. One query per text with
+  such links; links to what wasn't imported lead to Basecamp. Before,
+  the importer rewrote the stored texts at the end of each project,
+  which missed targets imported in later runs.
 - **Check-ins:** the schedule becomes a rule through
   `schedules.validate()` (`every_day` with days weekly on those,
   `every_other_week` interval 2, `every_month` by day or by

@@ -47,7 +47,6 @@ from biwak.items import operations as ops
 from biwak.items.models import (
     Comment,
     Item,
-    Kind,
     MessageCategory,
     Status,
     Todo,
@@ -105,26 +104,6 @@ ARCHIVED_SKIPPED = {
 
 # Basecamp's weekdays, 0 is Sunday
 WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"]
-
-# Links to other recordings in texts: <account>/buckets/<project>/<path>/<id>
-LINK = re.compile(
-    r"https://3\.basecamp\.com/\d+/buckets/\d+/"
-    r"(todos|todolists|messages|documents|uploads|vaults|card_tables/cards"
-    r"|card_tables|questions|inbox_forwards)/(\d+)[^\s)\]\"']*"
-)
-LINK_TYPES = {
-    "todos": "Todo",
-    "todolists": "Todolist",
-    "messages": "Message",
-    "documents": "Document",
-    "uploads": "Upload",
-    "vaults": "Vault",
-    "card_tables/cards": "Kanban::Card",
-    "card_tables": "Kanban::Board",
-    "questions": "Question",
-    "inbox_forwards": "Inbox::Forward",
-}
-
 
 # The kinds of ``/people.json`` entries that are the account's people
 ACCOUNT_PEOPLE = {"User", "Client"}
@@ -401,7 +380,6 @@ class Importer(Resolver):
         self._imaged = set()  # Basecamp person IDs whose image was looked at
         # While converting a text: its project, author and file entries
         self._text = None
-        self._links_to_fix = []
         # The list or card table being imported, and the internal lists made
         # for them in this run
         self._container = None
@@ -931,14 +909,6 @@ class Importer(Resolver):
         bang = "!" if known.is_image else ""
         return f"{bang}[{known.name}](attachment:{known.key})"
 
-    def link(self, href):
-        found = LINK.fullmatch(href)
-        if found:
-            target = self._find(LINK_TYPES[found[1]], int(found[2]))
-            if isinstance(target, Item):
-                return target.get_absolute_url()
-        return href
-
     def _md(self, html, rec_attachments, *, project, author, plain=False):
         """Markdown of a Basecamp text; files in it are downloaded and
         uploaded as ``author``, who saves the text next. ``plain``: a
@@ -952,9 +922,8 @@ class Importer(Resolver):
             text = (plain_to_markdown if plain else to_markdown)(html, self)
         finally:
             self._text = None
-        if LINK.search(text):
-            # Targets which aren't imported yet: fixed when the run is done
-            self._links_to_fix.append(text)
+        # Links to recordings keep Basecamp's address: shown leading to the
+        # import (biwak/importer/links.py)
         return text
 
     # A run --------------------------------------------------------------------------
@@ -1022,7 +991,6 @@ class Importer(Resolver):
         """What follows a project's or template's tools"""
         self._archived_recordings(bucket_id)
         if not self.dry:
-            self._fix_links(project)
             self._bookmarks(project)
             project_ops.recompute_activity()
         self._people_who_left()
@@ -2149,58 +2117,6 @@ class Importer(Resolver):
         return user
 
     # After the project --------------------------------------------------------------------
-
-    def _fix_links(self, project):
-        """Links to recordings imported later in the run: the texts get
-        their Biwak URLs now"""
-        if not self._links_to_fix:
-            return
-        with importing():
-            for item in Item.objects.filter(project=project).select_related("creator"):
-                self._fix_item_links(item)
-            for comment in Comment.objects.filter(item__project=project):
-                fixed = self._rewrite(comment.content)
-                if fixed != comment.content:
-                    # There's no operation changing comments
-                    Comment.objects.filter(pk=comment.pk).update(content=fixed)
-
-    def _rewrite(self, text):
-        return LINK.sub(lambda m: self.link(m[0]), text or "")
-
-    def _fix_item_links(self, item):
-        detail = item.detail
-        original = item.updated_at
-        # The import's own change, without a person (decided 2026-11-28)
-        with importing(at=original, noted="basecamp"):
-            self._rewrite_item(item, detail)
-        Item.objects.filter(pk=item.pk).update(updated_at=original)
-
-    def _rewrite_item(self, item, detail):
-        match item.kind:
-            case Kind.TODO:
-                fixed = self._rewrite(detail.notes)
-                if fixed != detail.notes:
-                    ops.update_todo(item, actor=None, notes=fixed)
-            case Kind.LIST:
-                fixed = self._rewrite(detail.description)
-                if fixed != detail.description:
-                    ops.update_list(item, actor=None, description=fixed)
-            case Kind.MESSAGE:
-                fixed = self._rewrite(detail.content)
-                if fixed != detail.content:
-                    file_ops.update_message(item, actor=None, content=fixed)
-            case Kind.DOC:
-                fixed = self._rewrite(detail.content)
-                if fixed != detail.content:
-                    file_ops.update_doc(item, actor=item.creator, content=fixed)
-            case Kind.FILE:
-                fixed = self._rewrite(detail.description)
-                if fixed != detail.description:
-                    file_ops.update_upload(item, actor=None, description=fixed)
-            case Kind.ANSWER:
-                fixed = self._rewrite(detail.content)
-                if fixed != detail.content:
-                    checkin_ops.update_answer(detail, fixed, actor=None)
 
     def _bookmarks(self, project):
         """The bookmarks of the person whose token it is"""

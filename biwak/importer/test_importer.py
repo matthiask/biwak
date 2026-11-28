@@ -34,6 +34,7 @@ from biwak.items.models import (
 )
 from biwak.organizations.models import Organization
 from biwak.projects.models import Membership, Project
+from biwak.templatetags.biwak import render_markdown
 from biwak.test_utils import organization, person
 
 
@@ -142,7 +143,16 @@ class ImportEveryKindTest(ImportCase):
             [None, None],
         )
         self.assertIn("[@Bob](person:", food.todo.notes)
-        self.assertIn("[the announcement](/messages/", food.todo.notes)
+        # Links to recordings keep Basecamp's address, shown leading to the
+        # import (biwak/importer/links.py, decided 2026-11-28)
+        self.assertIn(
+            f"[the announcement]({support.APP}/buckets/{support.PROJECT}/messages/2001)",
+            food.todo.notes,
+        )
+        self.assertIn(
+            f'href="{self.item("We have a camp").get_absolute_url()}"',
+            render_markdown(food.todo.notes),
+        )
         done = self.item("Pick a camp date")
         self.assertEqual(done.todo.completed_at, at("2026-01-08T16:30:00+00:00"))
         self.assertEqual(done.todo.completed_by, self.ada)
@@ -159,7 +169,10 @@ class ImportEveryKindTest(ImportCase):
             f"[@Cleo](person:{User.objects.get(email='cleo@example.org').pk})",
             announcement.message.content,
         )
-        self.assertIn(f"](/todos/{food.pk}/)", announcement.message.content)
+        self.assertIn(
+            f'href="{food.get_absolute_url()}"',
+            render_markdown(announcement.message.content),
+        )
         # Announcement and the email forwards' category
         self.assertEqual(MessageCategory.objects.count(), 2)
         # The board's order from the original times (specs/files.md)
