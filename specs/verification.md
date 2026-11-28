@@ -124,7 +124,8 @@ All nine areas, an agent each, four at once, each in its own worktree
 and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
-Fixed: nothing yet.
+Fixed: `biwak feed` and `biwak lantern` name events without an actor
+"Biwak" (CLI 0.76.0).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -219,9 +220,6 @@ part's spec with the fix):
   - An editor left open while its doc moves to another project uploads
     attachments to the old project, never linked, deleted a day later.
 - **API and CLI:**
-  - `biwak feed` and `biwak lantern` crash on events without an actor
-    (stale to-dos, the import), every CLI down to `MINIMUM`; the skills
-    don't say `actor` may be null.
   - Cursor pagination skips or repeats rows when something leaves or
     joins an earlier page where the first ordering field is shared
     (messages: `pin_key`; `todos/`: the project, the due date).

@@ -34,6 +34,11 @@ API first: everything the web interface does is possible through the API
   member, own staff only, themselves included (clients and externals get
   403, for themselves too: nobody leaves, decided 2026-11-22,
   `organizations.md`).
+- Events without an actor (`"actor": null`: Biwak itself, marking a
+  stale to-do obsolete, the importer) are named "Biwak" in the CLI, as
+  on the pages; the skills say so (fixed 2026-11-28, CLI 0.76.0; older
+  CLIs crash on them in `feed` and `lantern`, `MINIMUM` stays: updating
+  helps them as much).
 - No webhooks (decided 2026-11-22: no use case now); specified before
   building when one comes up.
 

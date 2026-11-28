@@ -28,9 +28,10 @@ newest first:
     biwak feed --project <project> --since <date> --limit 1000 --json
 
 Each event has its `action` (`created`, `completed`, `commented`, …),
-the `actor`, the `item` (`id`, `kind`, `title`, `url`,
-`visible_to_clients`), `data` and an `excerpt` of comments and
-messages. If it returns 1000 events, say the week is cut off there.
+the `actor` (null when Biwak itself acted, e.g. marking a stale to-do
+obsolete or importing: name it "Biwak"), the `item` (`id`, `kind`,
+`title`, `url`, `visible_to_clients`), `data` and an `excerpt` of
+comments and messages. If it returns 1000 events, say the week is cut off there.
 
 What's open, by due date:
 
