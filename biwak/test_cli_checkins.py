@@ -11,6 +11,7 @@ from biwak.checkins.models import Mode, Occurrence, Question, QuestionMail
 from biwak.checkins.support import at
 from biwak.files.models import Attachment
 from biwak.items.models import Item
+from biwak.projects.models import Membership
 from biwak.test_utils import person
 
 
@@ -112,6 +113,10 @@ class CheckinCLITest(test_cli.CLITest):
         self.assertEqual(question.rule, "FREQ=WEEKLY;BYDAY=FR")
         self.assertEqual(question.time_of_day, dt.time(8, 30))
         self.assertFalse(data["visible_to_clients"])
+        # Visible only in projects with clients (biwak/projects/test_client_switch.py)
+        Membership.objects.create(
+            project=self.project, user=person("Cleo", client=True)
+        )
         self.assertIn("Added #", self.biwak(
             "checkins", "create", self.project.pk, "Daily", "--schedule", "FREQ=DAILY",
             "--time", "09:00", "--clients",

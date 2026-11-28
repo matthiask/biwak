@@ -28,7 +28,7 @@ once.
   menu of tiles in "Docs and files". When you create a list, folder,
   message, file or check-in in a project with clients (invited ones
   too) you can make it visible right away; projects without clients
-  don't ask. To prepare what a client will see before inviting them, use
+  don't ask (and the API and the command line refuse it). To prepare what a client will see before inviting them, use
   "Show to clients…".
 - **Show to clients…** asks first and says what changes ("Makes 12
   to-dos and 34 comments visible to 3 clients"). Hiding is one click

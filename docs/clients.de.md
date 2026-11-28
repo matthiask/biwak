@@ -30,7 +30,8 @@ intern, bis es gezeigt wird: lieber einmal zu wenig zeigen.
   Menü „…“ der Kacheln in „Dokumente & Dateien“. Wenn du eine Liste,
   einen Ordner, eine Mitteilung, eine Datei oder einen Check-in in einem
   Projekt mit Kund:innen erstellst (auch eingeladenen), kannst du sie
-  gleich sichtbar machen; Projekte ohne Kund:innen fragen nicht danach.
+  gleich sichtbar machen; Projekte ohne Kund:innen fragen nicht danach
+  (und die API und die Kommandozeile lehnen es ab).
   Um vorzubereiten, was Kund:innen sehen werden, bevor du sie einlädst,
   nimm „Kund:innen zeigen…“.
 - **Kund:innen zeigen…** fragt vorher und sagt, was sich ändert („Macht

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:32+0100\n"
+"POT-Creation-Date: 2026-11-28 11:40+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -2047,6 +2047,11 @@ msgid "Your own level for this list instead of the one of the project. On “Eve
 msgstr "Deine eigene Stufe für diese Liste statt der des Projekts. Bei „Alles“ beobachtest du sie: Du abonnierst sie und jedes neue To-do darin und erfährst, wenn To-dos zwischen ihren Gruppen verschoben werden. Bei To-dos, die du abonniert hast, erfährst du alles. Die Aktivität zeigt immer alles."
 
 #: biwak/api_conventions.py
+#, python-brace-format
+msgid "This project has no clients: what's created in it is internal. Leave out “visible_to_clients”, or show it to clients later (“items/{id}/visibility/”)."
+msgstr "Dieses Projekt hat keine Kund:innen: Was darin erstellt wird, ist intern. Lass „visible_to_clients“ weg oder zeige es den Kund:innen später („items/{id}/visibility/“)."
+
+#: biwak/api_conventions.py
 msgid "Invalid cursor."
 msgstr "Ungültiger Cursor."
 
@@ -3275,13 +3280,6 @@ msgstr "Verschobene To-dos"
 
 #: biwak/items/assigning.py
 #, python-format
-msgid "Clients won't see %(count)d to-do any more: the list is internal."
-msgid_plural "Clients won't see %(count)d to-dos any more: the list is internal."
-msgstr[0] "Kund:innen sehen %(count)d To-do nicht mehr: Die Liste ist intern."
-msgstr[1] "Kund:innen sehen %(count)d To-dos nicht mehr: Die Liste ist intern."
-
-#: biwak/items/assigning.py
-#, python-format
 msgid "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
 msgid_plural "%(names)s won't see the to-dos in %(project)s: they'll be unassigned and unsubscribed."
 msgstr[0] "%(names)s sieht die To-dos in %(project)s nicht: Zuweisungen und Abonnements fallen weg."
@@ -3958,6 +3956,13 @@ msgstr[1] "%(count)d Einträge darin"
 #, python-format
 msgid "Makes it, %(items)s and %(comments)s visible to %(clients)s."
 msgstr "Macht den Eintrag, %(items)s und %(comments)s für %(clients)s sichtbar."
+
+#: biwak/items/views.py
+#, python-format
+msgid "Clients won't see %(count)d to-do any more: the list is internal."
+msgid_plural "Clients won't see %(count)d to-dos any more: the list is internal."
+msgstr[0] "Kund:innen sehen %(count)d To-do nicht mehr: Die Liste ist intern."
+msgstr[1] "Kund:innen sehen %(count)d To-dos nicht mehr: Die Liste ist intern."
 
 #: biwak/items/views.py
 #, python-format

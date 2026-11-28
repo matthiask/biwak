@@ -26,6 +26,7 @@ from biwak.api_conventions import (
     page_of,
     paginated,
     person_out,
+    refuse_client_switch,
 )
 from biwak.files import attachments, operations, queries
 from biwak.files.library import (
@@ -360,6 +361,8 @@ def message_create(request, project_id: int, data: MessageIn):
     are visible to clients. Mentions are written as ``[@Name](person:ID)``."""
     project = project_for(request, project_id)
     title = clean_title(data.title)
+    if not request.user.is_client:
+        refuse_client_switch(project, data.visible_to_clients)
     visible = ops.message_visibility(request.user, data.visible_to_clients)
     item = ops.create_message(
         project=project,
@@ -555,6 +558,7 @@ def folder_create(request, project_id: int, data: FolderIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.FOLDER)
+    refuse_client_switch(project, data.visible_to_clients)
     title = clean_title(data.title)
     item = ops.create_folder(
         project=project,
@@ -678,6 +682,7 @@ def doc_create(request, project_id: int, data: DocIn):
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.DOC)
+    refuse_client_switch(project, data.visible_to_clients)
     title = clean_title(data.title)
     item = ops.create_doc(
         project=project,
@@ -928,6 +933,7 @@ def file_create(request, project_id: int, file: File[UploadedFile], data: Form[F
     project = project_for(request, project_id)
     folder = parent_folder(request, project, data.parent_id)
     _staff_creates(request, Kind.FILE)
+    refuse_client_switch(project, data.visible_to_clients)
     try:
         item = ops.create_upload(
             project=project,

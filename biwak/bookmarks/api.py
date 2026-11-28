@@ -8,7 +8,13 @@ from django.utils.translation import gettext as _
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 
-from biwak.api_conventions import ItemOut, PersonOut, item_out, person_out
+from biwak.api_conventions import (
+    ItemOut,
+    PersonOut,
+    item_out,
+    person_out,
+    refuse_client_switch,
+)
 from biwak.bookmarks import operations as ops
 from biwak.bookmarks.models import Bookmark, Link
 from biwak.items.api import item_for
@@ -128,6 +134,7 @@ class LinkIn(Schema):
 def project_link_create(request, project_id: int, data: LinkIn):
     project = project_for(request, project_id)
     _staff_only(request)
+    refuse_client_switch(project, data.visible_to_clients)
     link = ops.add_link(
         project=project,
         url=data.url,

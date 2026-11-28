@@ -215,7 +215,14 @@ ones included, and in templates, whose visibility is copied
 (`Project.offers_client_switch()`). Without it, what's created is
 internal. "Show to clients…" in the "More" menu, the tiles' menu and the
 palette stays everywhere: staff prepare what a client will see before
-inviting them. The API and CLI keep their `visible` options. Tests:
+inviting them. The API refuses `visible_to_clients: true` there the
+same way (decided 2026-11-28, verification round 1; before, it kept
+its `visible` options): creating lists, folders, messages (staff),
+docs, files, check-ins and project links answers 400
+(`api_conventions.refuse_client_switch()`), so the CLI's `--visible`
+and `--clients` say so too; its visibility switch
+(`items/{id}/visibility/`) stays, like "Show to clients…". Editing a
+link and copying a list keep their switch, as on the pages. Tests:
 `biwak/projects/test_client_switch.py`.
 
 ## Making it obvious
