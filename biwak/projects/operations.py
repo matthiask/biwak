@@ -167,8 +167,14 @@ def _invitee(email, *, actor, full_name, is_client, organization):
     and whether they were created."""
     user = User.objects.filter(email__iexact=email).first()
     if user is not None:
-        if not user.is_active:
-            raise InvitationError(_("This person has been deactivated."))
+        if user.left_at is not None:
+            raise InvitationError(
+                _("This person has been deactivated: activate them first.")
+            )
+        if not user.is_active and not user.is_client and not actor.is_admin:
+            # Waiting to be activated: who may activate them (decided
+            # 2026-11-28, ``activation.can_change()``)
+            raise InvitationError(_("Only admins can invite staff."))
         return user, False
     if not is_client and not actor.is_admin:
         raise InvitationError(_("Only admins can invite staff."))
@@ -206,13 +212,17 @@ def invite_people(projects, people, *, actor, notify=NOTIFY_TAGGED):
     Only admins create staff (specs/access.md: staff or client is set by
     admins). New people belong to their ``organization``, else to the one
     their address's domain belongs to (specs/organizations.md); only admins
-    put people into the own. People who exist keep theirs."""
+    put people into the own. People who exist keep theirs. People waiting
+    to be activated are activated and mailed the invitation like
+    activating with the mail; people who left are refused."""
     if not can_manage_members(actor):
         raise PermissionError("Only staff invite people.")
     if notify not in NOTIFY_CHOICES:
         raise ValueError(f"Unknown choice {notify!r}")
+    from biwak.organizations import activation
+
     projects = list(projects)
-    errors, done, seen = {}, [], set()
+    errors, done, seen, waiting = {}, [], set(), []
     for index, row in enumerate(people):
         email = User.objects.normalize_email(row["email"].strip())
         if email.lower() in seen:
@@ -230,6 +240,12 @@ def invite_people(projects, people, *, actor, notify=NOTIFY_TAGGED):
         except InvitationError as exc:
             errors[index] = str(exc)
             continue
+        if not user.is_active:
+            # Waiting to be activated (an import's): activated, and sent the
+            # invitation below (decided 2026-11-28)
+            activation.activate([user], actor=actor)
+            user.refresh_from_db()
+            waiting.append(user)
         added = [
             project
             for project in projects
@@ -243,6 +259,9 @@ def invite_people(projects, people, *, actor, notify=NOTIFY_TAGGED):
         if invited.created:
             # Through the outbox: sent once this commits, not on a rollback
             send_invitation(projects, invited.user, actor=actor)
+    for user in waiting:
+        # As activating with the mail: the projects they're in now
+        activation.mail_invitation(user, actor=actor)
     return done
 
 

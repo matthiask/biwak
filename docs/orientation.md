@@ -227,9 +227,11 @@ the organization of its domain and, for admins, staff for your own and
 external organizations, client otherwise, unless you changed those
 fields in that row. "Add another" adds a row. New
 people get one mail naming the projects; people who have an account are
-added to them. If a row can't be invited (a deactivated person, staff
-invited by somebody who isn't an admin), nobody is, and the form says
-which row is wrong.
+added to them. People the import created who are waiting to be
+activated are activated and get the invitation, naming all their
+projects. If a row can't be invited (somebody who left, who needs
+activating first, staff invited by somebody who isn't an admin), nobody
+is, and the form says which row is wrong.
 
 **Invitations:** until someone signs in for the first time, staff see
 "Invited, not signed in yet" next to them, with who invited them and

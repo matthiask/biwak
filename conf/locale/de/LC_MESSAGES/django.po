@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Biwak\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-28 11:24+0100\n"
+"POT-Creation-Date: 2026-11-28 11:26+0100\n"
 "PO-Revision-Date: 2026-11-22 14:00+0100\n"
 "Last-Translator: Biwak\n"
 "Language-Team: German\n"
@@ -5171,8 +5171,8 @@ msgid "memberships"
 msgstr "Mitgliedschaften"
 
 #: biwak/projects/operations.py
-msgid "This person has been deactivated."
-msgstr "Diese Person wurde deaktiviert."
+msgid "This person has been deactivated: activate them first."
+msgstr "Diese Person wurde deaktiviert: Aktiviere sie zuerst."
 
 #: biwak/projects/operations.py
 msgid "Only admins can invite staff."

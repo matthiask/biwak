@@ -60,18 +60,24 @@ def activate(users, *, actor, mail=False):
         if user.is_active:
             continue
         user.is_active, user.left_at, user.left_in_basecamp = True, None, False
-        fields = ["is_active", "left_at", "left_in_basecamp"]
-        mailed = mail and user.mail_undeliverable_at is None
-        if mailed:
-            user.invited_by, user.invited_at = actor, timezone.now()
-            fields += ["invited_by", "invited_at"]
-        user.save(update_fields=fields)
-        if mailed:
-            project_ops.send_invitation(
-                list(project_ops.invitation_projects(user)), user, actor=actor
-            )
+        user.save(update_fields=["is_active", "left_at", "left_in_basecamp"])
+        mailed = mail and mail_invitation(user, actor=actor)
         done.append((user, mailed))
     return done
+
+
+def mail_invitation(user, *, actor):
+    """The invitation mail to somebody just activated, naming the projects
+    they're in, through the outbox; they count as invited until they sign
+    in. Not to addresses that bounced: returns whether it was sent."""
+    if user.mail_undeliverable_at is not None:
+        return False
+    user.invited_by, user.invited_at = actor, timezone.now()
+    user.save(update_fields=["invited_by", "invited_at"])
+    project_ops.send_invitation(
+        list(project_ops.invitation_projects(user)), user, actor=actor
+    )
+    return True
 
 
 def lock_with_admins(user_ids):

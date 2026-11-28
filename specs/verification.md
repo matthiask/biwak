@@ -149,7 +149,8 @@ Fixed (each in its part's spec):
   keeps the push device; mentions of people deactivated later show
   their current name, linked, marked inactive; staff made client in the
   Django admin lose what they can't see and their teams, a client made
-  staff only in the own or an external organization.
+  staff only in the own or an external organization; inviting someone
+  waiting to be activated activates them.
 - **Notifications:** a first mention merged into an edit marked unread
   is mailed and pushed; unsubscribing from a to-do stops its column
   moves, also through the mail's link; notifications of an item trashed
@@ -202,8 +203,7 @@ decided, marked "consistent"):
     forwarded mails isn't a mention; a mention removed again within a
     merged edit doesn't count (consistent).
 - **People:**
-  - Inviting someone waiting to be activated activates them (decided);
-    activating with the mail someone in no project is refused (decided).
+  - Activating with the mail someone in no project is refused (decided).
   - Withdrawing an invitation unassigns before choosing between
     deleting and deactivating; "Reset sign-in…" counts push devices
     (consistent).

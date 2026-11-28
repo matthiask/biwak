@@ -262,10 +262,12 @@ Organisation ihrer Domain und, für Admins, Mitarbeitende für die eigene
 und externe Organisationen, sonst Kund:in eingesetzt, ausser du hast
 diese Felder in der Zeile geändert. „Weitere hinzufügen“ fügt eine
 Zeile hinzu. Neue Personen bekommen eine Mail, die die Projekte nennt;
-Personen mit einem Konto werden ihnen hinzugefügt. Lässt sich eine Zeile
-nicht einladen (eine deaktivierte Person, Mitarbeitende, eingeladen von
-jemandem, der kein Admin ist), wird niemand eingeladen, und das Formular
-sagt, welche Zeile falsch ist.
+Personen mit einem Konto werden ihnen hinzugefügt. Vom Import angelegte
+Personen, die auf die Aktivierung warten, werden aktiviert und bekommen
+die Einladung, die alle ihre Projekte nennt. Lässt sich eine Zeile nicht
+einladen (jemand, der nicht mehr dabei ist und zuerst aktiviert werden
+muss, Mitarbeitende, eingeladen von jemandem, der kein Admin ist), wird
+niemand eingeladen, und das Formular sagt, welche Zeile falsch ist.
 
 **Einladungen:** Bis sich jemand zum ersten Mal anmeldet, sehen
 Mitarbeitende „Eingeladen, noch nicht angemeldet“ daneben, mit wer

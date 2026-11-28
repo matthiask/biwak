@@ -52,9 +52,16 @@ The form is `biwak/projects/invitations.py` with `frontend/invite.js`;
 - **The projects:** one set for all rows, those the inviter can open and
   not archived, with one "Only when tagged / Everything new" choice
   for the round, stored per project.
-- **All or nothing:** errors per row (a deactivated person's address,
-  staff invited by a non-admin, an organization the inviter may not
-  touch).
+- **All or nothing:** errors per row (the address of somebody who left,
+  "activate them first", staff invited by a non-admin, an organization
+  the inviter may not touch).
+- **People waiting to be activated** (imported, inactive, no `left_at`;
+  decided by the user 2026-11-28, verification round 1) are activated
+  by inviting them, by whoever may activate them (waiting staff by
+  admins only), added to the projects and sent the invitation like
+  activating with the mail (`activation.mail_invitation()`: naming all
+  the projects they're in, not to bounced addresses). People who left
+  still need "Activate…" first.
 - **The mail:** one per person after the commit, naming the one project
   ("Ada invited you to Website") or, with several, "Ada invited you to
   Biwak" with a line per project. People who already have an account are
