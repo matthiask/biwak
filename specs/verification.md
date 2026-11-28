@@ -137,7 +137,8 @@ item trashed or hidden when their mail is due are kept unmailed; one
 "Assign…" across projects is one entry in the digest; the outbox gives
 up retries to deactivated people and undeliverable addresses; the
 admins' notice names the outbox's retention (`RETENTION`, 90 days); a
-held check-in summary is checked again when it goes.
+held check-in summary is checked again when it goes; a stored check-in
+rule that isn't valid any more skips its question only.
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -199,8 +200,6 @@ part's spec with the fix):
     switch; the API and CLI need an explicit flag (decided).
   - A client's open list page isn't told when a to-do leaves it for an
     internal list (`live.changed()` takes the target's visibility).
-- **Check-ins:** one stored rule that isn't valid any more stops asking
-  the rest and the summaries every minute (`latest_due()` on `None`).
 - **Docs and files:**
   - A whole-text save with an old `base_version` overwrites someone
     else's typing merged into a version credited to the saver (the

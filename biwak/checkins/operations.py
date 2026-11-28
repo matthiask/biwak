@@ -346,9 +346,11 @@ def ask_due(*, now=None):
             )
             if question is None:
                 continue
-            date, _fire = schedule.latest_due(question, first=question.next_at, now=now)
-            if question.is_askable:
-                occurrence = _ask(question, date, now)
+            due = schedule.latest_due(question, first=question.next_at, now=now)
+            # A stored rule which isn't valid any more gives no date: not
+            # asked, and no next time (specs/checkins.md)
+            if due is not None and question.is_askable:
+                occurrence = _ask(question, due[0], now)
                 if occurrence is not None:
                     created.append(occurrence)
             question.next_at = schedule.next_fire_of(question, after=now)
