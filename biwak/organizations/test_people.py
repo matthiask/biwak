@@ -2,8 +2,10 @@
 
 import json
 import re
+from datetime import timedelta
 
 from django.test import TestCase
+from django.utils import timezone
 
 from biwak.test_utils import external, organization, person, project
 
@@ -74,6 +76,62 @@ class PeoplePageTest(TestCase):
         # Roles
         for word in ["admin", "staff", "external", "client"]:
             self.assertContains(response, f">{word}</span>")
+
+    def test_every_filter_groups_by_organization(self):
+        """Inactive, people who left and invited too (decided 2026-11-28,
+        GitHub issue #3)"""
+        now = timezone.now()
+        person("Kim", client=True, organization="Zebra Clients", is_active=False)
+        person("Lou", organization=None, is_active=False)
+        person("Max", organization="Alpine Agency", is_active=False)
+        person("Nia", organization=None, left_at=now.date())
+        person("Oli", organization="Zebra Clients", left_at=now.date())
+        person("Pam", left_at=now.date())  # Own staff
+        for name, org, days in [("Quin", "Zebra Clients", 1), ("Rae", None, 2)]:
+            person(
+                name,
+                client=True,
+                organization=org,
+                invited_at=now - timedelta(days=days),
+            )
+        person("Sam", invited_at=now - timedelta(days=3))
+        self.client.force_login(self.ada)
+        filters = {
+            "inactive": [
+                "Example Team",
+                "Zed Example",
+                "Alpine Agency",
+                "Max Example",
+                "Zebra Clients",
+                "Kim Example",
+                "Without an organization",
+                "Lou Example",
+            ],
+            "left": [
+                "Example Team",
+                "Pam Example",
+                "Zebra Clients",
+                "Oli Example",
+                "Without an organization",
+                "Nia Example",
+            ],
+            # The oldest invitation first within each group
+            "invited": [
+                "Example Team",
+                "Sam Example",
+                "Zebra Clients",
+                "Quin Example",
+                "Without an organization",
+                "Rae Example",
+            ],
+        }
+        for name, expected in filters.items():
+            with self.subTest(name):
+                response = self.client.get(f"/people/?{name}=1")
+                self.assertEqual(self.headings_and_names(response), expected)
+        response = self.client.get("/people/?inactive=1")
+        self.assertContains(response, "Client organization")
+        self.assertContains(response, "External organization")
 
     def test_an_external_sees_the_people_of_their_projects(self):
         response = self.page(self.pia)

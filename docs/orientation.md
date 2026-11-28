@@ -254,7 +254,8 @@ externals; you can't deactivate yourself or the last active admin.
 once, all or nothing.
 
 The People page shows the active people ("Active"); staff find the
-others under "Inactive" and "People who left".
+others under "Inactive" and "People who left". Every list is grouped by
+organization.
 
 **People who left** (deactivated, or no longer in Basecamp when
 imported) don't show under "Active"; the filter "People who left"

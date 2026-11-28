@@ -145,7 +145,9 @@ against a real account 2026-11-22) and whoever turns up in a project (creators, 
   a dry run reports who would be marked, people it would create too);
   "Inactive" (`?inactive=1`, the API's `inactive`, `biwak people
   --inactive`) lists only people waiting, not those who left; the
-  "People who left" list has no "Activate…", by name like "Inactive";
+  "People who left" list has no "Activate…", by organization and name
+  like "Inactive" (all the People page's filters group like "Active",
+  decided 2026-11-28, GitHub issue #3);
   `left_at` is on the people list's answers (`AccessOut`, own staff), not
   on every person in the API. The filter isn't remembered: the page's
   other filters aren't either (`data-remember` is for to-dos, the feed
