@@ -145,7 +145,7 @@
             {% comment %}
               A long title wraps under itself, not under the handle and the icon;
               each count stays in one piece, "overdue" moving to a line of its own
-              on phones
+              on phones, without the dot between them (.wb-separated)
             {% endcomment %}
             <a
               class="d-flex flex-grow-1 justify-content-between align-items-center gap-2 text-reset text-decoration-none"
@@ -160,12 +160,17 @@
                 {% icon "list-check" %}
                 <span>{{ list }}</span>
               </span>
-              <span class="d-flex flex-wrap justify-content-end align-items-center gap-1 text-end">
-                <span
-                  class="small text-body-secondary text-nowrap"
-                >{% blocktranslate with count=list.open_count %}{{ count }} open{% endblocktranslate %}</span>
-                {% if list.overdue_count %}<span class="small text-danger text-nowrap">·
-                    {% blocktranslate with count=list.overdue_count %}{{ count }} overdue{% endblocktranslate %}</span>{% endif %}
+              <span class="d-flex align-items-center gap-2">
+                <span class="wb-separated small">
+                  <span class="d-flex flex-wrap justify-content-end text-end">
+                    <span
+                      class="text-body-secondary text-nowrap"
+                    >{% blocktranslate with count=list.open_count %}{{ count }} open{% endblocktranslate %}</span>
+                    {% if list.overdue_count %}<span
+                        class="text-danger text-nowrap"
+                      >{% blocktranslate with count=list.overdue_count %}{{ count }} overdue{% endblocktranslate %}</span>{% endif %}
+                  </span>
+                </span>
                 {% client_badge list %}
               </span>
             </a>
