@@ -683,9 +683,18 @@ def project_detail(request, pk):
             "archived_lists": archived_lists,
             "can_manage": project_ops.can_manage_project(request.user),
             "can_create_lists": ops.can_create(request.user, Kind.LIST),
-            # By name, as on the people page
-            "members": project.memberships.select_related("user").order_by(
-                Lower("user__full_name"), "user__email"
+            # Avatars by organization, as on the people page (decided
+            # 2026-11-28, GitHub issue #4)
+            "member_groups": project_groups(
+                project,
+                [
+                    (m,)
+                    for m in project.memberships.select_related(
+                        "user__organization"
+                    ).order_by(Lower("user__full_name"), "user__email")
+                ],
+                can_add=False,
+                viewer=request.user,
             ),
             "front_messages": file_queries.front_messages(project, request.user),
             "front_files": file_queries.front_files(project, request.user),

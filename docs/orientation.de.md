@@ -55,7 +55,10 @@ Mitteilungen, Dokumente und Dateien, Check-ins, Mitglieder.
   der Befehlspalette.
 - **Mitglieder** zeigt, wer im Projekt ist, nach Organisation: zuerst
   die eigene, dann die Organisationen der Kund:innen, dann die der
-  Externen. Mitarbeitende fügen dort Personen hinzu („Personen von …
+  Externen. Die Seite des Projekts zeigt jede Organisation einmal mit
+  einer Reihe von Bildern ihrer Personen (der Name erscheint beim
+  Darüberfahren, ein Klick öffnet ihre Seite); „Verwalten“ (oder
+  „Alle“) zeigt sie mit Namen. Mitarbeitende fügen dort Personen hinzu („Personen von …
   hinzufügen“ für eine Organisation im Projekt) oder laden sie per Mail
   ein (siehe [Personen](#personen)), und entfernen sie mit „Entfernen“
   in ihrer Zeile, was vorher nachfragt. Kund:innen und Externe können

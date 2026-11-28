@@ -1,3 +1,5 @@
+import re
+
 from django.core import mail
 from django.test import TestCase
 
@@ -5,7 +7,7 @@ from biwak.accounts.models import APIToken, User
 from biwak.activity.models import Action, Event, Subscription
 from biwak.items import operations as ops
 from biwak.projects.models import Membership
-from biwak.test_utils import invite_data, person, project
+from biwak.test_utils import external, invite_data, organization, person, project
 
 
 class MembersTest(TestCase):
@@ -356,17 +358,50 @@ class MemberModalsTest(TestCase):
 
 
 class MembersBoxTest(TestCase):
-    def test_the_project_page_lists_members_by_name(self):
-        """The "Members" box sorts like the people page: by name, ignoring
-        case (it had no order at all)"""
+    def box(self, viewer, p):
+        self.client.force_login(viewer)
+        page = self.client.get(f"/projects/{p.pk}/").content.decode()
+        return page[page.index("data-member-groups") :].split("<h2", 1)[0]
+
+    def test_avatars_by_organization(self):
+        """The "Members" box: each organization's name once, with a row of
+        avatars linked to the people (decided 2026-11-28, GitHub issue #4),
+        in the order of the project's people page (own staff, clients,
+        externals, without one), by name within a group"""
+        organization("Example Team", is_own=True)
         zoe = person("zoe")
         ada = person("Ada")
-        mia = person("Mia")
-        p = project(members=[zoe, mia, ada])
-        self.client.force_login(ada)
-        page = self.client.get(f"/projects/{p.pk}/").content.decode()
-        box = page[page.index("Members") :]
-        positions = [
-            box.index(name) for name in ("Ada Example", "Mia Example", "zoe Example")
-        ]
-        self.assertEqual(positions, sorted(positions))
+        cleo = person("Cleo", client=True, organization="Zebra Clients")
+        dora = person(
+            "Dora", client=True, organization="Zebra Clients", is_active=False
+        )
+        pia = external("Pia", organization_name="Alpine Agency")
+        finn = person("Finn", organization=None)
+        p = project(members=[zoe, cleo, finn, dora, ada, pia])
+        box = self.box(ada, p)
+        names = re.findall(r'<div class="wb-member-org">([^<]*)</div>', box)
+        self.assertEqual(
+            [n.strip() for n in names],
+            [
+                "Example Team",
+                "Zebra Clients",
+                "Alpine Agency",
+                "Without an organization",
+            ],
+        )
+        self.assertEqual(box.count("Zebra Clients"), 1)
+        people = re.findall(r'href="/people/(\d+)/"', box)
+        self.assertEqual(people, [str(u.pk) for u in (ada, zoe, cleo, dora, pia, finn)])
+        # Named by the avatar's title, greyed when inactive
+        self.assertIn('title="Cleo Example"', box)
+        self.assertIn('title="Dora Example (inactive)"', box)
+        self.assertIn("wb-avatar-inactive", box)
+        self.assertNotIn("Cleo Example, Zebra Clients", box)
+
+    def test_a_client_sees_the_same(self):
+        ada = person("Ada")
+        cleo = person("Cleo", client=True, organization="Zebra Clients")
+        p = project(members=[ada, cleo])
+        box = self.box(cleo, p)
+        self.assertIn(f'href="/people/{ada.pk}/"', box)
+        self.assertIn('title="Ada Example"', box)

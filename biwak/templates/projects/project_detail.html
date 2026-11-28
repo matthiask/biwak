@@ -243,11 +243,7 @@
           <a class="btn btn-sm btn-quiet" href="{% url 'project_people' project.pk %}">{% icon "person-plus" %}<span
             >{% if request.user.is_client %}{% translate "All" %}{% else %}{% translate "Manage" %}{% endif %}</span></a>
         </h2>
-        <ul class="list-unstyled mb-4">
-          {% for m in members %}<li>
-              {% person_page m.user name=m.user.display_name %}
-            </li>{% endfor %}
-        </ul>
+        {% include "projects/_member_avatars.html" %}
       {% endif %}
       <h2 class="h5">{% translate "Activity" %}</h2>
       {% include "activity/_events.html" %}

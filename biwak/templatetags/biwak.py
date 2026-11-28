@@ -428,6 +428,21 @@ def person_page(context, person, *, size="sm", name=None):
     return linked_name(person, inner, _known_people(request) if request else set())
 
 
+@register.simple_tag(takes_context=True)
+def person_avatar(context, person, *, size="md"):
+    """The mark of a person alone, linked to their page like
+    ``person_page`` (rows of avatars: the project's members); the mark's
+    title and label name them"""
+    from biwak.organizations.people import linked_name
+
+    request = context.get("request")
+    return linked_name(
+        person,
+        avatar(context, person, size),
+        _known_people(request) if request else set(),
+    )
+
+
 def _known_people(request):
     """None if the viewer may know everybody, else the set of the people
     they may know (``biwak.organizations.people.known_people()``); looked

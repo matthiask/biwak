@@ -182,6 +182,15 @@ manage none (`access.md`).
   member, the invitations go out with the project, and an invitation
   that fails adds nothing. `form_response(template=)` takes a template
   extending `modal_form.html` (block `fields`) for the rows.
+- **The project page's "Members"** (decided 2026-11-28 by the user,
+  GitHub issue #4: "a compact row of avatars", "the names of
+  organizations wouldn't repeat"): the same groups as the project's
+  people page, each organization's name once (or "Without an
+  organization") over a row of avatars linked to the people's pages,
+  named by their title, inactive people greyed
+  (`projects/_member_avatars.html`, `{% person_avatar %}`). Only there:
+  the people page lists everybody with names ("when we look at people we
+  want to see them all").
 - **A project's people page by organization** (`project_groups()` in
   `biwak/organizations/people.py`): own staff, client organizations,
   external organizations (by name), then people without an organization;
