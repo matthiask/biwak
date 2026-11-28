@@ -11,7 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
-from biwak.accounts.middleware import set_user_name
+from biwak.accounts.middleware import set_user_name, user_name_kept
 from biwak.accounts.models import Color
 from biwak.activity import mentions
 from biwak.activity.models import Action
@@ -182,13 +182,21 @@ def _save_version(doc, *, title, content, authors, force=False):
     )
 
 
-def _save(item, doc, *, actor=None, new_version=False):
+def _save(item, doc, *, actor=None, new_version=False, name_authors=False):
     """Merges what was typed live (and edits through ``live.apply_text()``)
     into ``Doc.content``; a new text sets the doc's title, its first line
     (specs/doc-titles.md). One ``edited`` event
     per person and editing session (merging into their last one), a
-    version by the version rules. Returns whether anything changed."""
+    version by the version rules. Returns whether anything changed.
+    ``name_authors``: the audit log names who typed it (one person, or
+    several short names)."""
     content, authors, typed = live.merge(doc)
+    if name_authors and authors:
+        set_user_name(
+            authors[0]
+            if len(authors) == 1
+            else ", ".join(a.get_short_name() for a in authors)
+        )
     if actor is not None and actor not in authors:
         authors.append(actor)
     published = False
@@ -345,11 +353,11 @@ def tick_doc(item, *, actor, index, version, checked=None):
 
 
 @transaction.atomic
-def save_live(pk, user=None):
+def save_live(pk):
     """Saves what was typed live (``collab.consumers``, after a pause and
-    when the editor leaves); ``user`` is who the audit log records"""
-    if user is not None:
-        set_user_name(user)
+    when the editor leaves, the doc's pages, ``save_pending()``). The audit
+    log names who typed it, not who caused the save (decided 2026-11-28),
+    and the name set before comes back afterwards."""
     doc = (
         Doc.objects
         .select_for_update(of=("self",))
@@ -359,7 +367,8 @@ def save_live(pk, user=None):
     )
     if doc is None:
         return False
-    return _save(doc.item, doc)
+    with user_name_kept():
+        return _save(doc.item, doc, name_authors=True)
 
 
 def save_pending():

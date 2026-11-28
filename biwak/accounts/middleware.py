@@ -1,4 +1,5 @@
 import unicodedata
+from contextlib import contextmanager
 
 from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.db import connections
@@ -16,6 +17,19 @@ def set_user_name(user):
     connections["default"].cursor().execute(
         "SET SESSION application_name TO %s", [user]
     )
+
+
+@contextmanager
+def user_name_kept():
+    """Whatever ``set_user_name()`` sets inside goes again afterwards, for
+    a job saving on behalf of others (``files.operations.save_live()``)"""
+    with connections["default"].cursor() as cursor:
+        cursor.execute("SELECT current_setting('application_name')")
+        (before,) = cursor.fetchone()
+    try:
+        yield
+    finally:
+        set_user_name(before)
 
 
 def language_middleware(get_response):
