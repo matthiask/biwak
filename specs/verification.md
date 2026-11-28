@@ -174,7 +174,10 @@ Fixed (each in its part's spec):
 - **Who did what:** the mails' signed links ("Keep open",
   unsubscribing) are logged as their recipient; names lose their
   accents instead of turning into escapes; a live save is logged as who
-  typed it, not who caused it.
+  typed it, not who caused it; nameless changes show 🧙, commands and
+  migrations name themselves, sign-in addresses and linked accounts
+  are audited, the webhook names "Resend"; PgBouncer keeps names per
+  client (checked).
 
 **To fix:** the findings are fixed. From the risks and questions,
 decided by the user on 2026-11-28 (or following a rule already
@@ -220,13 +223,6 @@ decided, marked "consistent"):
   are linked when their typing is kept; lists' descriptions link their
   attachments (`create_list`/`update_list` never call `link()`, to
   check); read-only takes effect for open editors at once (to check).
-- **Who did what:** nameless changes show 🧙 in the history, as in
-  Workbench; management commands and migrations name themselves;
-  allauth's social accounts and sign-in addresses are audited (tokens
-  and secrets left out); the inbound webhook names "Resend" (decided:
-  as complete as reasonably possible). Production reaches PostgreSQL
-  through PgBouncer in transaction mode: check that `SET SESSION
-  application_name` stays with its client there, fix it if not.
 - **Import:** links to a list's group lead to the list in Biwak;
   archived to-dos without a completion are completed by nobody, at
   Basecamp's time; the same Basecamp attachment in two texts gets an

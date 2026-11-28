@@ -1263,10 +1263,6 @@ msgstr "Wieder geöffnet"
 msgid "Resumed"
 msgstr "Fortgesetzt"
 
-#: biwak/activity/history.py
-msgid "unknown"
-msgstr "unbekannt"
-
 #: biwak/activity/history.py biwak/templates/items/_todo_view.html
 msgid "Created"
 msgstr "Erstellt"
@@ -8601,6 +8597,9 @@ msgstr "Öffentlich geteilt bis %(date)s"
 #, python-format
 msgid "Color: %(color)s"
 msgstr "Farbe: %(color)s"
+
+#~ msgid "unknown"
+#~ msgstr "unbekannt"
 
 #~ msgid "weekly mail of my to-dos"
 #~ msgstr "wöchentliche Mail meiner To-dos"
