@@ -4,7 +4,16 @@ later and no date. Everything goes through ``Item.objects.visible_to()``."""
 
 import datetime as dt
 
-from django.db.models import DateField, Exists, F, OuterRef, Q, Value
+from django.db.models import (
+    BigIntegerField,
+    DateField,
+    Exists,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    Value,
+)
 from django.db.models.functions import Coalesce
 from django.utils import formats
 from django.utils.translation import gettext_lazy as _
@@ -131,7 +140,15 @@ def todos(
             # For ordering by project: to-dos outside groups come first, and
             # the first ordering field of cursors is a plain annotation
             project_key=F("project__name"),
-            group_key=Coalesce("todo__group__position", Value(-1)),
+            # An IntegerField: -1 is out of the positions' range, which
+            # Django folds into "never" for equality (cursors compare it)
+            group_key=Coalesce(
+                "todo__group__position", Value(-1), output_field=IntegerField()
+            ),
+            # Cursors need values (biwak/api_conventions.py)
+            group_id_key=Coalesce(
+                "todo__group_id", Value(0), output_field=BigIntegerField()
+            ),
         )
     )
     if project is not None:
@@ -225,7 +242,7 @@ PROJECT_ORDERING = (
     "parent__position",
     "parent_id",
     "group_key",
-    "todo__group_id",
+    "group_id_key",
     "position",
     "pk",
 )

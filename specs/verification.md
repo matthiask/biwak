@@ -125,7 +125,8 @@ and database (`../biwak-verify-<area>`, `biwak_verify_<area>`, no
 `STORAGE_URL` or `RESEND_API_KEY`). Every bug below was shown by a
 throwaway test that was run again and failed before it was listed.
 Fixed: `biwak feed` and `biwak lantern` name events without an actor
-"Biwak" (CLI 0.76.0).
+"Biwak" (CLI 0.76.0); the API's cursors are positions in the whole
+ordering (`api-cli.md`).
 
 **To fix** (decisions by the user, 2026-11-28; each goes into its
 part's spec with the fix):
@@ -219,10 +220,6 @@ part's spec with the fix):
     conflict check skips the saver's own versions).
   - An editor left open while its doc moves to another project uploads
     attachments to the old project, never linked, deleted a day later.
-- **API and CLI:**
-  - Cursor pagination skips or repeats rows when something leaves or
-    joins an earlier page where the first ordering field is shared
-    (messages: `pin_key`; `todos/`: the project, the due date).
 - **Who did what:**
   - A live save names the authors of the typing it merges (decided;
     today whoever triggered it, also a client who only opened the page).
