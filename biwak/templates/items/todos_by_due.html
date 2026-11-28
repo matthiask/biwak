@@ -55,6 +55,7 @@
           <div class="mb-3" data-list="{{ todolist.pk }}">
             <h3 class="h6 mb-1">
               <a href="{{ todolist.get_absolute_url }}" class="text-reset text-decoration-none">{{ todolist }}</a>
+              {% client_badge todolist %}
             </h3>
             {% for group, todos in groups %}
               {% if group %}<h4 class="small text-body-secondary mt-2 mb-1" data-group="{{ group.pk }}">

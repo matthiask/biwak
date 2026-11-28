@@ -181,7 +181,10 @@ feedback rounds (`ui-feedback.md`).
   imposing): the switch only in the "More" menu (decided 2026-11-22:
   less visible than a button below the content; creating something
   visible, like "New folder" with its checkbox, stays), the badge on rows (`{% client_badge item %}`, not in the
-  feed and the lantern, which tell what happened), the tab at the
+  feed and the lantern, which tell what happened; where to-dos are grouped
+  by their list, the list's heading has it and its to-dos don't, sharing
+  its visibility: decided 2026-11-28 by the user, "This could be
+  calmer"), the tab at the
   window's edge on pages (`items/_client_tab.html`), the banner
   (`items/_client_banner.html`) only above forms in modals (`access.md`,
   "Making it obvious").
