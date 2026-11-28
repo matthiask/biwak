@@ -1615,6 +1615,27 @@ class PeopleWhoLeftTest(ImportCase):
         self.assertEqual(report.left, ["Bob Example <bob@example.org>"])
         self.assertIsNone(self.left_at("bob@example.org"))
 
+    def test_people_met_only_in_comments_of_skipped_recordings(self):
+        """Somebody met only as the author of a comment on a recording that
+        later runs skip (unchanged, its comments aren't read again) is
+        checked too: every person imported from the account, not only
+        those met in this run (fixed 2026-11-28: a run stopped halfway left
+        one behind, its restart skipped the message she had commented on)"""
+        # A client: imported inactive, waiting to be activated
+        gil = support.person(8, "Gil Example", "gil@example.org", client=True)
+        self.client_.data["/people.json"].append(gil)
+        self.client_.data["/recordings/3011/comments.json"][0]["creator"] = gil
+        self.run_import()
+        self.assertIsNone(self.left_at("gil@example.org"))
+        self.client_.data["/people.json"] = [
+            p | {"personable_type": "Tombstone"} if p["id"] == gil["id"] else p
+            for p in self.client_.data["/people.json"]
+        ]
+        report = self.run_import()
+        self.assertEqual(report.counts["comments"]["created"], 0)
+        self.assertEqual(report.left, ["Gil Example <gil@example.org>"])
+        self.assertEqual(self.left_at("gil@example.org"), timezone.localdate())
+
     def test_later_runs_read_the_account_every_time(self):
         """Skipping unchanged recordings or reading everything with
         ``--full``: the account's people are read either way"""

@@ -123,9 +123,14 @@ couldn't hide one without the other.
   `activation.mark_left()`) for people Basecamp no longer has: it reads the account's people once per run (`/people.json`,
   paginated; only its `User` entries count: it also lists removed people as
 `Tombstone`, people from outside as `Outsider` and placeholders, checked
-against a real account 2026-11-22) and whoever turns up in a project (creators, commenters,
-  assignees, subscribers) but isn't among them has left (the date: the
-  run's). People still in the account who are inactive in Biwak aren't
+against a real account 2026-11-22) and whoever was imported from it
+  (creators, commenters, assignees, subscribers, in this run or an
+  earlier one) but isn't among them has left (the date: the run's).
+  Everybody imported counts, not only the people met in this run
+  (decided 2026-11-28 by the user, after an interrupted run's restart
+  skipped the message somebody had commented on, so she stayed
+  "Inactive": later runs don't read the comments of unchanged
+  recordings). This assumes one Basecamp account per installation. People still in the account who are inactive in Biwak aren't
   touched (they wait to be activated).
 - **The People page** shows the active people by default ("Active",
   invited people included; decided 2026-11-23 by the user, before
